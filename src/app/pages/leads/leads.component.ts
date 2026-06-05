@@ -97,28 +97,27 @@ import { CrmService } from '../../services/crm.service';
           <table class="leads-table">
             <thead>
               <tr>
-                <th>Lead Code</th>
-                <th>Lead / Contact</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Assigned Agent</th>
-                <th>Last Contact</th>
+                <th style="width: 35%;">Lead</th>
+                <th style="width: 15%;">Source</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 20%;">• Assigned To</th>
+                <th style="width: 15%;">Last Contact</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let l of leads" (click)="openDetailsDrawer(l)" [class.selected]="selectedLead?.id === l.id">
-                <td class="font-mono">{{ l.leadCode }}</td>
+              <tr *ngFor="let l of leads; let i = index" (click)="openDetailsDrawer(l)" [class.selected]="selectedLead?.id === l.id">
                 <td>
                   <div class="contact-info flex align-center gap-3">
+                    <span class="row-index">{{ i + 1 }}</span>
                     <div class="table-avatar">{{ getInitials(l.fullName) }}</div>
                     <div class="flex flex-col">
                       <span class="lead-name">{{ l.fullName }}</span>
-                      <span class="lead-phone">{{ l.primaryPhone }}</span>
+                      <span class="lead-phone">{{ l.primaryPhone }} <span class="text-muted font-xs" style="margin-left: 6px;">• {{ l.leadCode }}</span></span>
                     </div>
                     <span *ngIf="l.isDuplicate" class="duplicate-tag">Duplicate</span>
                   </div>
                 </td>
-                <td>{{ l.leadSource?.sourceName || '-' }}</td>
+                <td style="font-weight: 500; color: var(--text-main);">{{ l.leadSource?.sourceName || '-' }}</td>
                 <td>
                   <span class="badge" [ngClass]="getBadgeClass(l.leadStatus?.statusName)">
                     {{ l.leadStatus?.statusName || 'New' }}
@@ -126,7 +125,9 @@ import { CrmService } from '../../services/crm.service';
                 </td>
                 <td>
                   <div class="agent-col flex align-center gap-2" *ngIf="l.assignedSalesAgent">
-                    <div class="agent-avatar"></div>
+                    <div class="table-avatar" style="width: 24px; height: 24px; font-size: 9px; background-color: var(--brand-primary); color: white;">
+                      {{ getInitials(l.assignedSalesAgent.fullName) }}
+                    </div>
                     <span class="agent-name">{{ l.assignedSalesAgent.fullName }}</span>
                   </div>
                   <span class="text-secondary italic" *ngIf="!l.assignedSalesAgent">Unassigned</span>
@@ -328,6 +329,15 @@ import { CrmService } from '../../services/crm.service';
 
           <!-- Drawer Tab Content 2: Notes -->
           <div class="tab-content" *ngIf="activeTab === 'notes'">
+            <!-- Add Note Form -->
+            <div class="log-activity-form" style="margin-bottom: 16px; border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-md);">
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Add Internal Note</h4>
+              <textarea placeholder="Write internal note details..." [(ngModel)]="newNoteText" rows="3" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; outline: none; resize: vertical; margin-bottom: 8px; font-family: inherit; font-size: 13px;"></textarea>
+              <div class="flex justify-end">
+                <button class="btn btn-primary btn-sm" [disabled]="!newNoteText.trim()" (click)="onAddNote()">Save Note</button>
+              </div>
+            </div>
+
             <div class="notes-list">
               <div class="note-card" *ngFor="let n of selectedLeadDetails?.notes">
                 <p class="note-text">{{ n.note }}</p>
@@ -335,6 +345,10 @@ import { CrmService } from '../../services/crm.service';
                   <span>Logged by User</span>
                   <span>{{ n.createdAt | date:'short' }}</span>
                 </div>
+              </div>
+              
+              <div *ngIf="selectedLeadDetails?.notes?.length === 0" class="text-center py-6 text-secondary font-sm italic">
+                No internal notes logged yet.
               </div>
             </div>
           </div>
@@ -604,6 +618,7 @@ export class LeadsComponent implements OnInit {
     nextActionDate: ''
   };
   scheduleFollowup = false;
+  newNoteText = '';
 
   ngOnInit() {
     this.loadMetadata();
@@ -853,6 +868,17 @@ export class LeadsComponent implements OnInit {
         this.loadLeads(); // refresh main table contacted state/followups
       },
       error: (err) => console.error('Error logging activity:', err)
+    });
+  }
+
+  onAddNote() {
+    if (!this.selectedLeadDetails || !this.newNoteText.trim()) return;
+    this.crmService.addLeadNote(this.selectedLeadDetails.id, this.newNoteText).subscribe({
+      next: () => {
+        this.newNoteText = '';
+        this.loadLeadDetails(this.selectedLeadDetails.id);
+      },
+      error: (err) => console.error('Error adding note:', err)
     });
   }
 

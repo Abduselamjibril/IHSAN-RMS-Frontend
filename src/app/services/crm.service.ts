@@ -13,6 +13,38 @@ export class CrmService {
     return this.http.get<any>(`${this.apiBase}/agents/metadata`);
   }
 
+  getAgents(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/agents`);
+  }
+
+  createAgent(agentData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/agents`, agentData);
+  }
+
+  updateAgent(id: number, agentData: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/agents/${id}`, agentData);
+  }
+
+  deleteAgent(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/agents/${id}`);
+  }
+
+  getLeadSources(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/lead-sources`);
+  }
+
+  createLeadSource(sourceData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/lead-sources`, sourceData);
+  }
+
+  updateLeadSource(id: number, sourceData: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/lead-sources/${id}`, sourceData);
+  }
+
+  deleteLeadSource(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/lead-sources/${id}`);
+  }
+
   getLeads(filters: any): Observable<any> {
     let params = new HttpParams();
     if (filters.search) params = params.set('search', filters.search);
@@ -39,6 +71,10 @@ export class CrmService {
 
   updateLead(id: number, leadData: any): Observable<any> {
     return this.http.put<any>(`${this.apiBase}/leads/${id}`, leadData);
+  }
+
+  addLeadNote(id: number, note: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/leads/${id}/notes`, { note });
   }
 
   assignAgent(id: number, agentId: number): Observable<any> {
@@ -75,8 +111,34 @@ export class CrmService {
     return this.http.get<any>(`${this.apiBase}/agents/reminders`);
   }
 
+  completeReminder(id: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/agents/reminders/${id}/complete`, {});
+  }
+
   getDashboardStats(): Observable<any> {
     return this.http.get<any>(`${this.apiBase}/leads/stats`);
+  }
+
+  getAllLeadNotes(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.leadId) params = params.set('leadId', filters.leadId.toString());
+    return this.http.get<any>(`${this.apiBase}/leads/notes/all`, { params });
+  }
+
+  getAllAttachments(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.leadId) params = params.set('leadId', filters.leadId.toString());
+    return this.http.get<any>(`${this.apiBase}/leads/attachments/all`, { params });
+  }
+
+  getAllActivities(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.leadId) params = params.set('leadId', filters.leadId.toString());
+    if (filters.activityType) params = params.set('activityType', filters.activityType);
+    return this.http.get<any>(`${this.apiBase}/leads/activities/all`, { params });
   }
 
   getExportUrl(filters: any): string {

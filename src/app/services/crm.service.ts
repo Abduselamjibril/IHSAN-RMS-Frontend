@@ -155,4 +155,52 @@ export class CrmService {
     const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     return `${this.apiBase}/leads/export${queryStr}`;
   }
+
+  // Opportunity Methods
+  convertLeadToOpportunity(leadId: number, data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/opportunities/convert/${leadId}`, data);
+  }
+
+  getOpportunities(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.stageId) params = params.set('stageId', filters.stageId.toString());
+    if (filters.agentId) params = params.set('agentId', filters.agentId.toString());
+    if (filters.page) params = params.set('page', filters.page.toString());
+    if (filters.limit) params = params.set('limit', filters.limit.toString());
+
+    return this.http.get<any>(`${this.apiBase}/opportunities`, { params });
+  }
+
+  getOpportunityDetails(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/opportunities/${id}`);
+  }
+
+  updateOpportunityStage(id: number, stageId: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/opportunities/${id}/stage`, { stageId });
+  }
+
+  closeOpportunityLost(id: number, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/opportunities/${id}/close-lost`, payload);
+  }
+
+  updateOpportunity(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/opportunities/${id}`, data);
+  }
+
+  addOpportunityActivity(id: number, activityData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/opportunities/${id}/activity`, activityData);
+  }
+
+  addOpportunityNote(id: number, note: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/opportunities/${id}/notes`, { note });
+  }
+
+  getOpportunityForecast(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/opportunities/stats/forecast`);
+  }
+
+  getOpportunityMetadata(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/opportunities/metadata`);
+  }
 }

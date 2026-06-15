@@ -7,18 +7,24 @@ import { FollowupsComponent } from './pages/followups/followups.component';
 import { CommunicationsComponent } from './pages/communications/communications.component';
 import { DocumentsComponent } from './pages/documents/documents.component';
 import { LeadTrackingComponent } from './pages/lead-tracking/lead-tracking.component';
+import { LogInteractionComponent } from './pages/log-interaction/log-interaction.component';
+import { OpportunitiesComponent } from './pages/opportunities/opportunities.component';
+import { ForecastingComponent } from './pages/forecasting/forecasting.component';
 
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
   { path: 'agents', component: AgentsComponent },
   { path: 'lead-sources', component: LeadSourcesComponent },
+  { path: 'log-interaction', component: LogInteractionComponent },
   { path: 'follow-ups', component: FollowupsComponent },
+  { path: 'opportunities', component: OpportunitiesComponent },
+  { path: 'forecasting', component: ForecastingComponent },
   { path: 'communications', component: CommunicationsComponent },
   { path: 'documents', component: DocumentsComponent },
   { path: 'lead-tracking', component: LeadTrackingComponent },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },
 ];
-// Touch to trigger rebuild again - activated communications, documents and lead-tracking routes
+// Touch to trigger rebuild again - activated communications, documents, lead-tracking and log-interaction routes
 

@@ -49,9 +49,27 @@ import { filter } from 'rxjs/operators';
                 </a>
               </li>
               <li>
+                <a routerLink="/log-interaction" routerLinkActive="active" class="menu-item submenu-item">
+                  <span class="material-icons-outlined">history_edu</span>
+                  <span class="menu-text">Log Interaction</span>
+                </a>
+              </li>
+              <li>
                 <a routerLink="/follow-ups" routerLinkActive="active" class="menu-item submenu-item">
                   <span class="material-icons-outlined">alarm</span>
                   <span class="menu-text">Follow-ups</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/opportunities" routerLinkActive="active" class="menu-item submenu-item">
+                  <span class="material-icons-outlined">trending_up</span>
+                  <span class="menu-text">Opportunities</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/forecasting" routerLinkActive="active" class="menu-item submenu-item">
+                  <span class="material-icons-outlined">insights</span>
+                  <span class="menu-text">Forecasting</span>
                 </a>
               </li>
               <li>
@@ -308,9 +326,12 @@ export class SidebarComponent {
                         url.includes('/agents') || 
                         url.includes('/lead-sources') || 
                         url.includes('/follow-ups') ||
+                        url.includes('/opportunities') ||
+                        url.includes('/forecasting') ||
                         url.includes('/communications') ||
                         url.includes('/documents') ||
-                        url.includes('/lead-tracking');
+                        url.includes('/lead-tracking') ||
+                        url.includes('/log-interaction');
                         
     if (this.manualClosed) {
       return false;

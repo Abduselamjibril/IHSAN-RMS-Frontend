@@ -97,28 +97,27 @@ import { CrmService } from '../../services/crm.service';
           <table class="leads-table">
             <thead>
               <tr>
-                <th>Lead Code</th>
-                <th>Lead / Contact</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Assigned Agent</th>
-                <th>Last Contact</th>
+                <th style="width: 35%;">Lead</th>
+                <th style="width: 15%;">Source</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 20%;">• Assigned To</th>
+                <th style="width: 15%;">Last Contact</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let l of leads" (click)="openDetailsDrawer(l)" [class.selected]="selectedLead?.id === l.id">
-                <td class="font-mono">{{ l.leadCode }}</td>
+              <tr *ngFor="let l of leads; let i = index" (click)="openDetailsDrawer(l)" [class.selected]="selectedLead?.id === l.id">
                 <td>
                   <div class="contact-info flex align-center gap-3">
+                    <span class="row-index">{{ i + 1 }}</span>
                     <div class="table-avatar">{{ getInitials(l.fullName) }}</div>
                     <div class="flex flex-col">
                       <span class="lead-name">{{ l.fullName }}</span>
-                      <span class="lead-phone">{{ l.primaryPhone }}</span>
+                      <span class="lead-phone">{{ l.primaryPhone }} <span class="text-muted font-xs" style="margin-left: 6px;">• {{ l.leadCode }}</span></span>
                     </div>
                     <span *ngIf="l.isDuplicate" class="duplicate-tag">Duplicate</span>
                   </div>
                 </td>
-                <td>{{ l.leadSource?.sourceName || '-' }}</td>
+                <td style="font-weight: 500; color: var(--text-main);">{{ l.leadSource?.sourceName || '-' }}</td>
                 <td>
                   <span class="badge" [ngClass]="getBadgeClass(l.leadStatus?.statusName)">
                     {{ l.leadStatus?.statusName || 'New' }}
@@ -126,7 +125,9 @@ import { CrmService } from '../../services/crm.service';
                 </td>
                 <td>
                   <div class="agent-col flex align-center gap-2" *ngIf="l.assignedSalesAgent">
-                    <div class="agent-avatar"></div>
+                    <div class="table-avatar" style="width: 24px; height: 24px; font-size: 9px; background-color: var(--brand-primary); color: white;">
+                      {{ getInitials(l.assignedSalesAgent.fullName) }}
+                    </div>
                     <span class="agent-name">{{ l.assignedSalesAgent.fullName }}</span>
                   </div>
                   <span class="text-secondary italic" *ngIf="!l.assignedSalesAgent">Unassigned</span>
@@ -207,21 +208,61 @@ import { CrmService } from '../../services/crm.service';
             </div>
           </div>
 
+          <!-- Convert to Opportunity Button if status is Qualified -->
+          <div class="drawer-section" *ngIf="selectedLeadDetails?.leadStatus?.statusName === 'Qualified'" style="margin-bottom: 16px;">
+            <button class="btn btn-primary flex align-center justify-center gap-2" style="width: 100%; padding: 10px;" (click)="openConvertModal()">
+              <span class="material-icons-outlined">trending_up</span>
+              Convert to Opportunity
+            </button>
+          </div>
+
           <!-- Contact Profile -->
           <div class="drawer-section">
             <h3>Lead Information</h3>
             <div class="profile-details-grid">
               <div class="detail-item">
-                <span class="label">Phone</span>
+                <span class="label">Primary Phone</span>
                 <span class="val">{{ selectedLeadDetails?.primaryPhone }}</span>
               </div>
               <div class="detail-item">
-                <span class="label">Email</span>
+                <span class="label">Secondary Phone</span>
+                <span class="val">{{ selectedLeadDetails?.secondaryPhone || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Primary Email</span>
                 <span class="val">{{ selectedLeadDetails?.primaryEmail || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Secondary Email</span>
+                <span class="val">{{ selectedLeadDetails?.secondaryEmail || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Gender</span>
+                <span class="val">{{ selectedLeadDetails?.gender || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Preferred Contact</span>
+                <span class="val">{{ selectedLeadDetails?.preferredContactMethod || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Nationality</span>
+                <span class="val">{{ selectedLeadDetails?.nationality || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">City of Residence</span>
+                <span class="val">{{ selectedLeadDetails?.city || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Country of Residence</span>
+                <span class="val">{{ selectedLeadDetails?.country || '-' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Lead Source</span>
                 <span class="val">{{ selectedLeadDetails?.leadSource?.sourceName || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Property Interest</span>
+                <span class="val">{{ selectedLeadDetails?.interestedPropertyType || '-' }}</span>
               </div>
               <div class="detail-item">
                 <span class="label">Budget Range</span>
@@ -230,14 +271,14 @@ import { CrmService } from '../../services/crm.service';
                   {{ selectedLeadDetails?.budgetMax ? ('ETB ' + (selectedLeadDetails.budgetMax | number)) : '-' }}
                 </span>
               </div>
-              <div class="detail-item">
-                <span class="label">Property Interest</span>
-                <span class="val">{{ selectedLeadDetails?.interestedPropertyType || '-' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Preferred Contact</span>
-                <span class="val">{{ selectedLeadDetails?.preferredContactMethod || '-' }}</span>
-              </div>
+            </div>
+          </div>
+
+          <!-- Inquiry Remarks -->
+          <div class="drawer-section" *ngIf="selectedLeadDetails?.remarks">
+            <h3>Inquiry Remarks</h3>
+            <div class="remarks-box">
+              {{ selectedLeadDetails?.remarks }}
             </div>
           </div>
 
@@ -328,6 +369,15 @@ import { CrmService } from '../../services/crm.service';
 
           <!-- Drawer Tab Content 2: Notes -->
           <div class="tab-content" *ngIf="activeTab === 'notes'">
+            <!-- Add Note Form -->
+            <div class="log-activity-form" style="margin-bottom: 16px; border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-md);">
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Add Internal Note</h4>
+              <textarea placeholder="Write internal note details..." [(ngModel)]="newNoteText" rows="3" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; outline: none; resize: vertical; margin-bottom: 8px; font-family: inherit; font-size: 13px;"></textarea>
+              <div class="flex justify-end">
+                <button class="btn btn-primary btn-sm" [disabled]="!newNoteText.trim()" (click)="onAddNote()">Save Note</button>
+              </div>
+            </div>
+
             <div class="notes-list">
               <div class="note-card" *ngFor="let n of selectedLeadDetails?.notes">
                 <p class="note-text">{{ n.note }}</p>
@@ -335,6 +385,10 @@ import { CrmService } from '../../services/crm.service';
                   <span>Logged by User</span>
                   <span>{{ n.createdAt | date:'short' }}</span>
                 </div>
+              </div>
+              
+              <div *ngIf="selectedLeadDetails?.notes?.length === 0" class="text-center py-6 text-secondary font-sm italic">
+                No internal notes logged yet.
               </div>
             </div>
           </div>
@@ -427,6 +481,30 @@ import { CrmService } from '../../services/crm.service';
               </div>
 
               <div class="form-group flex-1 flex flex-col">
+                <label>Secondary Phone</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="newLeadData.secondaryPhone" 
+                  name="secondaryPhone" 
+                  placeholder="Secondary phone" 
+                />
+              </div>
+            </div>
+
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Primary Email</label>
+                <input type="email" [(ngModel)]="newLeadData.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+              </div>
+
+              <div class="form-group flex-1 flex flex-col">
+                <label>Secondary Email</label>
+                <input type="email" [(ngModel)]="newLeadData.secondaryEmail" name="secondaryEmail" placeholder="secondary@email.com" />
+              </div>
+            </div>
+
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
                 <label>Gender</label>
                 <select [(ngModel)]="newLeadData.gender" name="gender">
                   <option value="">Select Gender</option>
@@ -434,11 +512,42 @@ import { CrmService } from '../../services/crm.service';
                   <option value="Female">Female</option>
                 </select>
               </div>
+
+              <div class="form-group flex-1 flex flex-col">
+                <label>Preferred Contact Method</label>
+                <select [(ngModel)]="newLeadData.preferredContactMethod" name="preferredContactMethod">
+                  <option value="">Select Method</option>
+                  <option value="Phone">Phone</option>
+                  <option value="Email">Email</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Telegram">Telegram</option>
+                  <option value="SMS">SMS</option>
+                </select>
+              </div>
             </div>
 
-            <div class="form-group flex flex-col">
-              <label>Primary Email</label>
-              <input type="email" [(ngModel)]="newLeadData.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Nationality</label>
+                <input type="text" [(ngModel)]="newLeadData.nationality" name="nationality" placeholder="e.g. Ethiopian" />
+              </div>
+
+              <div class="form-group flex-1 flex flex-col">
+                <label>Country of Residence</label>
+                <input type="text" [(ngModel)]="newLeadData.country" name="country" placeholder="e.g. Ethiopia" />
+              </div>
+            </div>
+
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>City of Residence</label>
+                <input type="text" [(ngModel)]="newLeadData.city" name="city" placeholder="e.g. Addis Ababa" />
+              </div>
+
+              <div class="form-group flex-1 flex flex-col">
+                <label>Interested Property / Project Type</label>
+                <input type="text" [(ngModel)]="newLeadData.interestedPropertyType" name="interestedPropertyType" placeholder="e.g. 3 Bedroom Apartment" />
+              </div>
             </div>
 
             <div class="form-row flex gap-3">
@@ -451,11 +560,6 @@ import { CrmService } from '../../services/crm.service';
                 <label>Budget Maximum (ETB)</label>
                 <input type="number" [(ngModel)]="newLeadData.budgetMax" name="budgetMax" placeholder="Max budget" />
               </div>
-            </div>
-
-            <div class="form-group flex flex-col">
-              <label>Interested Property / Project Type</label>
-              <input type="text" [(ngModel)]="newLeadData.interestedPropertyType" name="interestedPropertyType" placeholder="e.g. 3 Bedroom Apartment, Bole Skylight" />
             </div>
 
             <div class="form-row flex gap-3">
@@ -543,6 +647,55 @@ import { CrmService } from '../../services/crm.service';
 
       </div>
     </div>
+
+    <!-- 3. Convert Lead to Opportunity Modal Overlay -->
+    <div class="modal-overlay" *ngIf="showConvertModal" (click)="closeConvertModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        
+        <div class="modal-header flex justify-between align-center">
+          <h2>Convert Lead to Opportunity</h2>
+          <button class="header-icon-btn close-btn" (click)="closeConvertModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form class="modal-form" (submit)="onSubmitConvertOpportunity($event)">
+            
+            <div class="form-group flex flex-col">
+              <label>Opportunity Title *</label>
+              <input type="text" [(ngModel)]="convertData.title" name="title" required placeholder="Opportunity Title" />
+            </div>
+
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Estimated Value (ETB) *</label>
+                <input type="number" [(ngModel)]="convertData.estimatedValue" name="estimatedValue" required placeholder="Estimated value" />
+              </div>
+
+              <div class="form-group flex-1 flex flex-col">
+                <label>Expected Close Date *</label>
+                <input type="date" [(ngModel)]="convertData.expectedCloseDate" name="expectedCloseDate" required />
+              </div>
+            </div>
+
+            <div class="form-group flex flex-col">
+              <label>Inquiry Remarks / Conversion Notes</label>
+              <textarea [(ngModel)]="convertData.remarks" name="remarks" placeholder="Enter conversion notes..." rows="3"></textarea>
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3">
+              <button type="button" class="btn btn-secondary" (click)="closeConvertModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!convertData.title || !convertData.estimatedValue || !convertData.expectedCloseDate">
+                Convert to Opportunity
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
   `,
   styles: []
 })
@@ -577,6 +730,15 @@ export class LeadsComponent implements OnInit {
   leadAttachments: any[] = [];
   selectedFile: File | null = null;
 
+  // Convert Lead Modal state
+  showConvertModal = false;
+  convertData = {
+    title: '',
+    estimatedValue: 0,
+    expectedCloseDate: '',
+    remarks: ''
+  };
+
   // Create Lead Modal state
   showCreateModal = false;
   duplicateWarning = false;
@@ -584,7 +746,13 @@ export class LeadsComponent implements OnInit {
     fullName: '',
     gender: '',
     primaryPhone: '',
+    secondaryPhone: '',
     primaryEmail: '',
+    secondaryEmail: '',
+    nationality: '',
+    city: '',
+    country: '',
+    preferredContactMethod: '',
     budgetMin: null,
     budgetMax: null,
     interestedPropertyType: '',
@@ -604,6 +772,7 @@ export class LeadsComponent implements OnInit {
     nextActionDate: ''
   };
   scheduleFollowup = false;
+  newNoteText = '';
 
   ngOnInit() {
     this.loadMetadata();
@@ -686,7 +855,13 @@ export class LeadsComponent implements OnInit {
       fullName: '',
       gender: '',
       primaryPhone: '',
+      secondaryPhone: '',
       primaryEmail: '',
+      secondaryEmail: '',
+      nationality: '',
+      city: '',
+      country: '',
+      preferredContactMethod: '',
       budgetMin: null,
       budgetMax: null,
       interestedPropertyType: '',
@@ -746,6 +921,40 @@ export class LeadsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error creating lead:', err);
+      }
+    });
+  }
+
+  openConvertModal() {
+    if (!this.selectedLeadDetails) return;
+    const estVal = this.selectedLeadDetails.budgetMax || this.selectedLeadDetails.budgetMin || 0;
+    const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    
+    this.convertData = {
+      title: `${this.selectedLeadDetails.fullName} - Bole Property Opportunity`,
+      estimatedValue: +estVal,
+      expectedCloseDate: thirtyDaysLater,
+      remarks: this.selectedLeadDetails.remarks || ''
+    };
+    this.showConvertModal = true;
+  }
+
+  closeConvertModal() {
+    this.showConvertModal = false;
+  }
+
+  onSubmitConvertOpportunity(event: Event) {
+    event.preventDefault();
+    if (!this.selectedLeadDetails) return;
+
+    this.crmService.convertLeadToOpportunity(this.selectedLeadDetails.id, this.convertData).subscribe({
+      next: (res) => {
+        this.closeConvertModal();
+        this.loadLeadDetails(this.selectedLeadDetails.id);
+        this.loadLeads();
+      },
+      error: (err) => {
+        console.error('Error converting lead to opportunity:', err);
       }
     });
   }
@@ -853,6 +1062,17 @@ export class LeadsComponent implements OnInit {
         this.loadLeads(); // refresh main table contacted state/followups
       },
       error: (err) => console.error('Error logging activity:', err)
+    });
+  }
+
+  onAddNote() {
+    if (!this.selectedLeadDetails || !this.newNoteText.trim()) return;
+    this.crmService.addLeadNote(this.selectedLeadDetails.id, this.newNoteText).subscribe({
+      next: () => {
+        this.newNoteText = '';
+        this.loadLeadDetails(this.selectedLeadDetails.id);
+      },
+      error: (err) => console.error('Error adding note:', err)
     });
   }
 

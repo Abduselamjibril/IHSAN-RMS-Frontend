@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-sidebar',
@@ -24,11 +25,72 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
               <span class="menu-text">Dashboard</span>
             </a>
           </li>
-          <li>
-            <a routerLink="/leads" routerLinkActive="active" class="menu-item">
+          
+          <li class="menu-group">
+            <a routerLink="/leads" routerLinkActive="active" class="menu-item" (click)="toggleLeads($event)">
               <span class="material-icons-outlined">people_outline</span>
               <span class="menu-text">Leads</span>
+              <span class="material-icons-outlined expand-icon" [style.transform]="isLeadsSubmenuOpen ? 'rotate(180deg)' : 'rotate(0)'">
+                expand_more
+              </span>
             </a>
+            
+            <ul class="submenu" [class.open]="isLeadsSubmenuOpen">
+              <li>
+                <a routerLink="/agents" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">people</span>
+                  <span class="menu-text">Sales Agents</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/lead-sources" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">share</span>
+                  <span class="menu-text">Lead Sources</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/log-interaction" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">history_edu</span>
+                  <span class="menu-text">Log Interaction</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/follow-ups" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">alarm</span>
+                  <span class="menu-text">Follow-ups</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/opportunities" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">trending_up</span>
+                  <span class="menu-text">Opportunities</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/forecasting" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">insights</span>
+                  <span class="menu-text">Forecasting</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/lead-tracking" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">timeline</span>
+                  <span class="menu-text">Lead Tracking</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/communications" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">chat_bubble_outline</span>
+                  <span class="menu-text">Communications</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/documents" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">description</span>
+                  <span class="menu-text">Documents</span>
+                </a>
+              </li>
+            </ul>
           </li>
 
           <!-- Collapsible Property Management Section -->
@@ -38,7 +100,7 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
               <span class="menu-text">Property Module</span>
               <span class="material-icons-outlined arrow-icon">{{ propertiesExpanded() ? 'expand_less' : 'expand_more' }}</span>
             </a>
-            <ul class="submenu" *ngIf="propertiesExpanded()">
+            <ul class="submenu" [class.open]="propertiesExpanded()">
               <li>
                 <a routerLink="/properties/dashboard" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">dashboard</span>
@@ -96,24 +158,6 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
             </ul>
           </li>
 
-          <li>
-            <a class="menu-item disabled">
-              <span class="material-icons-outlined">trending_up</span>
-              <span class="menu-text">Opportunities</span>
-            </a>
-          </li>
-          <li>
-            <a class="menu-item disabled">
-              <span class="material-icons-outlined">alarm</span>
-              <span class="menu-text">Follow-ups</span>
-            </a>
-          </li>
-          <li>
-            <a class="menu-item disabled">
-              <span class="material-icons-outlined">chat_bubble_outline</span>
-              <span class="menu-text">Communications</span>
-            </a>
-          </li>
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">person_outline</span>
@@ -206,6 +250,11 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
       margin-bottom: 6px;
     }
 
+    .menu-group {
+      display: flex;
+      flex-direction: column;
+    }
+
     .menu-item {
       display: flex;
       align-items: center;
@@ -215,6 +264,8 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
       color: #a0aec0;
       transition: var(--transition-fast);
       user-select: none;
+      cursor: pointer;
+      position: relative;
     }
 
     .menu-item:hover {
@@ -237,6 +288,50 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 
     .menu-item.active .material-icons-outlined {
       color: white;
+    }
+
+    .expand-icon {
+      margin-left: auto;
+      font-size: 18px;
+      color: #718096;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .menu-item:hover .expand-icon {
+      color: white;
+    }
+
+    .submenu {
+      list-style: none;
+      padding-left: 10px;
+      margin-left: 26px;
+      border-left: 1px dashed rgba(255, 255, 255, 0.12);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin 0.35s;
+    }
+
+    .submenu.open {
+      max-height: 500px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .submenu-item {
+      padding: 9px 12px;
+      font-size: 13px;
+      gap: 10px;
+      color: #94a3b8;
+    }
+
+    .submenu-item .material-icons-outlined {
+      font-size: 18px;
+    }
+
+    .submenu-item.active {
+      background-color: rgba(124, 58, 237, 0.12);
+      color: white;
+      box-shadow: none;
     }
 
     .menu-item.disabled {
@@ -311,15 +406,6 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
       font-size: 18px;
     }
 
-    .submenu {
-      list-style: none;
-      margin-left: 20px;
-      padding-left: 8px;
-      border-left: 1px dashed rgba(255, 255, 255, 0.1);
-      margin-top: 4px;
-      margin-bottom: 8px;
-    }
-
     .submenu-item {
       display: flex;
       align-items: center;
@@ -349,6 +435,10 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 export class SidebarComponent implements OnInit {
   private router = inject(Router);
   propertiesExpanded = signal(false);
+  
+  private manualClosed = false;
+  private manualOpened = false;
+  private lastUrl = '';
 
   ngOnInit() {
     // Auto-expand Property Module menu if loaded on a sub-route
@@ -364,5 +454,49 @@ export class SidebarComponent implements OnInit {
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
   }
-}
 
+  get isLeadsSubmenuOpen(): boolean {
+    const url = this.router.url;
+    const isLeadsUrl = url.includes('/leads') || 
+                        url.includes('/agents') || 
+                        url.includes('/lead-sources') || 
+                        url.includes('/follow-ups') ||
+                        url.includes('/opportunities') ||
+                        url.includes('/forecasting') ||
+                        url.includes('/communications') ||
+                        url.includes('/documents') ||
+                        url.includes('/lead-tracking') ||
+                        url.includes('/log-interaction');
+                        
+    if (this.manualClosed) {
+      return false;
+    }
+    if (this.manualOpened) {
+      return true;
+    }
+    return isLeadsUrl;
+  }
+
+  toggleLeads(event: MouseEvent) {
+    if (this.isLeadsSubmenuOpen) {
+      this.manualClosed = true;
+      this.manualOpened = false;
+    } else {
+      this.manualOpened = true;
+      this.manualClosed = false;
+    }
+  }
+
+  constructor() {
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe((event: NavigationEnd) => {
+      const url = event.urlAfterRedirects;
+      if (url !== this.lastUrl) {
+        this.manualClosed = false;
+        this.manualOpened = false;
+        this.lastUrl = url;
+      }
+    });
+  }
+}

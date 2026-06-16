@@ -21,6 +21,7 @@ import { LeadTrackingComponent } from './pages/lead-tracking/lead-tracking.compo
 import { LogInteractionComponent } from './pages/log-interaction/log-interaction.component';
 import { OpportunitiesComponent } from './pages/opportunities/opportunities.component';
 import { ForecastingComponent } from './pages/forecasting/forecasting.component';
+import { SegmentationComponent } from './pages/segmentation/segmentation.component';
 
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
@@ -48,6 +49,7 @@ export const routes: Routes = [
   { path: 'forecasting', component: ForecastingComponent },
   { path: 'communications', component: CommunicationsComponent },
   { path: 'documents', component: DocumentsComponent },
+  { path: 'segmentation', component: SegmentationComponent },
   { path: 'lead-tracking', component: LeadTrackingComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

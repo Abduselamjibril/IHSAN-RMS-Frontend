@@ -261,6 +261,40 @@ import { CrmService } from '../../services/crm.service';
       font-size: 0.8rem;
       font-weight: 600;
     }
+
+    /* Modal spacing fixes */
+    .modal-overlay {
+      position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+      background: rgba(15,23,42,0.5); z-index:60; padding: 1.5rem;
+    }
+    .modal-container {
+      width: 700px; max-width: 100%; background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 12px 30px rgba(2,6,23,0.25); border: 1px solid rgba(15,23,42,0.06);
+    }
+    .modal-header { padding: 18px 22px; border-bottom: 1px solid rgba(15,23,42,0.04); }
+    .modal-header h2 { margin:0; font-size:1.125rem; }
+    .header-icon-btn { background:transparent; border:none; padding:6px; border-radius:8px; }
+
+    .modal-body { padding: 18px 22px; }
+    .modal-form { display:block; }
+    .form-row { display:flex; gap:14px; }
+    .form-group { display:flex; flex-direction:column; gap:8px; margin-bottom:6px; }
+    .form-group label { font-size:0.88rem; color:#334155; }
+    .form-group input[type="text"], .form-group input[type="email"], .form-group input[type="date"] {
+      height:42px; padding:8px 12px; border-radius:8px; border:1px solid rgba(15,23,42,0.08); font-size:0.95rem;
+    }
+    .form-group input[type="checkbox"] { width:18px; height:18px; }
+    .form-group .margin-0 { margin:0; }
+
+    .modal-footer { padding: 14px 22px; border-top: 1px solid rgba(15,23,42,0.04); display:flex; justify-content:flex-end; gap:12px; }
+    .btn-primary { background:#5b46b8; color:#fff; border-radius:8px; padding:10px 14px; }
+    .btn-secondary { background:#fff; color:#0f172a; border:1px solid rgba(15,23,42,0.06); border-radius:8px; padding:10px 14px; }
+
+    @media (max-width:640px) {
+      .modal-container { width:100%; height:100%; border-radius:0; }
+      .form-row { flex-direction:column; }
+      .modal-body, .modal-header, .modal-footer { padding-left:14px; padding-right:14px; }
+    }
   `]
 })
 export class AgentsComponent implements OnInit {

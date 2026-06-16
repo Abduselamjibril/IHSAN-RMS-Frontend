@@ -133,12 +133,12 @@ import { CrmService } from '../../services/crm.service';
     </div>
 
     <!-- Create/Edit Modal Dialog -->
-    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-      <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()" role="dialog" aria-modal="true" aria-labelledby="leadSourceModalTitle">
+      <div class="modal-container" (click)="$event.stopPropagation()" tabindex="0">
         
         <div class="modal-header flex justify-between align-center">
-          <h2>{{ isEditMode ? 'Edit Lead Source' : 'Create New Lead Source' }}</h2>
-          <button class="header-icon-btn close-btn" (click)="closeModal()">
+          <h2 id="leadSourceModalTitle">{{ isEditMode ? 'Edit Lead Source' : 'Create New Lead Source' }}</h2>
+          <button class="header-icon-btn close-btn" (click)="closeModal()" aria-label="Close dialog">
             <span class="material-icons-outlined">close</span>
           </button>
         </div>
@@ -148,8 +148,9 @@ import { CrmService } from '../../services/crm.service';
             
             <!-- Source Name -->
             <div class="form-group">
-              <label>Source Name *</label>
+              <label for="sourceNameInput">Source Name *</label>
               <input 
+                id="sourceNameInput"
                 type="text" 
                 placeholder="e.g. Telegram Channel, TikTok Ads" 
                 [(ngModel)]="sourceForm.sourceName" 
@@ -160,8 +161,8 @@ import { CrmService } from '../../services/crm.service';
 
             <!-- Source Type -->
             <div class="form-group">
-              <label>Source Type *</label>
-              <select [(ngModel)]="sourceForm.sourceType" name="sourceType" required>
+              <label for="sourceTypeInput">Source Type *</label>
+              <select id="sourceTypeInput" [(ngModel)]="sourceForm.sourceType" name="sourceType" required>
                 <option value="Digital">Digital</option>
                 <option value="Social Media">Social Media</option>
                 <option value="Offline">Offline</option>
@@ -172,8 +173,9 @@ import { CrmService } from '../../services/crm.service';
 
             <!-- Description -->
             <div class="form-group">
-              <label>Description</label>
+              <label for="descriptionInput">Description</label>
               <textarea 
+                id="descriptionInput"
                 placeholder="Enter description or campaign details..." 
                 [(ngModel)]="sourceForm.description" 
                 name="description"
@@ -209,7 +211,64 @@ import { CrmService } from '../../services/crm.service';
       </div>
     </div>
   `,
-  styles: []
+  styles: [``,
+  `
+    .margin-y-4 { margin-top: 1.5rem; margin-bottom: 1.5rem; }
+    .margin-0 { margin: 0; }
+    .mt-4 { margin-top: 1rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .btn-danger-hover:hover {
+      background-color: #fecaca !important;
+      color: #dc2626 !important;
+      border-color: #f87171 !important;
+    }
+    .department-tag {
+      background-color: rgba(124, 58, 237, 0.08);
+      color: #7c3aed;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Modal spacing & styling (match Agents) */
+    .modal-overlay {
+      position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+      background: rgba(15,23,42,0.5); z-index:60; padding: 1.5rem;
+    }
+    .modal-container {
+      /* ensure dialog fits horizontally on all viewports */
+      width: min(720px, calc(100% - 64px));
+      max-width: 100%;
+      background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 12px 30px rgba(2,6,23,0.25); border: 1px solid rgba(15,23,42,0.06);
+    }
+    .modal-header { padding: 18px 22px; border-bottom: 1px solid rgba(15,23,42,0.04); }
+    .modal-header h2 { margin:0; font-size:1.125rem; }
+    .header-icon-btn { background:transparent; border:none; padding:6px; border-radius:8px; }
+
+    .modal-body { padding: 18px 22px; }
+    .modal-form { display:block; }
+    .form-row { display:flex; gap:14px; align-items:flex-start; }
+    .form-group { display:flex; flex-direction:column; gap:8px; margin-bottom:6px; flex:1; min-width:0; }
+    .form-group label { font-size:0.88rem; color:#334155; }
+    .form-group input[type="text"], .form-group textarea, .form-group select {
+      width:100%; height:42px; padding:8px 12px; border-radius:8px; border:1px solid rgba(15,23,42,0.08); font-size:0.95rem;
+      box-sizing: border-box;
+    }
+    .form-group textarea { height:auto; padding-top:10px; padding-bottom:10px; resize:vertical; }
+    .form-group input[type="checkbox"] { width:18px; height:18px; }
+
+    .modal-footer { padding: 14px 22px; border-top: 1px solid rgba(15,23,42,0.04); display:flex; justify-content:flex-end; gap:12px; }
+    .btn-primary { background:#5b46b8; color:#fff; border-radius:8px; padding:10px 14px; }
+    .btn-secondary { background:#fff; color:#0f172a; border:1px solid rgba(15,23,42,0.06); border-radius:8px; padding:10px 14px; }
+
+    @media (max-width:640px) {
+      .modal-container { width:100%; height:100%; border-radius:0; }
+      .form-row { flex-direction:column; }
+      .modal-body, .modal-header, .modal-footer { padding-left:14px; padding-right:14px; }
+    }
+  `]
 })
 export class LeadSourcesComponent implements OnInit {
   private crmService = inject(CrmService);

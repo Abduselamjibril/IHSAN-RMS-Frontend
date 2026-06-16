@@ -46,7 +46,7 @@ import { CrmService } from '../../services/crm.service';
         </div>
         <div class="metric-info">
           <span class="metric-label">Opportunities</span>
-          <span class="metric-value">87</span>
+          <span class="metric-value">{{ stats?.totalOpportunities ?? 0 }}</span>
           <span class="metric-trend text-green">
             <span class="material-icons-outlined arrow">arrow_upward</span>
             +12% <span class="trend-label">vs last month</span>
@@ -60,7 +60,7 @@ import { CrmService } from '../../services/crm.service';
         </div>
         <div class="metric-info">
           <span class="metric-label">Won Opportunities</span>
-          <span class="metric-value">23</span>
+          <span class="metric-value">{{ stats?.wonOpportunities ?? 0 }}</span>
           <span class="metric-trend text-green">
             <span class="material-icons-outlined arrow">arrow_upward</span>
             +35% <span class="trend-label">vs last month</span>
@@ -74,7 +74,7 @@ import { CrmService } from '../../services/crm.service';
         </div>
         <div class="metric-info">
           <span class="metric-label">Pipeline Value</span>
-          <span class="metric-value">ETB 45.6M</span>
+          <span class="metric-value">ETB {{ formatPipelineValue(stats?.pipelineValue ?? 0) }}</span>
           <span class="metric-trend text-green">
             <span class="material-icons-outlined arrow">arrow_upward</span>
             +22% <span class="trend-label">vs last month</span>
@@ -132,14 +132,7 @@ import { CrmService } from '../../services/crm.service';
               <circle class="donut-hole" cx="21" cy="21" r="15.91549430918954" fill="#fff"></circle>
               <circle class="donut-ring" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#e2e8f0" stroke-width="4.5"></circle>
               
-              <!-- Segment: Website (35%) -->
-              <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#4c3a93" stroke-width="4.5" stroke-dasharray="35 65" stroke-dashoffset="100"></circle>
-              <!-- Segment: Facebook (25%) -->
-              <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#3b82f6" stroke-width="4.5" stroke-dasharray="25 75" stroke-dashoffset="65"></circle>
-              <!-- Segment: Walk-in (15%) -->
-              <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#10b981" stroke-width="4.5" stroke-dasharray="15 85" stroke-dashoffset="40"></circle>
-              <!-- Segment: Other (25%) -->
-              <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#f59e0b" stroke-width="4.5" stroke-dasharray="25 75" stroke-dashoffset="25"></circle>
+              <circle *ngFor="let seg of getDonutSegments()" class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" [attr.stroke]="seg.color" stroke-width="4.5" [attr.stroke-dasharray]="seg.dasharray" [attr.stroke-dashoffset]="seg.dashoffset"></circle>
             </svg>
             <div class="donut-center-text">
               <span class="big-number">{{ stats?.totalLeads ?? 0 }}</span>
@@ -498,5 +491,32 @@ export class DashboardComponent implements OnInit {
       case 'Broker': return '#f59e0b';
       default: return '#9ca3af';
     }
+  }
+
+  formatPipelineValue(val: number): string {
+    if (val >= 1000000) {
+      return (val / 1000000).toFixed(1) + 'M';
+    } else if (val >= 1000) {
+      return (val / 1000).toFixed(1) + 'K';
+    }
+    return val.toString();
+  }
+
+  getDonutSegments() {
+    if (!this.stats || !this.stats.bySource || this.stats.totalLeads === 0) return [];
+    
+    let currentOffset = 100;
+    return this.stats.bySource.map((s: any) => {
+      const pct = Math.round((s.count / this.stats.totalLeads) * 100);
+      const dasharray = `${pct} ${100 - pct}`;
+      const dashoffset = currentOffset;
+      currentOffset -= pct;
+      return {
+        source: s.source,
+        color: this.getSourceColor(s.source),
+        dasharray,
+        dashoffset
+      };
+    });
   }
 }

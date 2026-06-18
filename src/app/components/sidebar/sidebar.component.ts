@@ -158,12 +158,65 @@ import { filter } from 'rxjs/operators';
             </ul>
           </li>
 
+          <!-- Collapsible Sales Management Section -->
           <li>
-            <a class="menu-item disabled">
-              <span class="material-icons-outlined">person_outline</span>
-              <span class="menu-text">Customers</span>
+            <a (click)="toggleSales()" class="menu-item cursor-pointer" [class.active-parent]="isSalesActive()">
+              <span class="material-icons-outlined">monetization_on</span>
+              <span class="menu-text">Sales Module</span>
+              <span class="material-icons-outlined arrow-icon">{{ salesExpanded() ? 'expand_less' : 'expand_more' }}</span>
             </a>
+            <ul class="submenu" [class.open]="salesExpanded()">
+              <li>
+                <a routerLink="/sales/dashboard" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">dashboard</span>
+                  <span class="menu-text">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/customers" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">people</span>
+                  <span class="menu-text">Customers</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/reservations" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">schedule</span>
+                  <span class="menu-text">Reservations</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/quotations" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">request_quote</span>
+                  <span class="menu-text">Quotations & Rules</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/bookings" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">book_online</span>
+                  <span class="menu-text">Bookings</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/contracts" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">gavel</span>
+                  <span class="menu-text">Contracts & Agrmts</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/installments" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">calendar_month</span>
+                  <span class="menu-text">Installments Ledger</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/sales/commissions" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">payments</span>
+                  <span class="menu-text">Commissions</span>
+                </a>
+              </li>
+            </ul>
           </li>
+
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">settings</span>
@@ -435,6 +488,7 @@ import { filter } from 'rxjs/operators';
 export class SidebarComponent implements OnInit {
   private router = inject(Router);
   propertiesExpanded = signal(false);
+  salesExpanded = signal(false);
   
   private manualClosed = false;
   private manualOpened = false;
@@ -445,14 +499,25 @@ export class SidebarComponent implements OnInit {
     if (this.router.url.includes('/properties')) {
       this.propertiesExpanded.set(true);
     }
+    if (this.router.url.includes('/sales')) {
+      this.salesExpanded.set(true);
+    }
   }
 
   toggleProperties() {
     this.propertiesExpanded.update(v => !v);
   }
 
+  toggleSales() {
+    this.salesExpanded.update(v => !v);
+  }
+
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
+  }
+
+  isSalesActive(): boolean {
+    return this.router.url.includes('/sales');
   }
 
   get isLeadsSubmenuOpen(): boolean {

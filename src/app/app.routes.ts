@@ -22,6 +22,16 @@ import { LogInteractionComponent } from './pages/log-interaction/log-interaction
 import { OpportunitiesComponent } from './pages/opportunities/opportunities.component';
 import { ForecastingComponent } from './pages/forecasting/forecasting.component';
 
+// Sales module imports
+import { SalesDashboardComponent } from './pages/sales/sales-dashboard.component';
+import { CustomersComponent } from './pages/sales/customers.component';
+import { ReservationsComponent } from './pages/sales/reservations.component';
+import { QuotationsComponent } from './pages/sales/quotations.component';
+import { BookingsComponent } from './pages/sales/bookings.component';
+import { ContractsComponent } from './pages/sales/contracts.component';
+import { InstallmentsComponent } from './pages/sales/installments.component';
+import { CommissionsComponent } from './pages/sales/commissions.component';
+
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
@@ -49,6 +59,16 @@ export const routes: Routes = [
   { path: 'communications', component: CommunicationsComponent },
   { path: 'documents', component: DocumentsComponent },
   { path: 'lead-tracking', component: LeadTrackingComponent },
+
+  // Sales module routes
+  { path: 'sales/dashboard', component: SalesDashboardComponent },
+  { path: 'sales/customers', component: CustomersComponent },
+  { path: 'sales/reservations', component: ReservationsComponent },
+  { path: 'sales/quotations', component: QuotationsComponent },
+  { path: 'sales/bookings', component: BookingsComponent },
+  { path: 'sales/contracts', component: ContractsComponent },
+  { path: 'sales/installments', component: InstallmentsComponent },
+  { path: 'sales/commissions', component: CommissionsComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },

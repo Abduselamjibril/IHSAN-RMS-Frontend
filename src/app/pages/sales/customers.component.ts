@@ -53,7 +53,7 @@ import { CrmService } from '../../services/crm.service';
 
       <!-- Customers Table -->
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Customer Name</th>
@@ -62,6 +62,7 @@ import { CrmService } from '../../services/crm.service';
               <th>Nationality</th>
               <th>Linked CRM Lead</th>
               <th>Created Date</th>
+              <th class="text-center" style="width: 100px;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -82,9 +83,19 @@ import { CrmService } from '../../services/crm.service';
                 <span *ngIf="!c.lead" class="text-secondary italic">Direct Customer</span>
               </td>
               <td>{{ c.createdAt | date:'mediumDate' }}</td>
+              <td>
+                <div class="flex justify-center gap-2">
+                  <button class="header-icon-btn edit-btn" title="Edit Customer" (click)="openEditModal(c)">
+                    <span class="material-icons-outlined" style="font-size: 18px; color: var(--brand-primary);">edit</span>
+                  </button>
+                  <button class="header-icon-btn delete-btn" title="Delete Customer" (click)="onDeleteCustomer(c.id, c.fullName)">
+                    <span class="material-icons-outlined" style="font-size: 18px; color: var(--color-lost);">delete</span>
+                  </button>
+                </div>
+              </td>
             </tr>
             <tr *ngIf="filteredCustomers.length === 0">
-              <td colspan="6" class="text-center py-6 text-secondary">
+              <td colspan="7" class="text-center py-6 text-secondary">
                 No customers registered yet.
               </td>
             </tr>
@@ -112,7 +123,7 @@ import { CrmService } from '../../services/crm.service';
 
             <!-- Full Name (Required) -->
             <div class="form-group flex flex-col">
-              <label>Full Customer Name <span class="text-danger" style="color: red;">*</span> [REQUIRED]</label>
+               <label>Full Customer Name <span class="text-danger" style="color: red;">*</span> [REQUIRED]</label>
               <input type="text" [(ngModel)]="newCustomer.fullName" name="fullName" required placeholder="Enter customer full name (e.g. John Doe)" />
             </div>
 
@@ -142,7 +153,7 @@ import { CrmService } from '../../services/crm.service';
                 <label>Link CRM Lead [OPTIONAL]</label>
                 <select [(ngModel)]="newCustomer.leadId" name="leadId" (change)="onLeadSelectChange()">
                   <option [value]="null">-- Select Lead to Auto-Fill & Link --</option>
-                  <option *ngFor="let l of leads" [value]="l.id">{{ l.fullName }} ({{ l.primaryPhone }})</option>
+                  <option *ngFor="let l of getAvailableLeads()" [value]="l.id">{{ l.fullName }} ({{ l.primaryPhone }})</option>
                 </select>
               </div>
             </div>
@@ -152,6 +163,68 @@ import { CrmService } from '../../services/crm.service';
               <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
               <button type="submit" class="btn btn-primary" [disabled]="!newCustomer.fullName || !newCustomer.primaryPhone">
                 Save Customer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Customer Modal -->
+    <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <h2>Edit Customer Profile</h2>
+          <button class="header-icon-btn close-btn" (click)="closeEditModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form class="modal-form" (submit)="onEditSubmit($event)">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+              Modify customer profile details. Modifying the linked lead is disabled to preserve audit integrity.
+            </p>
+
+            <!-- Full Name (Required) -->
+            <div class="form-group flex flex-col">
+              <label>Full Customer Name <span class="text-danger" style="color: red;">*</span> [REQUIRED]</label>
+              <input type="text" [(ngModel)]="editCustomer.fullName" name="fullName" required placeholder="Enter customer full name" />
+            </div>
+
+            <div class="form-row flex gap-3">
+              <!-- Primary Phone (Required) -->
+              <div class="form-group flex-1 flex flex-col">
+                <label>Primary Phone <span class="text-danger" style="color: red;">*</span> [REQUIRED]</label>
+                <input type="text" [(ngModel)]="editCustomer.primaryPhone" name="primaryPhone" required placeholder="e.g. +251911223344" />
+              </div>
+
+              <!-- Primary Email (Optional) -->
+              <div class="form-group flex-1 flex flex-col">
+                <label>Email Address [OPTIONAL]</label>
+                <input type="email" [(ngModel)]="editCustomer.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+              </div>
+            </div>
+
+            <div class="form-row flex gap-3">
+              <!-- Nationality (Optional) -->
+              <div class="form-group flex-1 flex flex-col">
+                <label>Nationality [OPTIONAL]</label>
+                <input type="text" [(ngModel)]="editCustomer.nationality" name="nationality" placeholder="e.g. Ethiopian" />
+              </div>
+
+              <!-- Link Lead (Read Only) -->
+              <div class="form-group flex-1 flex flex-col">
+                <label>Linked CRM Lead [LOCKED]</label>
+                <input type="text" [value]="editCustomer.leadName ? editCustomer.leadName : 'Direct Customer'" disabled style="background: rgba(255,255,255,0.05); color: var(--text-secondary);" />
+              </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="modal-footer flex justify-end gap-3" style="margin-top: 24px;">
+              <button type="button" class="btn btn-secondary" (click)="closeEditModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!editCustomer.fullName || !editCustomer.primaryPhone">
+                Save Changes
               </button>
             </div>
           </form>
@@ -180,6 +253,26 @@ import { CrmService } from '../../services/crm.service';
       font-size: 11px;
       font-weight: 600;
     }
+    .edit-btn, .delete-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .edit-btn:hover {
+      background: rgba(var(--brand-primary-rgb), 0.15);
+      border-color: var(--brand-primary);
+    }
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--color-lost);
+    }
   `]
 })
 export class CustomersComponent implements OnInit {
@@ -192,6 +285,7 @@ export class CustomersComponent implements OnInit {
 
   searchQuery = '';
   showCreateModal = false;
+  showEditModal = false;
   successMessage = '';
   errorMessage = '';
 
@@ -201,6 +295,15 @@ export class CustomersComponent implements OnInit {
     primaryEmail: '',
     nationality: '',
     leadId: null as number | null
+  };
+
+  editCustomer = {
+    id: 0,
+    fullName: '',
+    primaryPhone: '',
+    primaryEmail: '',
+    nationality: '',
+    leadName: ''
   };
 
   ngOnInit() {
@@ -225,6 +328,13 @@ export class CustomersComponent implements OnInit {
       },
       error: (err) => console.error('Error fetching leads', err)
     });
+  }
+
+  getAvailableLeads(): any[] {
+    const convertedLeadIds = this.customers
+      .filter(c => c.lead && c.lead.id)
+      .map(c => Number(c.lead.id));
+    return this.leads.filter(l => !convertedLeadIds.includes(Number(l.id)));
   }
 
   onSearchChange() {
@@ -266,6 +376,24 @@ export class CustomersComponent implements OnInit {
     this.showCreateModal = false;
   }
 
+  openEditModal(customer: any) {
+    this.showEditModal = true;
+    this.editCustomer = {
+      id: customer.id,
+      fullName: customer.fullName || '',
+      primaryPhone: customer.primaryPhone || '',
+      primaryEmail: customer.primaryEmail || '',
+      nationality: customer.nationality || '',
+      leadName: customer.lead ? `${customer.lead.fullName} (${customer.lead.leadCode})` : ''
+    };
+    this.successMessage = '';
+    this.errorMessage = '';
+  }
+
+  closeEditModal() {
+    this.showEditModal = false;
+  }
+
   onLeadSelectChange() {
     if (!this.newCustomer.leadId) return;
     const selectedLead = this.leads.find(l => l.id == this.newCustomer.leadId);
@@ -286,11 +414,56 @@ export class CustomersComponent implements OnInit {
         this.successMessage = `Customer ${res.fullName} registered successfully!`;
         this.loadCustomers();
         this.closeCreateModal();
+        setTimeout(() => this.successMessage = '', 5000);
       },
       error: (err) => {
         console.error('Error creating customer', err);
         this.errorMessage = err.error?.message || 'Failed to register customer.';
+        setTimeout(() => this.errorMessage = '', 5000);
       }
     });
+  }
+
+  onEditSubmit(event: Event) {
+    event.preventDefault();
+    if (!this.editCustomer.fullName || !this.editCustomer.primaryPhone) return;
+
+    const payload = {
+      fullName: this.editCustomer.fullName,
+      primaryPhone: this.editCustomer.primaryPhone,
+      primaryEmail: this.editCustomer.primaryEmail || null,
+      nationality: this.editCustomer.nationality || null
+    };
+
+    this.salesService.updateCustomer(this.editCustomer.id, payload).subscribe({
+      next: (res) => {
+        this.successMessage = `Customer ${res.fullName} updated successfully!`;
+        this.loadCustomers();
+        this.closeEditModal();
+        setTimeout(() => this.successMessage = '', 5000);
+      },
+      error: (err) => {
+        console.error('Error updating customer', err);
+        this.errorMessage = err.error?.message || 'Failed to update customer.';
+        setTimeout(() => this.errorMessage = '', 5000);
+      }
+    });
+  }
+
+  onDeleteCustomer(id: number, name: string) {
+    if (confirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`)) {
+      this.salesService.deleteCustomer(id).subscribe({
+        next: () => {
+          this.successMessage = `Customer "${name}" deleted successfully.`;
+          this.loadCustomers();
+          setTimeout(() => this.successMessage = '', 5000);
+        },
+        error: (err) => {
+          console.error('Error deleting customer', err);
+          this.errorMessage = err.error?.message || `Failed to delete customer "${name}".`;
+          setTimeout(() => this.errorMessage = '', 5000);
+        }
+      });
+    }
   }
 }

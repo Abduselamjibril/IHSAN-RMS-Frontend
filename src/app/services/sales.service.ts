@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class SalesService {
   private http = inject(HttpClient);
-  private apiBase = '/api/sales';
+  private apiBase = 'http://localhost:3000/api/sales';
 
   // --- Customers ---
   getCustomers(): Observable<any[]> {
@@ -20,6 +20,14 @@ export class SalesService {
 
   createCustomer(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/customers`, data);
+  }
+
+  updateCustomer(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/customers/${id}`, data);
+  }
+
+  deleteCustomer(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/customers/${id}`);
   }
 
   // --- Reservations ---
@@ -94,9 +102,20 @@ export class SalesService {
     return this.http.post<any>(`${this.apiBase}/contracts/${id}/document`, data);
   }
 
+  uploadContractDocumentFile(id: number, file: File, fileName: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileName', fileName);
+    return this.http.post<any>(`${this.apiBase}/contracts/${id}/document/upload`, formData);
+  }
+
+  deleteContractDocument(docId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/contracts/documents/${docId}`);
+  }
+
   // --- Installments ---
   getInstallmentPlans(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiBase}/installments/plan`); // plan maps to plans
+    return this.http.get<any[]>(`${this.apiBase}/installments/plans`);
   }
 
   generateInstallmentPlan(data: any): Observable<any> {

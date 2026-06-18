@@ -126,6 +126,18 @@ export class PropertiesService {
     return this.http.get<any>(`${this.apiBase}/unit-prices/promotions/active`);
   }
 
+  getPromotions(params?: any): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/unit-prices/promotions`, { params });
+  }
+
+  updatePromotion(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/unit-prices/promotions/${id}`, data);
+  }
+
+  deactivatePromotion(id: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiBase}/unit-prices/promotions/${id}/deactivate`, {});
+  }
+
   // --- Media & Floor Plans Upload ---
   uploadPropertyMedia(propertyId: number, file: File, options: { isFeatured?: boolean; displayOrder?: number; mediaType?: string } = {}): Observable<any> {
     const formData = new FormData();

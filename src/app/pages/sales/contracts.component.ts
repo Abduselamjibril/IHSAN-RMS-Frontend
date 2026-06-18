@@ -66,7 +66,7 @@ import { SalesService } from '../../services/sales.service';
     <!-- Sales Agreements Tab -->
     <div class="card glass-card" *ngIf="activeTab === 'agreements'">
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Agreement No</th>
@@ -107,7 +107,7 @@ import { SalesService } from '../../services/sales.service';
     <!-- Executed Contracts Tab -->
     <div class="card glass-card" *ngIf="activeTab === 'contracts'">
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Contract No</th>
@@ -140,9 +140,21 @@ import { SalesService } from '../../services/sales.service';
               <td>
                 <div class="flex flex-col gap-1">
                   <!-- Documents list -->
-                  <div *ngFor="let doc of c.documents" class="flex align-center gap-1 font-xs text-secondary">
-                    <span class="material-icons-outlined" style="font-size: 14px;">description</span>
-                    <span>{{ doc.fileName }}</span>
+                  <div *ngFor="let doc of c.documents" class="flex align-center justify-between gap-2 font-xs text-secondary" style="border-bottom: 1px dashed rgba(0,0,0,0.05); padding-bottom: 4px; margin-bottom: 4px;">
+                    <div class="flex align-center gap-1">
+                      <span class="material-icons-outlined" style="font-size: 14px;">description</span>
+                      <a [href]="getDownloadUrl(doc.filePath)" target="_blank" class="doc-link">
+                        {{ doc.fileName }}
+                      </a>
+                    </div>
+                    <button 
+                      type="button" 
+                      style="background: none; border: none; color: var(--color-lost); cursor: pointer; padding: 2px; display: inline-flex; align-items: center;"
+                      (click)="onDetachDocument(doc.id, doc.fileName)"
+                      title="Detach document"
+                    >
+                      <span class="material-icons-outlined" style="font-size: 14px;">close</span>
+                    </button>
                   </div>
                   <span *ngIf="!c.documents || c.documents.length === 0" class="text-secondary italic font-xs">No documents attached</span>
                 </div>
@@ -358,6 +370,15 @@ import { SalesService } from '../../services/sales.service';
     .badge-terminated { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
     .badge-suspended { background-color: rgba(100, 116, 139, 0.15); color: var(--text-secondary); }
     .badge-completed { background-color: rgba(76, 58, 147, 0.15); color: var(--brand-primary); }
+    .doc-link {
+      color: var(--brand-primary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .doc-link:hover {
+      text-decoration: underline !important;
+      opacity: 0.8;
+    }
   `]
 })
 export class ContractsComponent implements OnInit {
@@ -595,13 +616,17 @@ export class ContractsComponent implements OnInit {
         
         // If they had a file selected, upload it immediately
         if (this.selectedFile) {
-          const simulatedPath = `/uploads/contracts/${this.selectedFile.name}`;
-          this.salesService.uploadContractDocument(res.id, {
-            fileName: this.uploadDocFileName || this.selectedFile.name,
-            filePath: simulatedPath
-          }).subscribe({
+          this.salesService.uploadContractDocumentFile(
+            res.id,
+            this.selectedFile,
+            this.uploadDocFileName || this.selectedFile.name
+          ).subscribe({
             next: () => {
               this.loadContracts();
+            },
+            error: (err) => {
+              console.error('Error uploading contract document', err);
+              this.errorMessage = err.error?.message || 'Contract executed but document upload failed.';
             }
           });
         } else {
@@ -622,11 +647,11 @@ export class ContractsComponent implements OnInit {
     event.preventDefault();
     if (!this.selectedContract || !this.selectedFile) return;
 
-    const simulatedPath = `/uploads/contracts/${this.selectedFile.name}`;
-    this.salesService.uploadContractDocument(this.selectedContract.id, {
-      fileName: this.uploadDocFileName,
-      filePath: simulatedPath
-    }).subscribe({
+    this.salesService.uploadContractDocumentFile(
+      this.selectedContract.id,
+      this.selectedFile,
+      this.uploadDocFileName
+    ).subscribe({
       next: (res) => {
         this.successMessage = `Document attached successfully to contract ${this.selectedContract.contractNo}!`;
         this.loadContracts();
@@ -637,6 +662,27 @@ export class ContractsComponent implements OnInit {
         this.errorMessage = err.error?.message || 'Failed to attach document.';
       }
     });
+  }
+
+  onDetachDocument(docId: number, name: string) {
+    if (confirm(`Are you sure you want to detach the document "${name}"?`)) {
+      this.salesService.deleteContractDocument(docId).subscribe({
+        next: () => {
+          this.successMessage = `Document "${name}" detached successfully!`;
+          this.loadContracts();
+        },
+        error: (err) => {
+          console.error('Error detaching document', err);
+          this.errorMessage = err.error?.message || 'Failed to detach document.';
+        }
+      });
+    }
+  }
+
+  getDownloadUrl(filePath: string): string {
+    if (!filePath) return '#';
+    if (filePath.startsWith('http')) return filePath;
+    return `http://localhost:3000${filePath}`;
   }
 
   private formatDate(date: Date): string {

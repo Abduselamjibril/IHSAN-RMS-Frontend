@@ -13,7 +13,7 @@ import { PropertiesService } from '../../../services/properties.service';
         <h1>Pricing & Promotions</h1>
         <p>Valuation guidelines, unit pricing history, and sales discount rules</p>
       </div>
-      <div class="app-header-actions">
+      <div class="app-header-actions" *ngIf="activeTab === 'promotions'">
         <button class="btn btn-primary" (click)="openPromotionModal()">
           <span class="material-icons-outlined">tag</span>
           Launch Promotion
@@ -21,73 +21,67 @@ import { PropertiesService } from '../../../services/properties.service';
       </div>
     </header>
 
-    <!-- Filters Panel -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div class="flex justify-between align-center gap-3 flex-wrap">
-        <!-- Search box -->
-        <div class="search-box">
-          <span class="material-icons-outlined">search</span>
-          <input 
-            type="text" 
-            placeholder="Search by code or number..." 
-            [(ngModel)]="filters.search"
-            (ngModelChange)="onSearchChange()" 
-          />
-        </div>
-
-        <!-- Filter Selects -->
-        <div class="flex align-center gap-2 flex-wrap">
-          <select [(ngModel)]="filters.propertyId" (change)="onPropertyFilterChange()">
-            <option [value]="0">All Properties</option>
-            <option *ngFor="let p of propertiesList" [value]="p.id">{{ p.propertyName }}</option>
-          </select>
-
-          <select [(ngModel)]="filters.buildingId" (change)="onBuildingFilterChange()" [disabled]="!filters.propertyId">
-            <option [value]="0">All Buildings</option>
-            <option *ngFor="let b of filterBuildings" [value]="b.id">{{ b.buildingName }}</option>
-          </select>
-
-          <select [(ngModel)]="filters.floorId" (change)="loadPricingData()" [disabled]="!filters.buildingId">
-            <option [value]="0">All Floors</option>
-            <option *ngFor="let f of filterFloors" [value]="f.id">Floor {{ f.floorNumber }}</option>
-          </select>
-        </div>
-      </div>
+    <!-- Main Tabs Header -->
+    <div class="flex gap-4" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'pricing'" 
+        (click)="activeTab = 'pricing'"
+        style="padding: 10px 16px; font-weight: 600; font-size: 15px; border-bottom: 2px solid transparent; cursor: pointer; background: none; border: none; outline: none; transition: all 0.2s;"
+        [style.border-bottom-color]="activeTab === 'pricing' ? 'var(--brand-primary)' : 'transparent'"
+        [style.color]="activeTab === 'pricing' ? 'var(--brand-primary)' : 'var(--text-secondary)'"
+      >
+        Base Pricing & Inventory
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'promotions'" 
+        (click)="activeTab = 'promotions'"
+        style="padding: 10px 16px; font-weight: 600; font-size: 15px; border-bottom: 2px solid transparent; cursor: pointer; background: none; border: none; outline: none; transition: all 0.2s;"
+        [style.border-bottom-color]="activeTab === 'promotions' ? 'var(--brand-primary)' : 'transparent'"
+        [style.color]="activeTab === 'promotions' ? 'var(--brand-primary)' : 'var(--text-secondary)'"
+      >
+        Sales Promotions & Campaigns
+      </button>
     </div>
 
-    <div class="pricing-middle-row grid gap-6">
-      
-      <!-- List of active promotions -->
-      <div class="card">
-        <h3>Active Sales Promotions</h3>
-        <div class="promotions-deck mt-3 flex flex-col gap-3">
-          <div class="promo-card border bg-main p-3 relative" *ngFor="let promo of promotions">
-            <div class="flex justify-between align-center">
-              <div>
-                <div class="flex gap-2 align-center">
-                  <span class="badge badge-qualified">Active Promo</span>
-                  <span class="badge badge-indigo" *ngIf="promo.promotionType" style="font-size: 10px;">{{ promo.promotionType }}</span>
-                </div>
-                <h4 class="mt-1">{{ promo.promotionName }}</h4>
-                <p class="text-secondary font-xs mt-1">
-                  Discount: <strong class="text-indigo">{{ promo.discountPercentage }}%</strong>
-                  <span *ngIf="promo.fixedDiscountAmount"> | Fixed: <strong>ETB {{ promo.fixedDiscountAmount | number }}</strong></span>
-                  | Validity: {{ promo.startDate | date:'shortDate' }} to {{ promo.endDate | date:'shortDate' }}
-                </p>
-                <p class="text-secondary font-xs" *ngIf="promo.applicableProperty || promo.applicableUnitType">
-                  Scope: {{ promo.applicableProperty?.propertyName || 'All Properties' }} / {{ promo.applicableUnitType?.typeName || 'All Types' }}
-                </p>
-                <p class="text-secondary font-xs" *ngIf="promo.remarks" style="font-style: italic; margin-top: 4px;">{{ promo.remarks }}</p>
-              </div>
-            </div>
+    <!-- TAB 1: Base Pricing -->
+    <div *ngIf="activeTab === 'pricing'">
+      <!-- Filters Panel -->
+      <div class="card" style="margin-bottom: 24px; padding: 16px;">
+        <div class="flex justify-between align-center gap-3 flex-wrap">
+          <!-- Search box -->
+          <div class="search-box">
+            <span class="material-icons-outlined">search</span>
+            <input 
+              type="text" 
+              placeholder="Search by code or number..." 
+              [(ngModel)]="filters.search"
+              (ngModelChange)="onSearchChange()" 
+            />
           </div>
-          <div *ngIf="promotions.length === 0" class="text-center py-6 text-secondary italic font-sm">
-            No active discount campaigns running.
+
+          <!-- Filter Selects -->
+          <div class="flex align-center gap-2 flex-wrap">
+            <select [(ngModel)]="filters.propertyId" (change)="onPropertyFilterChange()">
+              <option [value]="0">All Properties</option>
+              <option *ngFor="let p of propertiesList" [value]="p.id">{{ p.propertyName }}</option>
+            </select>
+
+            <select [(ngModel)]="filters.buildingId" (change)="onBuildingFilterChange()" [disabled]="!filters.propertyId">
+              <option [value]="0">All Buildings</option>
+              <option *ngFor="let b of filterBuildings" [value]="b.id">{{ b.buildingName }}</option>
+            </select>
+
+            <select [(ngModel)]="filters.floorId" (change)="loadPricingData()" [disabled]="!filters.buildingId">
+              <option [value]="0">All Floors</option>
+              <option *ngFor="let f of filterFloors" [value]="f.id">Floor {{ f.floorNumber }}</option>
+            </select>
           </div>
         </div>
       </div>
 
-      <!-- Pricing ledger list -->
+      <!-- Pricing ledger list (Full width) -->
       <div class="card">
         <h3>Inventory Base Pricing</h3>
         <div class="table-container mt-3">
@@ -135,7 +129,138 @@ import { PropertiesService } from '../../../services/properties.service';
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- TAB 2: Promotions & Campaigns -->
+    <div *ngIf="activeTab === 'promotions'">
+      <!-- Sub-tabs header -->
+      <div class="flex justify-between align-center" style="margin-bottom: 20px; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 6px;">
+        <div class="flex gap-3">
+          <button 
+            class="tab-btn" 
+            [class.active]="activePromoTab === 'active'" 
+            (click)="activePromoTab = 'active'"
+            style="padding: 8px 12px; font-weight: 500; font-size: 14px; border-bottom: 2px solid transparent; cursor: pointer; background: none; border: none;"
+            [style.border-bottom-color]="activePromoTab === 'active' ? 'var(--brand-primary)' : 'transparent'"
+            [style.color]="activePromoTab === 'active' ? 'var(--brand-primary)' : 'var(--text-secondary)'"
+          >
+            Active Campaigns ({{ activePromotions.length }})
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activePromoTab === 'history'" 
+            (click)="activePromoTab = 'history'"
+            style="padding: 8px 12px; font-weight: 500; font-size: 14px; border-bottom: 2px solid transparent; cursor: pointer; background: none; border: none;"
+            [style.border-bottom-color]="activePromoTab === 'history' ? 'var(--brand-primary)' : 'transparent'"
+            [style.color]="activePromoTab === 'history' ? 'var(--brand-primary)' : 'var(--text-secondary)'"
+          >
+            Campaign History ({{ historyPromotions.length }})
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Campaigns Table -->
+      <div *ngIf="activePromoTab === 'active'" class="card">
+        <div class="table-container mt-3">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Campaign Name</th>
+                <th>Type</th>
+                <th>Discount</th>
+                <th>Validity</th>
+                <th>Scope</th>
+                <th>Remarks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let promo of activePromotions">
+                <td class="font-bold">{{ promo.promotionName }}</td>
+                <td>
+                  <span class="badge badge-indigo" *ngIf="promo.promotionType">{{ promo.promotionType }}</span>
+                  <span *ngIf="!promo.promotionType">-</span>
+                </td>
+                <td>
+                  <strong class="text-indigo">{{ promo.discountPercentage }}%</strong>
+                  <span *ngIf="promo.fixedDiscountAmount"><br><span style="font-size: 11px; color: var(--text-secondary);">Fixed: ETB {{ promo.fixedDiscountAmount | number }}</span></span>
+                </td>
+                <td>{{ promo.startDate | date:'shortDate' }} to {{ promo.endDate | date:'shortDate' }}</td>
+                <td>
+                  {{ promo.applicableProperty?.propertyName || 'All Properties' }}<br>
+                  <span style="font-size: 11px; color: var(--text-secondary);">{{ promo.applicableUnitType?.typeName || 'All Types' }}</span>
+                </td>
+                <td>{{ promo.remarks || '-' }}</td>
+                <td>
+                  <div class="flex gap-2">
+                    <button class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openEditPromotionModal(promo)">
+                      <span class="material-icons-outlined" style="font-size: 14px;">edit</span>
+                      Edit
+                    </button>
+                    <button class="btn btn-xs flex align-center gap-1" (click)="onDeactivatePromotion(promo.id)" style="background-color: var(--color-lost); border: 1px solid var(--color-lost); color: white;">
+                      <span class="material-icons-outlined" style="font-size: 14px;">power_settings_new</span>
+                      End
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="activePromotions.length === 0">
+                <td colspan="7" class="text-center py-6 text-secondary italic">
+                  No active discount campaigns running. Click "Launch Promotion" to start one.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Historical Campaigns Table -->
+      <div *ngIf="activePromoTab === 'history'" class="card">
+        <div class="table-container mt-3">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Campaign Name</th>
+                <th>Type</th>
+                <th>Discount</th>
+                <th>Validity</th>
+                <th>Scope</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let promo of historyPromotions">
+                <td class="font-bold">{{ promo.promotionName }}</td>
+                <td>
+                  <span class="badge badge-indigo" *ngIf="promo.promotionType">{{ promo.promotionType }}</span>
+                  <span *ngIf="!promo.promotionType">-</span>
+                </td>
+                <td>
+                  <strong class="text-indigo">{{ promo.discountPercentage }}%</strong>
+                  <span *ngIf="promo.fixedDiscountAmount"><br><span style="font-size: 11px; color: var(--text-secondary);">Fixed: ETB {{ promo.fixedDiscountAmount | number }}</span></span>
+                </td>
+                <td>{{ promo.startDate | date:'shortDate' }} to {{ promo.endDate | date:'shortDate' }}</td>
+                <td>
+                  {{ promo.applicableProperty?.propertyName || 'All Properties' }}<br>
+                  <span style="font-size: 11px; color: var(--text-secondary);">{{ promo.applicableUnitType?.typeName || 'All Types' }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class.badge-lost]="!promo.isActive" [class.badge-qualified]="promo.isActive" style="background-color: #6b7280; color: white;">
+                    {{ promo.isActive ? 'Expired' : 'Deactivated' }}
+                  </span>
+                </td>
+                <td>{{ promo.remarks || '-' }}</td>
+              </tr>
+              <tr *ngIf="historyPromotions.length === 0">
+                <td colspan="7" class="text-center py-6 text-secondary italic">
+                  No historical campaigns.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Set Price Modal -->
@@ -178,23 +303,10 @@ import { PropertiesService } from '../../../services/properties.service';
               </div>
               <div class="form-group flex-1 flex flex-col">
                 <label>Currency</label>
-                <input type="text" [(ngModel)]="newPrice.currencyCode" name="currency" />
-              </div>
-            </div>
-            <div class="form-row flex gap-3">
-              <div class="form-group flex-1 flex flex-col">
-                <label>Effective From <span class="text-danger" style="color: red;">*</span></label>
-                <input type="date" [(ngModel)]="newPrice.effectiveFrom" name="effFrom" required />
-              </div>
-              <div class="form-group flex-1 flex flex-col">
-                <label>Effective To</label>
-                <input type="date" [(ngModel)]="newPrice.effectiveTo" name="effTo" />
-              </div>
-            </div>
-            <div class="form-row flex gap-3">
-              <div class="form-group flex-1 flex align-center gap-2">
-                <input type="checkbox" [(ngModel)]="newPrice.isNegotiable" name="negotiable" id="chkNegotiable" />
-                <label for="chkNegotiable">Price is Negotiable</label>
+                <select [(ngModel)]="newPrice.currencyCode" name="currency">
+                  <option value="ETB">ETB (Ethiopian Birr)</option>
+                  <option value="USD">USD (US Dollar)</option>
+                </select>
               </div>
             </div>
             <div class="form-group flex flex-col">
@@ -282,20 +394,110 @@ import { PropertiesService } from '../../../services/properties.service';
         </div>
       </div>
     </div>
+
+    <!-- Edit Promotion Modal -->
+    <div class="modal-overlay" *ngIf="showEditPromotionModal" (click)="closeEditPromotionModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <h2>Edit Sales Promotion</h2>
+          <button class="header-icon-btn close-btn" (click)="closeEditPromotionModal()"><span class="material-icons-outlined">close</span></button>
+        </div>
+        <div class="modal-body" *ngIf="editPromotion">
+          <form class="modal-form" (submit)="onSubmitEditPromotion($event)">
+            <div class="form-group flex flex-col">
+              <label>Campaign Name <span class="text-danger" style="color: red;">*</span></label>
+              <input type="text" [(ngModel)]="editPromotion.promotionName" name="editPName" required />
+            </div>
+            <div class="form-group flex flex-col">
+              <label>Promotion Type</label>
+              <select [(ngModel)]="editPromotion.promotionType" name="editPType">
+                <option value="">Select Type</option>
+                <option value="Seasonal">Seasonal</option>
+                <option value="Early Bird">Early Bird</option>
+                <option value="Bulk Purchase">Bulk Purchase</option>
+                <option value="Clearance">Clearance</option>
+                <option value="Special Event">Special Event</option>
+              </select>
+            </div>
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Discount Percentage <span class="text-danger" style="color: red;">*</span></label>
+                <input type="number" [(ngModel)]="editPromotion.discountPercentage" name="editPPercent" required min="0" max="100" />
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label>Fixed Discount Amount (ETB)</label>
+                <input type="number" [(ngModel)]="editPromotion.fixedDiscountAmount" name="editPFixedAmt" placeholder="0" />
+              </div>
+            </div>
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Start Date <span class="text-danger" style="color: red;">*</span></label>
+                <input type="date" [(ngModel)]="editPromotion.startDate" name="editPStart" required />
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label>End Date <span class="text-danger" style="color: red;">*</span></label>
+                <input type="date" [(ngModel)]="editPromotion.endDate" name="editPEnd" required />
+              </div>
+            </div>
+            <div class="form-row flex gap-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label>Applicable Property</label>
+                <select [(ngModel)]="editPromotion.applicablePropertyId" name="editPPropId">
+                  <option [value]="0">All Properties</option>
+                  <option *ngFor="let p of propertiesList" [value]="p.id">{{ p.propertyName }}</option>
+                </select>
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label>Applicable Unit Type</label>
+                <select [(ngModel)]="editPromotion.applicableUnitTypeId" name="editPTypeId">
+                  <option [value]="0">All Types</option>
+                  <option *ngFor="let t of unitTypes" [value]="t.id">{{ t.typeName }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group flex flex-col">
+              <label>Remarks</label>
+              <textarea [(ngModel)]="editPromotion.remarks" name="editPromoRemarks" rows="2"></textarea>
+            </div>
+            <div class="modal-footer flex justify-end gap-3">
+              <button type="button" class="btn btn-secondary" (click)="closeEditPromotionModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!editPromotion.promotionName || !editPromotion.discountPercentage">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
-    .pricing-middle-row {
+    .promotions-deck {
       display: grid;
-      grid-template-columns: 1fr 2fr;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .tab-btn {
+      border: none;
+      background: none;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+    }
+    .tab-btn:hover {
+      color: var(--brand-primary) !important;
+      opacity: 0.9;
     }
     .mt-1 { margin-top: 4px; }
+    .mt-2 { margin-top: 8px; }
     .mt-3 { margin-top: 12px; }
+    .mt-4 { margin-top: 16px; }
     .flex-wrap { flex-wrap: wrap; }
   `]
 })
 export class PricingComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);
+
+  activeTab: 'pricing' | 'promotions' = 'pricing';
+  activePromoTab: 'active' | 'history' = 'active';
 
   units: any[] = [];
   totalUnits = 0;
@@ -318,6 +520,7 @@ export class PricingComponent implements OnInit {
   // Modal forms states
   showPriceModal = false;
   showPromotionModal = false;
+  showEditPromotionModal = false;
 
   selectedUnit: any = null;
   newPrice = {
@@ -346,6 +549,8 @@ export class PricingComponent implements OnInit {
     remarks: ''
   };
 
+  editPromotion: any = null;
+
   unitTypes: any[] = [];
 
   searchTimeout: any;
@@ -354,6 +559,18 @@ export class PricingComponent implements OnInit {
     this.loadProperties();
     this.loadPricingData();
     this.loadUnitTypes();
+  }
+
+  get activePromotions(): any[] {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date(todayStr);
+    return this.promotions.filter(p => p.isActive && (!p.endDate || new Date(p.endDate) >= today));
+  }
+
+  get historyPromotions(): any[] {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date(todayStr);
+    return this.promotions.filter(p => !p.isActive || (p.endDate && new Date(p.endDate) < today));
   }
 
   loadProperties() {
@@ -394,7 +611,7 @@ export class PricingComponent implements OnInit {
       error: (err) => console.error('Error loading units list:', err)
     });
 
-    this.propertiesService.getActivePromotions().subscribe({
+    this.propertiesService.getPromotions().subscribe({
       next: (res) => {
         this.promotions = res ?? [];
         this.cdr.detectChanges();
@@ -472,10 +689,12 @@ export class PricingComponent implements OnInit {
     this.showPriceModal = true;
     this.cdr.detectChanges();
   }
+
   closePriceModal() { 
     this.showPriceModal = false; 
     this.cdr.detectChanges();
   }
+
   onSubmitPrice(event: Event) {
     event.preventDefault();
     if (!this.selectedUnit) return;
@@ -488,8 +707,8 @@ export class PricingComponent implements OnInit {
       discountPercentage: +this.newPrice.discountPercentage || 0,
       finalPrice: this.newPrice.finalPrice ? +this.newPrice.finalPrice : undefined,
       currencyCode: this.newPrice.currencyCode || 'ETB',
-      effectiveFrom: this.newPrice.effectiveFrom ? new Date(this.newPrice.effectiveFrom) : new Date(),
-      effectiveTo: this.newPrice.effectiveTo ? new Date(this.newPrice.effectiveTo) : undefined,
+      effectiveFrom: this.newPrice.effectiveFrom || new Date().toISOString().split('T')[0],
+      effectiveTo: this.newPrice.effectiveTo || undefined,
       isNegotiable: this.newPrice.isNegotiable,
       isActive: true,
       remarks: this.newPrice.remarks || undefined
@@ -519,10 +738,12 @@ export class PricingComponent implements OnInit {
     this.showPromotionModal = true;
     this.cdr.detectChanges();
   }
+
   closePromotionModal() { 
     this.showPromotionModal = false; 
     this.cdr.detectChanges();
   }
+
   onSubmitPromotion(event: Event) {
     event.preventDefault();
     const payload: any = {
@@ -549,5 +770,64 @@ export class PricingComponent implements OnInit {
       },
       error: (err) => console.error('Error launching promotion:', err)
     });
+  }
+
+  openEditPromotionModal(promo: any) {
+    this.editPromotion = {
+      id: promo.id,
+      promotionName: promo.promotionName,
+      promotionType: promo.promotionType || '',
+      discountPercentage: promo.discountPercentage || 0,
+      fixedDiscountAmount: promo.fixedDiscountAmount || null,
+      startDate: promo.startDate ? new Date(promo.startDate).toISOString().split('T')[0] : '',
+      endDate: promo.endDate ? new Date(promo.endDate).toISOString().split('T')[0] : '',
+      applicablePropertyId: promo.applicableProperty?.id || 0,
+      applicableUnitTypeId: promo.applicableUnitType?.id || 0,
+      remarks: promo.remarks || ''
+    };
+    this.showEditPromotionModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeEditPromotionModal() {
+    this.showEditPromotionModal = false;
+    this.editPromotion = null;
+    this.cdr.detectChanges();
+  }
+
+  onSubmitEditPromotion(event: Event) {
+    event.preventDefault();
+    if (!this.editPromotion) return;
+
+    const payload: any = {
+      promotionName: this.editPromotion.promotionName,
+      promotionType: this.editPromotion.promotionType || null,
+      discountPercentage: +this.editPromotion.discountPercentage,
+      fixedDiscountAmount: this.editPromotion.fixedDiscountAmount ? +this.editPromotion.fixedDiscountAmount : null,
+      startDate: new Date(this.editPromotion.startDate),
+      endDate: new Date(this.editPromotion.endDate),
+      applicablePropertyId: +this.editPromotion.applicablePropertyId || null,
+      applicableUnitTypeId: +this.editPromotion.applicableUnitTypeId || null,
+      remarks: this.editPromotion.remarks || null
+    };
+
+    this.propertiesService.updatePromotion(this.editPromotion.id, payload).subscribe({
+      next: () => {
+        this.closeEditPromotionModal();
+        this.loadPricingData();
+      },
+      error: (err) => console.error('Error updating promotion:', err)
+    });
+  }
+
+  onDeactivatePromotion(id: number) {
+    if (confirm('Are you sure you want to deactivate (kill) this campaign immediately? This action is instant and cannot be undone.')) {
+      this.propertiesService.deactivatePromotion(id).subscribe({
+        next: () => {
+          this.loadPricingData();
+        },
+        error: (err) => console.error('Error deactivating promotion:', err)
+      });
+    }
   }
 }

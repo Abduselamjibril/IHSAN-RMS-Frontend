@@ -63,7 +63,7 @@ import { CrmService } from '../../services/crm.service';
     <!-- Commission Ledger Tab -->
     <div class="card glass-card" *ngIf="activeTab === 'ledger'">
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Payout ID</th>
@@ -108,7 +108,7 @@ import { CrmService } from '../../services/crm.service';
     <!-- Payout Rules Tab -->
     <div class="card glass-card" *ngIf="activeTab === 'rules'">
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Rule Name</th>

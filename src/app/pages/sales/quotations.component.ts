@@ -86,7 +86,7 @@ interface QuotationItemRow {
       </div>
 
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Quote No</th>
@@ -147,7 +147,7 @@ interface QuotationItemRow {
     <!-- Discount Requests Tab Content -->
     <div class="card glass-card" *ngIf="activeTab === 'discounts'">
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Request ID</th>
@@ -336,27 +336,39 @@ interface QuotationItemRow {
                 </button>
               </div>
 
+              <!-- Item Column Headers -->
+              <div class="flex gap-2 align-center" style="margin-bottom: 6px; font-size: 11px; font-weight: 600; color: var(--text-secondary); padding: 0 4px;">
+                <div style="flex: 3;">Description *</div>
+                <div style="flex: 1;">Qty *</div>
+                <div style="flex: 2;">Unit Price (ETB) *</div>
+                <div style="flex: 2;">Line Total (ETB)</div>
+                <div style="width: 38px;" class="text-center">Action</div>
+              </div>
+
               <div class="flex flex-col gap-2">
-                <div class="flex gap-2 align-center" *ngFor="let item of itemRows; let idx = index">
+                <div class="flex gap-2 align-center" *ngFor="let item of itemRows; let idx = index" style="width: 100%;">
                   <!-- Description * -->
-                  <div style="flex: 3;" class="flex flex-col">
-                    <input type="text" [(ngModel)]="item.description" name="item_desc_{{idx}}" placeholder="Description (e.g. Unit base price, parking block)" required style="padding: 6px 10px;" />
+                  <div style="flex: 3; min-width: 0;">
+                    <input type="text" [(ngModel)]="item.description" name="item_desc_{{idx}}" placeholder="e.g. Unit base price" required style="padding: 8px 10px; width: 100%; box-sizing: border-box;" />
                   </div>
                   <!-- Quantity * -->
-                  <div style="flex: 1;" class="flex flex-col">
-                    <input type="number" [(ngModel)]="item.quantity" name="item_qty_{{idx}}" placeholder="Qty" required (ngModelChange)="onItemRowChange(idx)" style="padding: 6px 10px;" />
+                  <div style="flex: 1; min-width: 0;">
+                    <input type="number" [(ngModel)]="item.quantity" name="item_qty_{{idx}}" placeholder="Qty" required (ngModelChange)="onItemRowChange(idx)" style="padding: 8px 10px; width: 100%; box-sizing: border-box;" />
                   </div>
                   <!-- Unit Price * -->
-                  <div style="flex: 2;" class="flex flex-col">
-                    <input type="number" [(ngModel)]="item.unitPrice" name="item_price_{{idx}}" placeholder="Unit Price (ETB)" required (ngModelChange)="onItemRowChange(idx)" style="padding: 6px 10px;" />
+                  <div style="flex: 2; min-width: 0;">
+                    <input type="number" [(ngModel)]="item.unitPrice" name="item_price_{{idx}}" placeholder="Price" required (ngModelChange)="onItemRowChange(idx)" style="padding: 8px 10px; width: 100%; box-sizing: border-box;" />
                   </div>
                   <!-- Line Total * -->
-                  <div style="flex: 2;" class="flex flex-col">
-                    <input type="number" [value]="item.amount" readonly style="padding: 6px 10px; background-color: var(--bg-main);" />
+                  <div style="flex: 2; min-width: 0;">
+                    <input type="number" [value]="item.amount" readonly style="padding: 8px 10px; width: 100%; box-sizing: border-box; background-color: var(--bg-main);" />
                   </div>
-                  <button type="button" class="btn btn-secondary" style="padding: 6px 8px; color: var(--color-lost);" (click)="removeItemRow(idx)" [disabled]="itemRows.length <= 1">
-                    <span class="material-icons-outlined font-sm">delete</span>
-                  </button>
+                  <!-- Delete Action Button -->
+                  <div style="width: 38px; display: flex; justify-content: center;">
+                    <button type="button" class="btn btn-secondary" style="padding: 0; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--color-lost); border-color: rgba(239, 68, 68, 0.2);" (click)="removeItemRow(idx)" [disabled]="itemRows.length <= 1">
+                      <span class="material-icons-outlined font-sm" style="font-size: 18px;">delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -527,7 +539,7 @@ export class QuotationsComponent implements OnInit {
 
   loadProperties() {
     this.propertiesService.getProperties().subscribe({
-      next: (res) => this.properties = res,
+      next: (res) => this.properties = res.items || res,
       error: (err) => console.error('Error fetching properties', err)
     });
   }

@@ -51,7 +51,7 @@ import { PropertiesService } from '../../services/properties.service';
       </div>
 
       <div class="table-container">
-        <table>
+        <table class="leads-table">
           <thead>
             <tr>
               <th>Res. Code</th>
@@ -320,7 +320,7 @@ export class ReservationsComponent implements OnInit {
 
   loadProperties() {
     this.propertiesService.getProperties().subscribe({
-      next: (res) => this.properties = res,
+      next: (res) => this.properties = res.items || res,
       error: (err) => console.error('Error fetching properties', err)
     });
   }

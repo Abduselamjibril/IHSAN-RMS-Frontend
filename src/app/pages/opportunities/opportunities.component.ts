@@ -2,11 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-opportunities',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <header class="app-header">
       <div class="app-title-section">
@@ -237,6 +238,14 @@ import { CrmService } from '../../services/crm.service';
             </div>
           </div>
 
+          <!-- View Original Lead Link -->
+          <div class="drawer-section" style="margin-bottom: 16px;">
+            <a routerLink="/leads" [queryParams]="{ search: selectedOppDetails?.lead?.leadCode }" class="btn btn-secondary flex align-center justify-center gap-2" style="width: 100%; padding: 10px; color: var(--brand-primary); border-color: var(--brand-primary);">
+              <span class="material-icons-outlined">person</span>
+              View Original Lead: <strong>{{ selectedOppDetails?.lead?.leadCode }}</strong>
+            </a>
+          </div>
+
           <!-- Opportunity Profile Grid -->
           <div class="drawer-section">
             <h3>Deal Information</h3>
@@ -311,6 +320,20 @@ import { CrmService } from '../../services/crm.service';
                 <input type="text" placeholder="Subject (e.g. Completed site tour)" [(ngModel)]="newActivity.subject" />
               </div>
               <textarea placeholder="Write interaction outcome notes here..." [(ngModel)]="newActivity.description" rows="3"></textarea>
+              
+              <!-- Next Action Followup -->
+              <div class="followup-scheduling flex align-center justify-between gap-3 margin-y-2">
+                <div class="flex align-center gap-2">
+                  <input type="checkbox" id="scheduleFollowup" [(ngModel)]="scheduleFollowup" />
+                  <label for="scheduleFollowup">Schedule next follow-up action</label>
+                </div>
+                <input 
+                  type="datetime-local" 
+                  *ngIf="scheduleFollowup" 
+                  [(ngModel)]="newActivity.nextActionDate" 
+                />
+              </div>
+
               <div class="flex justify-end gap-2 mt-2">
                 <button class="btn btn-primary btn-sm" (click)="onLogActivity()">Log Activity</button>
               </div>
@@ -445,8 +468,10 @@ export class OpportunitiesComponent implements OnInit {
     subject: '',
     description: '',
     performedBy: 1,
-    outcome: ''
+    outcome: '',
+    nextActionDate: ''
   };
+  scheduleFollowup = false;
   newNoteText = '';
 
   // Close Lost modal overlay
@@ -456,9 +481,16 @@ export class OpportunitiesComponent implements OnInit {
     remarks: ''
   };
 
+  private route = inject(ActivatedRoute);
+
   ngOnInit() {
-    this.loadMetadata();
-    this.loadOpportunities();
+    this.route.queryParams.subscribe(params => {
+      if (params['search']) {
+        this.filters.search = params['search'];
+      }
+      this.loadMetadata();
+      this.loadOpportunities();
+    });
   }
 
   loadMetadata() {
@@ -476,6 +508,11 @@ export class OpportunitiesComponent implements OnInit {
         this.opportunities = res.data;
         this.totalOpportunities = res.total;
         this.calculateStats();
+
+        // Auto-open drawer if search finds exactly one opportunity
+        if (this.filters.search && this.opportunities.length === 1) {
+          this.openDetailsDrawer(this.opportunities[0]);
+        }
       },
       error: (err) => console.error('Error fetching opportunities:', err)
     });
@@ -623,15 +660,22 @@ export class OpportunitiesComponent implements OnInit {
   onLogActivity() {
     if (!this.selectedOppDetails || !this.newActivity.subject) return;
 
-    this.crmService.addOpportunityActivity(this.selectedOppDetails.id, this.newActivity).subscribe({
+    const payload: any = { ...this.newActivity };
+    if (!this.scheduleFollowup) {
+      delete payload.nextActionDate;
+    }
+
+    this.crmService.addOpportunityActivity(this.selectedOppDetails.id, payload).subscribe({
       next: () => {
         this.newActivity = {
           activityType: 'Meeting',
           subject: '',
           description: '',
           performedBy: 1,
-          outcome: ''
+          outcome: '',
+          nextActionDate: ''
         };
+        this.scheduleFollowup = false;
         this.loadOpportunityDetails(this.selectedOppDetails.id);
       },
       error: (err) => console.error('Error logging activity:', err)

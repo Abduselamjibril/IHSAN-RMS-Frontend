@@ -2,11 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-leads',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <header class="app-header">
       <div class="app-title-section">
@@ -214,6 +215,14 @@ import { CrmService } from '../../services/crm.service';
               <span class="material-icons-outlined">trending_up</span>
               Convert to Opportunity
             </button>
+          </div>
+
+          <!-- View Converted Opportunity Link if Converted -->
+          <div class="drawer-section" *ngIf="selectedLeadDetails?.opportunity" style="margin-bottom: 16px;">
+            <a routerLink="/opportunities" [queryParams]="{ search: selectedLeadDetails?.opportunity?.opportunityCode }" class="btn btn-secondary flex align-center justify-center gap-2" style="width: 100%; padding: 10px; color: var(--brand-primary); border-color: var(--brand-primary);">
+              <span class="material-icons-outlined">trending_up</span>
+              View Converted Opportunity: <strong>{{ selectedLeadDetails?.opportunity?.opportunityCode }}</strong>
+            </a>
           </div>
 
           <!-- Contact Profile -->
@@ -774,9 +783,16 @@ export class LeadsComponent implements OnInit {
   scheduleFollowup = false;
   newNoteText = '';
 
+  private route = inject(ActivatedRoute);
+
   ngOnInit() {
-    this.loadMetadata();
-    this.loadLeads();
+    this.route.queryParams.subscribe(params => {
+      if (params['search']) {
+        this.filters.search = params['search'];
+      }
+      this.loadMetadata();
+      this.loadLeads();
+    });
   }
 
   loadMetadata() {
@@ -793,6 +809,11 @@ export class LeadsComponent implements OnInit {
       next: (res) => {
         this.leads = res.data;
         this.totalLeads = res.total;
+
+        // Auto-open drawer if search finds exactly one lead
+        if (this.filters.search && this.leads.length === 1) {
+          this.openDetailsDrawer(this.leads[0]);
+        }
       },
       error: (err) => console.error('Error loading leads:', err)
     });

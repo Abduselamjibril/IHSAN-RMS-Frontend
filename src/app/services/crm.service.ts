@@ -203,4 +203,79 @@ export class CrmService {
   getOpportunityMetadata(): Observable<any> {
     return this.http.get<any>(`${this.apiBase}/opportunities/metadata`);
   }
+
+  // Follow-up Reminders Advanced APIs
+  snoozeReminder(id: number, minutes: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/agents/reminders/${id}/snooze`, { minutes });
+  }
+
+  rescheduleReminder(id: number, datetime: string): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/agents/reminders/${id}/reschedule`, { datetime });
+  }
+
+  triggerEscalationsCheck(): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/agents/reminders/cron/check-escalations`, {});
+  }
+
+  // Segmentation APIs
+  getSegments(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/segments`);
+  }
+
+  getSegmentDetails(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/segments/${id}`);
+  }
+
+  createSegment(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/segments`, payload);
+  }
+
+  deleteSegment(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/segments/${id}`);
+  }
+
+  recalculateSegment(id: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/segments/${id}/recalculate`, {});
+  }
+
+  getTags(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/segments/tags`);
+  }
+
+  createTag(tag: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/segments/tags`, tag);
+  }
+
+  // Document Management APIs
+  getCustomerDocuments(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.category && filters.category !== 'all') params = params.set('category', filters.category);
+    if (filters.leadId && +filters.leadId !== 0) params = params.set('leadId', filters.leadId.toString());
+    return this.http.get<any>(`${this.apiBase}/documents`, { params });
+  }
+
+  getDocumentDetails(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/documents/${id}`);
+  }
+
+  getDocumentVersions(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/documents/${id}/versions`);
+  }
+
+  getDocumentAccessLogs(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/documents/${id}/access-logs`);
+  }
+
+  uploadCustomerDocument(leadId: number, formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/documents/${leadId}`, formData);
+  }
+
+  uploadNewDocumentVersion(id: number, formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/documents/${id}/version`, formData);
+  }
+
+  triggerDocumentExpiryCheck(): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/documents/cron/check-expiry`, {});
+  }
 }

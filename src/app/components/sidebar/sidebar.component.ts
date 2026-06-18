@@ -20,22 +20,25 @@ import { filter } from 'rxjs/operators';
       <nav class="sidebar-menu">
         <ul>
           <li>
-            <a routerLink="/dashboard" routerLinkActive="active" class="menu-item">
-              <span class="material-icons-outlined">dashboard</span>
-              <span class="menu-text">Dashboard</span>
-            </a>
-          </li>
-          
-          <li class="menu-group">
-            <a routerLink="/leads" routerLinkActive="active" class="menu-item" (click)="toggleLeads($event)">
+            <a (click)="toggleLeads($event)" class="menu-item cursor-pointer" [class.active-parent]="isLeadsActive()">
               <span class="material-icons-outlined">people_outline</span>
-              <span class="menu-text">Leads</span>
-              <span class="material-icons-outlined expand-icon" [style.transform]="isLeadsSubmenuOpen ? 'rotate(180deg)' : 'rotate(0)'">
-                expand_more
-              </span>
+              <span class="menu-text">Leads Module</span>
+              <span class="material-icons-outlined arrow-icon">{{ isLeadsSubmenuOpen ? 'expand_less' : 'expand_more' }}</span>
             </a>
             
             <ul class="submenu" [class.open]="isLeadsSubmenuOpen">
+              <li>
+                <a routerLink="/dashboard" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">dashboard</span>
+                  <span class="menu-text">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/leads" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">people_outline</span>
+                  <span class="menu-text">Leads</span>
+                </a>
+              </li>
               <li>
                 <a routerLink="/agents" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people</span>
@@ -88,6 +91,12 @@ import { filter } from 'rxjs/operators';
                 <a routerLink="/documents" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">description</span>
                   <span class="menu-text">Documents</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/segmentation" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">segment</span>
+                  <span class="menu-text">Segmentation</span>
                 </a>
               </li>
             </ul>
@@ -520,9 +529,28 @@ export class SidebarComponent implements OnInit {
     return this.router.url.includes('/sales');
   }
 
+  isLeadsActive(): boolean {
+    const url = this.router.url;
+    return url === '/dashboard' ||
+           url === '/' ||
+           url.includes('/leads') || 
+           url.includes('/agents') || 
+           url.includes('/lead-sources') || 
+           url.includes('/follow-ups') ||
+           url.includes('/opportunities') ||
+           url.includes('/forecasting') ||
+           url.includes('/communications') ||
+           url.includes('/documents') ||
+           url.includes('/segmentation') ||
+           url.includes('/lead-tracking') ||
+           url.includes('/log-interaction');
+  }
+
   get isLeadsSubmenuOpen(): boolean {
     const url = this.router.url;
-    const isLeadsUrl = url.includes('/leads') || 
+    const isLeadsUrl = url === '/dashboard' ||
+                        url === '/' ||
+                        url.includes('/leads') || 
                         url.includes('/agents') || 
                         url.includes('/lead-sources') || 
                         url.includes('/follow-ups') ||
@@ -530,6 +558,7 @@ export class SidebarComponent implements OnInit {
                         url.includes('/forecasting') ||
                         url.includes('/communications') ||
                         url.includes('/documents') ||
+                        url.includes('/segmentation') ||
                         url.includes('/lead-tracking') ||
                         url.includes('/log-interaction');
                         

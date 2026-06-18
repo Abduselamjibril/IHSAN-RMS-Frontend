@@ -327,9 +327,22 @@ import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/d
         <div class="modal-body">
           <div class="flex flex-col gap-3 p-2">
             <p class="text-secondary font-sm">
-              Upload a standard CSV file with headers matching 'Unit Code', 'Unit Number', 'Property Code', 'Building Code', 'Floor Number', 'Unit Type', 'Area', 'Price'.
+              Upload a standard CSV file with headers matching our database schema. You can download the template below to ensure correct columns and format before uploading.
             </p>
-            <input type="file" (change)="onFileSelected($event)" style="padding: 10px; border: 1px dashed var(--border-color); border-radius: var(--radius-sm);" />
+            
+            <!-- Download Template Button -->
+            <button 
+              type="button" 
+              class="btn btn-secondary flex align-center gap-2 justify-center" 
+              (click)="downloadCsvTemplate()"
+              style="margin-bottom: 16px; border-style: dashed; padding: 10px 14px; width: 100%; text-align: center;"
+            >
+              <span class="material-icons-outlined" style="font-size: 20px;">file_download</span>
+              <span>Download sample-units-template.csv</span>
+            </button>
+
+            <label class="font-bold font-sm text-secondary" style="margin-bottom: 4px;">Upload CSV File</label>
+            <input type="file" accept=".csv" (change)="onFileSelected($event)" style="padding: 10px; border: 1px dashed var(--border-color); border-radius: var(--radius-sm);" />
             
             <div class="flex justify-end gap-2 mt-4">
               <button class="btn btn-secondary" (click)="closeImportModal()">Cancel</button>
@@ -847,6 +860,24 @@ export class UnitsComponent implements OnInit {
   closeImportModal() { this.showImportModal = false; }
   onFileSelected(event: any) {
     this.selectedFile = event.target.files[0];
+  }
+  downloadCsvTemplate() {
+    const csvContent = 
+      "property_code,building_code,floor_number,unit_number,unit_type_name,bedroom_count,bathroom_count,area,base_price\n" +
+      "RVA,RVA-B1,1,101,Villa,3,3,180.50,5000000\n" +
+      "RVA,RVA-B1,1,102,Apartment,2,2,120.00,3500000\n";
+      
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "sample-units-template.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
   onUploadCsv() {
     if (!this.selectedFile) return;

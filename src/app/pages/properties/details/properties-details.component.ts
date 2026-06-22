@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
+import { customConfirm } from '../../../utils/confirm';
 
 @Component({
   selector: 'app-properties-details',
@@ -1605,16 +1606,18 @@ export class PropertiesDetailsComponent implements OnInit {
 
   deleteAmenity(id: number, event: Event) {
     event.stopPropagation();
-    if (confirm('Are you sure you want to delete this amenity definition? This will remove it from all properties.')) {
-      this.propertiesService.deleteAmenity(id).subscribe({
-        next: () => {
-          this.loadAmenities();
-          this.loadPropertyDetails();
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.error('Error deleting amenity:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this amenity definition? This will remove it from all properties.').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteAmenity(id).subscribe({
+          next: () => {
+            this.loadAmenities();
+            this.loadPropertyDetails();
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.error('Error deleting amenity:', err)
+        });
+      }
+    });
   }
 
   saveNewAmenity() {
@@ -1749,15 +1752,17 @@ export class PropertiesDetailsComponent implements OnInit {
   }
 
   onDeleteBuilding(id: number) {
-    if (confirm('Are you sure you want to remove this building block?')) {
-      this.propertiesService.deleteBuilding(id).subscribe({
-        next: () => {
-          this.loadPropertyDetails();
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.error('Error deleting building:', err)
-      });
-    }
+    customConfirm('Are you sure you want to remove this building block?').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteBuilding(id).subscribe({
+          next: () => {
+            this.loadPropertyDetails();
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.error('Error deleting building:', err)
+        });
+      }
+    });
   }
 
   // --- Site Methods ---
@@ -1831,15 +1836,17 @@ export class PropertiesDetailsComponent implements OnInit {
   }
 
   onDeleteSite(siteId: number) {
-    if (confirm('Are you sure you want to remove this site? Note: This will also soft-delete all buildings associated with this site.')) {
-      this.propertiesService.deleteSite(siteId).subscribe({
-        next: () => {
-          this.loadPropertyDetails();
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.error('Error deleting site:', err)
-      });
-    }
+    customConfirm('Are you sure you want to remove this site? Note: This will also soft-delete all buildings associated with this site.').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteSite(siteId).subscribe({
+          next: () => {
+            this.loadPropertyDetails();
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.error('Error deleting site:', err)
+        });
+      }
+    });
   }
 
   openAddFloorModal(buildingId?: number) {
@@ -2051,14 +2058,16 @@ export class PropertiesDetailsComponent implements OnInit {
   }
   onDeleteFloor(floorId: number, event?: Event) {
     if (event) event.stopPropagation();
-    if (confirm('Are you sure you want to delete this floor level? This will remove all associated units.')) {
-      this.propertiesService.deleteFloor(floorId).subscribe({
-        next: () => {
-          this.loadPropertyDetails();
-        },
-        error: (err) => console.error('Error deleting floor:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this floor level? This will remove all associated units.').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteFloor(floorId).subscribe({
+          next: () => {
+            this.loadPropertyDetails();
+          },
+          error: (err) => console.error('Error deleting floor:', err)
+        });
+      }
+    });
   }
 
   // --- Media & Doc Upload logic ---

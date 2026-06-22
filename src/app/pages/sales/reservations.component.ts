@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { PropertiesService } from '../../services/properties.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-reservations',
@@ -458,16 +459,18 @@ export class ReservationsComponent implements OnInit {
   }
 
   onCancel(id: number) {
-    if (!confirm('Are you sure you want to cancel this reservation? This will return the unit status to Available.')) return;
-    
-    this.salesService.cancelReservation(id).subscribe({
-      next: (res) => {
-        this.successMessage = `Reservation cancelled. Unit is now available!`;
-        this.loadReservations();
-      },
-      error: (err) => {
-        console.error('Error cancelling reservation', err);
-        this.errorMessage = err.error?.message || 'Failed to cancel reservation.';
+    customConfirm('Are you sure you want to cancel this reservation? This will return the unit status to Available.').then(confirmed => {
+      if (confirmed) {
+        this.salesService.cancelReservation(id).subscribe({
+          next: (res) => {
+            this.successMessage = `Reservation cancelled. Unit is now available!`;
+            this.loadReservations();
+          },
+          error: (err) => {
+            console.error('Error cancelling reservation', err);
+            this.errorMessage = err.error?.message || 'Failed to cancel reservation.';
+          }
+        });
       }
     });
   }

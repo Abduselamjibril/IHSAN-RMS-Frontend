@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import { RouterLink, ActivatedRoute } from '@angular/router';
+import { MarketingService } from '../../services/marketing.service';
 
 @Component({
   selector: 'app-leads',
@@ -223,6 +224,57 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
               <span class="material-icons-outlined">trending_up</span>
               View Converted Opportunity: <strong>{{ selectedLeadDetails?.opportunity?.opportunityCode }}</strong>
             </a>
+          </div>
+
+          <!-- Marketing Campaign Attribution Section -->
+          <div class="drawer-section" style="margin-bottom: 16px; border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-md); background: rgba(255,255,255,0.02);">
+            <h3 style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--brand-primary);">
+              <span class="material-icons-outlined">campaign</span>
+              Campaign Attribution
+            </h3>
+            
+            <!-- Display Existing Attribution -->
+            <div *ngIf="leadAttribution" class="flex flex-col gap-2 font-sm" style="background: var(--brand-primary-fade); padding: 12px; border-radius: var(--radius-sm); border-left: 4px solid var(--brand-primary);">
+              <div>Campaign: <strong style="color: var(--text-main);">{{ leadAttribution.campaign?.campaignName }}</strong></div>
+              <div class="flex justify-between" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                <span>Score: <strong>{{ leadAttribution.leadScore }}</strong></span>
+                <span>Prob: <strong>{{ leadAttribution.conversionProbability }}%</strong></span>
+                <span>Cost: <strong>ETB {{ leadAttribution.acquisitionCost | number }}</strong></span>
+              </div>
+            </div>
+
+            <!-- Create/Edit Attribution Form -->
+            <div *ngIf="!leadAttribution" class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Select Marketing Campaign *</label>
+                <select [(ngModel)]="attributionForm.campaignId" style="width: 100%; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main);">
+                  <option [value]="0">-- Select Campaign --</option>
+                  <option *ngFor="let camp of campaigns" [value]="camp.id">{{ camp.campaignName }}</option>
+                </select>
+              </div>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <div class="flex flex-col gap-1">
+                  <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Lead Score</label>
+                  <input type="number" [(ngModel)]="attributionForm.leadScore" style="width: 100%; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main);" />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Probability (%)</label>
+                  <input type="number" [(ngModel)]="attributionForm.conversionProbability" style="width: 100%; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main);" />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Cost (ETB)</label>
+                  <input type="number" [(ngModel)]="attributionForm.acquisitionCost" style="width: 100%; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main);" />
+                </div>
+              </div>
+              
+              <div class="flex justify-end">
+                <button type="button" class="btn btn-primary btn-sm flex align-center gap-1" [disabled]="attributionForm.campaignId === 0" (click)="onSaveAttribution()">
+                  <span class="material-icons-outlined font-sm">link</span>
+                  <span>Link Campaign</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Contact Profile -->
@@ -710,6 +762,16 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 })
 export class LeadsComponent implements OnInit {
   private crmService = inject(CrmService);
+  private marketingService = inject(MarketingService);
+
+  campaigns: any[] = [];
+  leadAttribution: any = null;
+  attributionForm = {
+    campaignId: 0,
+    leadScore: 85,
+    conversionProbability: 75,
+    acquisitionCost: 5000
+  };
 
   metadata: any = null;
   leads: any[] = [];
@@ -792,6 +854,14 @@ export class LeadsComponent implements OnInit {
       }
       this.loadMetadata();
       this.loadLeads();
+      this.loadCampaigns();
+    });
+  }
+
+  loadCampaigns() {
+    this.marketingService.getCampaigns().subscribe({
+      next: (res) => this.campaigns = res,
+      error: (err) => console.error('Error fetching campaigns:', err)
     });
   }
 
@@ -1010,6 +1080,26 @@ export class LeadsComponent implements OnInit {
       },
       error: (err) => console.error('Error fetching attachments:', err)
     });
+    this.marketingService.getMarketingLeads().subscribe({
+      next: (res) => {
+        this.leadAttribution = res.find((ml: any) => ml.lead && ml.lead.id === id);
+        if (this.leadAttribution) {
+          this.attributionForm.campaignId = this.leadAttribution.campaign?.id || 0;
+          this.attributionForm.leadScore = this.leadAttribution.leadScore || 85;
+          this.attributionForm.conversionProbability = this.leadAttribution.conversionProbability || 75;
+          this.attributionForm.acquisitionCost = this.leadAttribution.acquisitionCost || 5000;
+        } else {
+          this.leadAttribution = null;
+          this.attributionForm = {
+            campaignId: 0,
+            leadScore: 85,
+            conversionProbability: 75,
+            acquisitionCost: 5000
+          };
+        }
+      },
+      error: (err) => console.error('Error fetching marketing leads:', err)
+    });
   }
 
   onFileSelected(event: any) {
@@ -1094,6 +1184,26 @@ export class LeadsComponent implements OnInit {
         this.loadLeadDetails(this.selectedLeadDetails.id);
       },
       error: (err) => console.error('Error adding note:', err)
+    });
+  }
+
+  onSaveAttribution() {
+    if (!this.selectedLeadDetails || !this.attributionForm.campaignId) return;
+
+    const payload = {
+      leadId: this.selectedLeadDetails.id,
+      campaignId: +this.attributionForm.campaignId,
+      leadSourceId: this.selectedLeadDetails.leadSource?.id || 8, // fallback to Billboard
+      leadScore: +this.attributionForm.leadScore,
+      conversionProbability: +this.attributionForm.conversionProbability,
+      acquisitionCost: +this.attributionForm.acquisitionCost
+    };
+
+    this.marketingService.trackMarketingLead(payload).subscribe({
+      next: (res) => {
+        this.loadLeadDetails(this.selectedLeadDetails.id);
+      },
+      error: (err) => console.error('Error saving marketing attribution:', err)
     });
   }
 

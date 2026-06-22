@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
+import { customConfirm } from '../../../utils/confirm';
 
 @Component({
   selector: 'app-properties-list',
@@ -561,11 +562,13 @@ export class PropertiesListComponent implements OnInit {
   }
 
   onDelete(id: number) {
-    if (confirm('Are you sure you want to delete this property?')) {
-      this.propertiesService.deleteProperty(id).subscribe({
-        next: () => this.loadProperties(),
-        error: (err) => console.error('Error deleting property:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this property?').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteProperty(id).subscribe({
+          next: () => this.loadProperties(),
+          error: (err) => console.error('Error deleting property:', err)
+        });
+      }
+    });
   }
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { customConfirm } from '../../../utils/confirm';
 import { RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
@@ -844,12 +845,14 @@ export class UnitsComponent implements OnInit {
   }
 
   onDelete(id: number) {
-    if (confirm('Are you sure you want to delete this unit?')) {
-      this.propertiesService.deleteUnit(id).subscribe({
-        next: () => this.loadUnits(),
-        error: (err) => console.error('Error deleting unit:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this unit?').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteUnit(id).subscribe({
+          next: () => this.loadUnits(),
+          error: (err) => console.error('Error deleting unit:', err)
+        });
+      }
+    });
   }
 
   // --- Bulk CSV Import ---

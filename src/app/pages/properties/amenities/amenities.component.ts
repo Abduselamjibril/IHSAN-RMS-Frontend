@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { customConfirm } from '../../../utils/confirm';
 
 @Component({
   selector: 'app-amenities',
@@ -173,13 +174,15 @@ export class AmenitiesComponent implements OnInit {
   }
 
   onDelete(id: number) {
-    if (confirm('Are you sure you want to delete this amenity definition?')) {
-      this.propertiesService.deleteAmenity(id).subscribe({
-        next: () => {
-          this.loadAmenities();
-        },
-        error: (err) => console.error('Error deleting amenity:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this amenity definition?').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteAmenity(id).subscribe({
+          next: () => {
+            this.loadAmenities();
+          },
+          error: (err) => console.error('Error deleting amenity:', err)
+        });
+      }
+    });
   }
 }

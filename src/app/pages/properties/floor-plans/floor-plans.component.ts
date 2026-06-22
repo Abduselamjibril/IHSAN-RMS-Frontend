@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { customConfirm } from '../../../utils/confirm';
 
 @Component({
   selector: 'app-floor-plans',
@@ -959,14 +960,16 @@ export class FloorPlansComponent implements OnInit {
   }
 
   onDeleteFloor(floorId: number) {
-    if (confirm('Are you sure you want to delete this floor level? This will remove all associated units.')) {
-      this.propertiesService.deleteFloor(floorId).subscribe({
-        next: () => {
-          this.refreshAll();
-        },
-        error: (err) => console.error('Error deleting floor:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this floor level? This will remove all associated units.').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteFloor(floorId).subscribe({
+          next: () => {
+            this.refreshAll();
+          },
+          error: (err) => console.error('Error deleting floor:', err)
+        });
+      }
+    });
   }
 
   openCreateFloorPlanModal() {

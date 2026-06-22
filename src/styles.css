@@ -509,6 +509,10 @@ select:focus {
   background-color: #f8fafc !important;
 }
 
+.leads-table tbody tr.selected td {
+  background-color: var(--brand-primary-light) !important;
+}
+
 /* Card-style wrapping borders for table body */
 .leads-table tbody tr td:first-child {
   border-left: 1px solid var(--border-color) !important;
@@ -1163,4 +1167,15 @@ select:focus {
 .margin-y-4 {
   margin-top: 16px;
   margin-bottom: 16px;
+}
+
+/* Custom Confirm Modal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

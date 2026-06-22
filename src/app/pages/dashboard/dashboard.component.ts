@@ -445,7 +445,7 @@ export class DashboardComponent implements OnInit {
   private crmService = inject(CrmService);
   stats: any = null;
   reminders: any[] = [];
- 
+
   ngOnInit() {
     this.crmService.getDashboardStats().subscribe({
       next: (res) => {
@@ -504,7 +504,7 @@ export class DashboardComponent implements OnInit {
 
   getDonutSegments() {
     if (!this.stats || !this.stats.bySource || this.stats.totalLeads === 0) return [];
-    
+
     let currentOffset = 100;
     return this.stats.bySource.map((s: any) => {
       const pct = Math.round((s.count / this.stats.totalLeads) * 100);

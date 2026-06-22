@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-lead-sources',
@@ -396,15 +397,17 @@ export class LeadSourcesComponent implements OnInit {
   }
 
   deactivateSource(id: number) {
-    if (confirm('Are you sure you want to deactivate this lead source?')) {
-      this.crmService.deleteLeadSource(id).subscribe({
-        next: () => {
-          this.loadLeadSources();
-        },
-        error: (err) => {
-          console.error('Failed to deactivate lead source:', err);
-        }
-      });
-    }
+    customConfirm('Are you sure you want to deactivate this lead source?').then(confirmed => {
+      if (confirmed) {
+        this.crmService.deleteLeadSource(id).subscribe({
+          next: () => {
+            this.loadLeadSources();
+          },
+          error: (err) => {
+            console.error('Failed to deactivate lead source:', err);
+          }
+        });
+      }
+    });
   }
 }

@@ -33,6 +33,12 @@ import { ContractsComponent } from './pages/sales/contracts.component';
 import { InstallmentsComponent } from './pages/sales/installments.component';
 import { CommissionsComponent } from './pages/sales/commissions.component';
 
+// Marketing module imports
+import { MarketingDashboardComponent } from './pages/marketing/marketing-dashboard.component';
+import { CampaignsComponent } from './pages/marketing/campaigns.component';
+import { AdvertisementsComponent } from './pages/marketing/advertisements.component';
+import { MarketingReportsComponent } from './pages/marketing/marketing-reports.component';
+
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
@@ -71,6 +77,12 @@ export const routes: Routes = [
   { path: 'sales/contracts', component: ContractsComponent },
   { path: 'sales/installments', component: InstallmentsComponent },
   { path: 'sales/commissions', component: CommissionsComponent },
+
+  // Marketing module routes
+  { path: 'marketing/dashboard', component: MarketingDashboardComponent },
+  { path: 'marketing/campaigns', component: CampaignsComponent },
+  { path: 'marketing/ads', component: AdvertisementsComponent },
+  { path: 'marketing/reports', component: MarketingReportsComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },

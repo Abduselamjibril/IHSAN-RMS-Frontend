@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { CrmService } from '../../services/crm.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-customers',
@@ -451,19 +452,21 @@ export class CustomersComponent implements OnInit {
   }
 
   onDeleteCustomer(id: number, name: string) {
-    if (confirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`)) {
-      this.salesService.deleteCustomer(id).subscribe({
-        next: () => {
-          this.successMessage = `Customer "${name}" deleted successfully.`;
-          this.loadCustomers();
-          setTimeout(() => this.successMessage = '', 5000);
-        },
-        error: (err) => {
-          console.error('Error deleting customer', err);
-          this.errorMessage = err.error?.message || `Failed to delete customer "${name}".`;
-          setTimeout(() => this.errorMessage = '', 5000);
-        }
-      });
-    }
+    customConfirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`).then(confirmed => {
+      if (confirmed) {
+        this.salesService.deleteCustomer(id).subscribe({
+          next: () => {
+            this.successMessage = `Customer "${name}" deleted successfully.`;
+            this.loadCustomers();
+            setTimeout(() => this.successMessage = '', 5000);
+          },
+          error: (err) => {
+            console.error('Error deleting customer', err);
+            this.errorMessage = err.error?.message || `Failed to delete customer "${name}".`;
+            setTimeout(() => this.errorMessage = '', 5000);
+          }
+        });
+      }
+    });
   }
 }

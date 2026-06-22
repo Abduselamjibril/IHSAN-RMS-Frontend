@@ -33,6 +33,12 @@ import { ContractsComponent } from './pages/sales/contracts.component';
 import { InstallmentsComponent } from './pages/sales/installments.component';
 import { CommissionsComponent } from './pages/sales/commissions.component';
 
+// Finance module imports
+import { CollectionsComponent } from './pages/finance/collections.component';
+import { FinanceInstallmentsComponent } from './pages/finance/installments.component';
+import { ReceiptsComponent } from './pages/finance/receipts.component';
+import { FinanceReportsComponent } from './pages/finance/reports.component';
+
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
@@ -71,6 +77,12 @@ export const routes: Routes = [
   { path: 'sales/contracts', component: ContractsComponent },
   { path: 'sales/installments', component: InstallmentsComponent },
   { path: 'sales/commissions', component: CommissionsComponent },
+
+  // Finance module routes
+  { path: 'finance/collections', component: CollectionsComponent },
+  { path: 'finance/installments', component: FinanceInstallmentsComponent },
+  { path: 'finance/receipts', component: ReceiptsComponent },
+  { path: 'finance/reports', component: FinanceReportsComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },

@@ -226,6 +226,7 @@ import { SalesService } from '../../services/sales.service';
       background-color: var(--bg-main) !important;
       font-size: 11px;
       padding: 8px 10px;
+      text-align: left;
     }
     .nested-table td {
       padding: 8px 10px;

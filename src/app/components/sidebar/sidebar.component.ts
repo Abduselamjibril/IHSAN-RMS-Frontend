@@ -226,6 +226,41 @@ import { filter } from 'rxjs/operators';
             </ul>
           </li>
 
+          <!-- Collapsible Finance & Collections Section -->
+          <li>
+            <a (click)="toggleFinance()" class="menu-item cursor-pointer" [class.active-parent]="isFinanceActive()">
+              <span class="material-icons-outlined">account_balance_wallet</span>
+              <span class="menu-text">Finance & Collections</span>
+              <span class="material-icons-outlined arrow-icon">{{ financeExpanded() ? 'expand_less' : 'expand_more' }}</span>
+            </a>
+            <ul class="submenu" [class.open]="financeExpanded()">
+              <li>
+                <a routerLink="/finance/collections" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">receipt_long</span>
+                  <span class="menu-text">Collections Ledger</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/finance/installments" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">edit_calendar</span>
+                  <span class="menu-text">Reschedule & Penalties</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/finance/receipts" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">receipt</span>
+                  <span class="menu-text">Receipts & Templates</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/finance/reports" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">analytics</span>
+                  <span class="menu-text">Statements & Aging</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">settings</span>
@@ -498,6 +533,7 @@ export class SidebarComponent implements OnInit {
   private router = inject(Router);
   propertiesExpanded = signal(false);
   salesExpanded = signal(false);
+  financeExpanded = signal(false);
   
   private manualClosed = false;
   private manualOpened = false;
@@ -511,6 +547,9 @@ export class SidebarComponent implements OnInit {
     if (this.router.url.includes('/sales')) {
       this.salesExpanded.set(true);
     }
+    if (this.router.url.includes('/finance')) {
+      this.financeExpanded.set(true);
+    }
   }
 
   toggleProperties() {
@@ -521,12 +560,20 @@ export class SidebarComponent implements OnInit {
     this.salesExpanded.update(v => !v);
   }
 
+  toggleFinance() {
+    this.financeExpanded.update(v => !v);
+  }
+
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
   }
 
   isSalesActive(): boolean {
     return this.router.url.includes('/sales');
+  }
+
+  isFinanceActive(): boolean {
+    return this.router.url.includes('/finance');
   }
 
   isLeadsActive(): boolean {

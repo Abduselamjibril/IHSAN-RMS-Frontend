@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-segmentation',
@@ -598,15 +599,17 @@ export class SegmentationComponent implements OnInit {
   }
 
   onDeleteSegment(id: number) {
-    if (confirm('Are you sure you want to delete this segment?')) {
-      this.crmService.deleteSegment(id).subscribe({
-        next: () => {
-          this.selectedSegment = null;
-          this.loadSegments();
-        },
-        error: (err) => console.error('Failed to delete segment:', err)
-      });
-    }
+    customConfirm('Are you sure you want to delete this segment?').then(confirmed => {
+      if (confirmed) {
+        this.crmService.deleteSegment(id).subscribe({
+          next: () => {
+            this.selectedSegment = null;
+            this.loadSegments();
+          },
+          error: (err) => console.error('Failed to delete segment:', err)
+        });
+      }
+    });
   }
 
   onCreateTag() {

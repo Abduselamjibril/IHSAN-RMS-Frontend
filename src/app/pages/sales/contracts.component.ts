@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-contracts',
@@ -665,18 +666,20 @@ export class ContractsComponent implements OnInit {
   }
 
   onDetachDocument(docId: number, name: string) {
-    if (confirm(`Are you sure you want to detach the document "${name}"?`)) {
-      this.salesService.deleteContractDocument(docId).subscribe({
-        next: () => {
-          this.successMessage = `Document "${name}" detached successfully!`;
-          this.loadContracts();
-        },
-        error: (err) => {
-          console.error('Error detaching document', err);
-          this.errorMessage = err.error?.message || 'Failed to detach document.';
-        }
-      });
-    }
+    customConfirm(`Are you sure you want to detach the document "${name}"?`).then(confirmed => {
+      if (confirmed) {
+        this.salesService.deleteContractDocument(docId).subscribe({
+          next: () => {
+            this.successMessage = `Document "${name}" detached successfully!`;
+            this.loadContracts();
+          },
+          error: (err) => {
+            console.error('Error detaching document', err);
+            this.errorMessage = err.error?.message || 'Failed to detach document.';
+          }
+        });
+      }
+    });
   }
 
   getDownloadUrl(filePath: string): string {

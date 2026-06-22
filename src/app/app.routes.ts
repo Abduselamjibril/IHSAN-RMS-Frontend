@@ -39,6 +39,12 @@ import { FinanceInstallmentsComponent } from './pages/finance/installments.compo
 import { ReceiptsComponent } from './pages/finance/receipts.component';
 import { FinanceReportsComponent } from './pages/finance/reports.component';
 
+// Marketing module imports
+import { MarketingDashboardComponent } from './pages/marketing/marketing-dashboard.component';
+import { CampaignsComponent } from './pages/marketing/campaigns.component';
+import { AdvertisementsComponent } from './pages/marketing/advertisements.component';
+import { MarketingReportsComponent } from './pages/marketing/marketing-reports.component';
+
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
@@ -83,6 +89,12 @@ export const routes: Routes = [
   { path: 'finance/installments', component: FinanceInstallmentsComponent },
   { path: 'finance/receipts', component: ReceiptsComponent },
   { path: 'finance/reports', component: FinanceReportsComponent },
+
+  // Marketing module routes
+  { path: 'marketing/dashboard', component: MarketingDashboardComponent },
+  { path: 'marketing/campaigns', component: CampaignsComponent },
+  { path: 'marketing/ads', component: AdvertisementsComponent },
+  { path: 'marketing/reports', component: MarketingReportsComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },

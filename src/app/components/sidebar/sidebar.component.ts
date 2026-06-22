@@ -261,6 +261,41 @@ import { filter } from 'rxjs/operators';
             </ul>
           </li>
 
+          <!-- Collapsible Marketing Management Section -->
+          <li>
+            <a (click)="toggleMarketing()" class="menu-item cursor-pointer" [class.active-parent]="isMarketingActive()">
+              <span class="material-icons-outlined">campaign</span>
+              <span class="menu-text">Marketing Module</span>
+              <span class="material-icons-outlined arrow-icon">{{ marketingExpanded() ? 'expand_less' : 'expand_more' }}</span>
+            </a>
+            <ul class="submenu" [class.open]="marketingExpanded()">
+              <li>
+                <a routerLink="/marketing/dashboard" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">dashboard</span>
+                  <span class="menu-text">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/marketing/campaigns" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">campaign</span>
+                  <span class="menu-text">Campaigns</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/marketing/ads" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">ads_click</span>
+                  <span class="menu-text">Ads & Channels</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/marketing/reports" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">bar_chart</span>
+                  <span class="menu-text">Reports</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">settings</span>
@@ -534,13 +569,14 @@ export class SidebarComponent implements OnInit {
   propertiesExpanded = signal(false);
   salesExpanded = signal(false);
   financeExpanded = signal(false);
+  marketingExpanded = signal(false);
   
   private manualClosed = false;
   private manualOpened = false;
   private lastUrl = '';
 
   ngOnInit() {
-    // Auto-expand Property Module menu if loaded on a sub-route
+    // Auto-expand menus based on route
     if (this.router.url.includes('/properties')) {
       this.propertiesExpanded.set(true);
     }
@@ -549,6 +585,9 @@ export class SidebarComponent implements OnInit {
     }
     if (this.router.url.includes('/finance')) {
       this.financeExpanded.set(true);
+    }
+    if (this.router.url.includes('/marketing')) {
+      this.marketingExpanded.set(true);
     }
   }
 
@@ -564,6 +603,10 @@ export class SidebarComponent implements OnInit {
     this.financeExpanded.update(v => !v);
   }
 
+  toggleMarketing() {
+    this.marketingExpanded.update(v => !v);
+  }
+
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
   }
@@ -574,6 +617,10 @@ export class SidebarComponent implements OnInit {
 
   isFinanceActive(): boolean {
     return this.router.url.includes('/finance');
+  }
+
+  isMarketingActive(): boolean {
+    return this.router.url.includes('/marketing');
   }
 
   isLeadsActive(): boolean {

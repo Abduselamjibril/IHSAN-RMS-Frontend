@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { customConfirm } from '../../../utils/confirm';
 
 @Component({
   selector: 'app-pricing',
@@ -821,13 +822,15 @@ export class PricingComponent implements OnInit {
   }
 
   onDeactivatePromotion(id: number) {
-    if (confirm('Are you sure you want to deactivate (kill) this campaign immediately? This action is instant and cannot be undone.')) {
-      this.propertiesService.deactivatePromotion(id).subscribe({
-        next: () => {
-          this.loadPricingData();
-        },
-        error: (err) => console.error('Error deactivating promotion:', err)
-      });
-    }
+    customConfirm('Are you sure you want to deactivate (kill) this campaign immediately? This action is instant and cannot be undone.').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deactivatePromotion(id).subscribe({
+          next: () => {
+            this.loadPricingData();
+          },
+          error: (err) => console.error('Error deactivating promotion:', err)
+        });
+      }
+    });
   }
 }

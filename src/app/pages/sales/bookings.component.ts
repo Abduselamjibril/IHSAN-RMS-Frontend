@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { PropertiesService } from '../../services/properties.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-bookings',
@@ -445,15 +446,18 @@ export class BookingsComponent implements OnInit {
   }
 
   onCancel(id: number) {
-    if (!confirm('Are you sure you want to cancel this booking?')) return;
-    this.salesService.cancelBooking(id).subscribe({
-      next: (res) => {
-        this.successMessage = `Booking cancelled successfully. Unit returned to inventory.`;
-        this.loadBookings();
-      },
-      error: (err) => {
-        console.error('Error cancelling booking', err);
-        this.errorMessage = err.error?.message || 'Failed to cancel booking.';
+    customConfirm('Are you sure you want to cancel this booking?').then(confirmed => {
+      if (confirmed) {
+        this.salesService.cancelBooking(id).subscribe({
+          next: (res) => {
+            this.successMessage = `Booking cancelled successfully. Unit returned to inventory.`;
+            this.loadBookings();
+          },
+          error: (err) => {
+            console.error('Error cancelling booking', err);
+            this.errorMessage = err.error?.message || 'Failed to cancel booking.';
+          }
+        });
       }
     });
   }

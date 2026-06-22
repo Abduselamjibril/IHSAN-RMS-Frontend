@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-agents',
@@ -437,11 +438,13 @@ export class AgentsComponent implements OnInit {
   }
 
   deactivateAgent(id: number) {
-    if (confirm('Are you sure you want to deactivate this agent?')) {
-      this.crmService.deleteAgent(id).subscribe({
-        next: () => this.loadAgents(),
-        error: (err) => console.error('Failed to deactivate agent', err)
-      });
-    }
+    customConfirm('Are you sure you want to deactivate this agent?').then(confirmed => {
+      if (confirmed) {
+        this.crmService.deleteAgent(id).subscribe({
+          next: () => this.loadAgents(),
+          error: (err) => console.error('Failed to deactivate agent', err)
+        });
+      }
+    });
   }
 }

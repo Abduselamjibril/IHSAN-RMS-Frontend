@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, HostListener, ElementRef, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-dynamic-dropdown',
@@ -448,14 +449,16 @@ export class DynamicDropdownComponent implements OnInit, OnChanges {
 
   onDeleteClick(opt: any, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete "${opt[this.displayKey]}"?`)) {
-      this.delete.emit(opt[this.valueKey]);
-      if (String(this.value) === String(opt[this.valueKey])) {
-        this.value = 0;
-        this.selectedLabel = '';
-        this.valueChange.emit(0);
+    customConfirm(`Are you sure you want to delete "${opt[this.displayKey]}"?`).then(confirmed => {
+      if (confirmed) {
+        this.delete.emit(opt[this.valueKey]);
+        if (String(this.value) === String(opt[this.valueKey])) {
+          this.value = 0;
+          this.selectedLabel = '';
+          this.valueChange.emit(0);
+        }
       }
-    }
+    });
   }
 
   startAdd(event: Event) {

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
+import { FinanceService } from '../../services/finance.service';
 
 @Component({
   selector: 'app-installments',
@@ -73,7 +74,6 @@ import { SalesService } from '../../services/sales.service';
                   <th>Outstanding Balance</th>
                   <th>Status</th>
                   <th>Payment Date</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,17 +89,6 @@ import { SalesService } from '../../services/sales.service';
                     </span>
                   </td>
                   <td>{{ sch.paymentDate ? (sch.paymentDate | date:'mediumDate') : '-' }}</td>
-                  <td>
-                    <button 
-                      *ngIf="sch.status !== 'PAID'"
-                      class="btn btn-secondary btn-xs flex align-center gap-1"
-                      (click)="openPayModal(sch)"
-                      style="padding: 4px 8px; font-size: 10px;"
-                    >
-                      <span class="material-icons-outlined" style="font-size: 12px;">payment</span>
-                      <span>Collect</span>
-                    </button>
-                  </td>
                 </tr>
               </tbody>
             </table>
@@ -161,13 +150,77 @@ import { SalesService } from '../../services/sales.service';
               </div>
             </div>
 
+            <!-- Record Payment Checkbox -->
+            <div class="form-group" style="margin: 16px 0; display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="recordPayment" [(ngModel)]="newPlan.recordPayment" name="recordPayment" style="width: auto; cursor: pointer;" />
+              <label for="recordPayment" style="margin: 0; font-weight: bold; cursor: pointer; color: var(--brand-primary);">Record Down Payment Payment now (will submit a pending payment to Collections Ledger)</label>
+            </div>
+
+            <!-- Conditional Down Payment Recording Fields -->
+            <div *ngIf="newPlan.recordPayment" class="card p-3 border mb-3" style="background-color: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); border: 1px solid var(--border-color); padding: 12px; margin-bottom: 16px;">
+              <h4 style="margin-bottom: 12px; font-size: 13px;" class="text-main">Down Payment Receipt Details</h4>
+              
+              <div class="form-row flex gap-3">
+                <!-- Payment Method * -->
+                <div class="form-group flex-1 flex flex-col">
+                  <label>Payment Method * [REQUIRED]</label>
+                  <select [(ngModel)]="newPlan.paymentMethodId" name="paymentMethodId" [required]="newPlan.recordPayment" (change)="onPaymentMethodChange()">
+                    <option [value]="0">-- Select Method --</option>
+                    <option *ngFor="let m of paymentMethods" [value]="m.id">
+                      {{ m.paymentMethodName }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Payment Reference -->
+                <div class="form-group flex-1 flex flex-col">
+                  <label>Payment Reference / Voucher ID</label>
+                  <input type="text" [(ngModel)]="newPlan.paymentReference" name="paymentReference" placeholder="e.g. VCH-98219" />
+                </div>
+              </div>
+
+              <div class="form-row flex gap-3" style="margin-top: 8px;">
+                <!-- Payment Date * -->
+                <div class="form-group flex-1 flex flex-col">
+                  <label>Payment Date * [REQUIRED]</label>
+                  <input type="date" [(ngModel)]="newPlan.paymentDate" name="paymentDate" [required]="newPlan.recordPayment" />
+                </div>
+
+                <!-- Bank Name -->
+                <div class="form-group flex-1 flex flex-col" *ngIf="showBankFields()">
+                  <label>Bank Name * [REQUIRED]</label>
+                  <input type="text" [(ngModel)]="newPlan.bankName" name="bankName" placeholder="e.g. Commercial Bank" [required]="newPlan.recordPayment && showBankFields()" />
+                </div>
+              </div>
+
+              <div class="form-row flex gap-3" style="margin-top: 8px;">
+                <!-- Transaction Reference -->
+                <div class="form-group flex-1 flex flex-col" *ngIf="showTxFields()">
+                  <label>Transaction Reference ID * [REQUIRED]</label>
+                  <input type="text" [(ngModel)]="newPlan.transactionReference" name="transactionReference" placeholder="e.g. FT26081829" [required]="newPlan.recordPayment && showTxFields()" />
+                </div>
+
+                <!-- Cheque Number -->
+                <div class="form-group flex-1 flex flex-col" *ngIf="showChequeFields()">
+                  <label>Cheque Number * [REQUIRED]</label>
+                  <input type="text" [(ngModel)]="newPlan.chequeNumber" name="chequeNumber" placeholder="e.g. CHQ-8192083" [required]="newPlan.recordPayment && showChequeFields()" />
+                </div>
+              </div>
+
+              <!-- Remarks -->
+              <div class="form-group flex flex-col" style="margin-top: 8px;">
+                <label>Remarks</label>
+                <textarea [(ngModel)]="newPlan.remarks" name="remarks" placeholder="Add custom payment notes..." rows="2"></textarea>
+              </div>
+            </div>
+
             <!-- Footer Buttons -->
             <div class="modal-footer flex justify-end gap-3" style="margin-top: 24px;">
               <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
               <button 
                 type="submit" 
                 class="btn btn-primary" 
-                [disabled]="newPlan.contractId === 0 || !newPlan.downPayment || !newPlan.installmentFrequency || !newPlan.numberOfInstallments"
+                [disabled]="newPlan.contractId === 0 || !newPlan.downPayment || !newPlan.installmentFrequency || !newPlan.numberOfInstallments || (newPlan.recordPayment && (newPlan.paymentMethodId === 0 || !newPlan.paymentDate))"
               >
                 Generate Plan
               </button>
@@ -177,44 +230,6 @@ import { SalesService } from '../../services/sales.service';
       </div>
     </div>
 
-    <!-- Collect Payment Modal -->
-    <div class="modal-overlay" *ngIf="showPayModal" (click)="closePayModal()">
-      <div class="modal-container" (click)="$event.stopPropagation()">
-        <div class="modal-header flex justify-between align-center">
-          <h2>Record Installment Payment</h2>
-          <button class="header-icon-btn close-btn" (click)="closePayModal()">
-            <span class="material-icons-outlined">close</span>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <form class="modal-form" (submit)="onSubmitPayment($event)">
-            <div class="form-group flex flex-col">
-              <label>Installment Reference</label>
-              <input type="text" [value]="'Installment #' + selectedSchedule?.installmentNo + ' - Outstanding: ETB ' + selectedSchedule?.outstandingAmount" readonly style="background-color: var(--bg-main);" />
-            </div>
-
-            <div class="form-group flex flex-col">
-              <label>Outstanding Amount Remaining (ETB) * [REQUIRED] [READ-ONLY]</label>
-              <input type="number" [value]="selectedSchedule?.outstandingAmount" readonly style="background-color: var(--bg-main);" />
-            </div>
-
-            <div class="form-group flex flex-col">
-              <label>Amount Collected / Paid (ETB) * [REQUIRED]</label>
-              <input type="number" [(ngModel)]="payAmount" name="payAmount" required placeholder="e.g. 50000" [max]="selectedSchedule?.outstandingAmount" />
-            </div>
-
-            <!-- Footer Buttons -->
-            <div class="modal-footer flex justify-end gap-3" style="margin-top: 24px;">
-              <button type="button" class="btn btn-secondary" (click)="closePayModal()">Cancel</button>
-              <button type="submit" class="btn btn-primary" [disabled]="!payAmount || payAmount <= 0">
-                Log Payment
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
     .nested-table {
@@ -241,35 +256,44 @@ import { SalesService } from '../../services/sales.service';
 })
 export class InstallmentsComponent implements OnInit {
   private salesService = inject(SalesService);
+  private financeService = inject(FinanceService);
 
   plans: any[] = [];
   contracts: any[] = [];
+  paymentMethods: any[] = [];
 
   successMessage = '';
   errorMessage = '';
 
   showCreateModal = false;
-  showPayModal = false;
-
-  selectedSchedule: any = null;
-  payAmount = 0;
 
   newPlan = {
     contractId: 0,
     totalContractAmount: 0,
     downPayment: 0,
     installmentFrequency: 'MONTHLY',
-    numberOfInstallments: 12
+    numberOfInstallments: 12,
+    recordPayment: false,
+    paymentMethodId: 0,
+    paymentReference: '',
+    paymentDate: '',
+    bankName: '',
+    transactionReference: '',
+    chequeNumber: '',
+    remarks: ''
   };
 
   ngOnInit() {
     this.loadPlans();
-    this.loadContracts();
+    this.loadPaymentMethods();
   }
 
   loadPlans() {
     this.salesService.getInstallmentPlans().subscribe({
-      next: (res) => this.plans = res,
+      next: (res) => {
+        this.plans = res;
+        this.loadContracts();
+      },
       error: (err) => console.error('Error fetching plans', err)
     });
   }
@@ -277,9 +301,19 @@ export class InstallmentsComponent implements OnInit {
   loadContracts() {
     this.salesService.getContracts().subscribe({
       next: (res) => {
-        this.contracts = res.filter((c: any) => c.status === 'ACTIVE');
+        this.contracts = res.filter((c: any) => 
+          c.status === 'ACTIVE' && 
+          !this.plans.some(p => Number(p.contract?.id) === Number(c.id))
+        );
       },
       error: (err) => console.error('Error fetching contracts', err)
+    });
+  }
+
+  loadPaymentMethods() {
+    this.financeService.getPaymentMethods().subscribe({
+      next: (res) => this.paymentMethods = res,
+      error: (err) => console.error('Error fetching payment methods', err)
     });
   }
 
@@ -291,6 +325,33 @@ export class InstallmentsComponent implements OnInit {
       // Auto-set down payment as 10%
       this.newPlan.downPayment = Math.round(this.newPlan.totalContractAmount * 0.1);
     }
+  }
+
+  onPaymentMethodChange() {
+    this.newPlan.bankName = '';
+    this.newPlan.transactionReference = '';
+    this.newPlan.chequeNumber = '';
+  }
+
+  getSelectedPaymentMethodCode(): string {
+    if (this.newPlan.paymentMethodId === 0) return '';
+    const m = this.paymentMethods.find(x => x.id == this.newPlan.paymentMethodId);
+    return m ? m.paymentMethodCode : '';
+  }
+
+  showBankFields(): boolean {
+    const code = this.getSelectedPaymentMethodCode();
+    return code === 'BANK' || code === 'CHEQUE';
+  }
+
+  showTxFields(): boolean {
+    const code = this.getSelectedPaymentMethodCode();
+    return code === 'BANK' || code === 'MOBILE' || code === 'TELEBIRR' || code === 'CHAPA';
+  }
+
+  showChequeFields(): boolean {
+    const code = this.getSelectedPaymentMethodCode();
+    return code === 'CHEQUE';
   }
 
   getScheduleStatusBadge(status: string): string {
@@ -313,7 +374,15 @@ export class InstallmentsComponent implements OnInit {
       totalContractAmount: 0,
       downPayment: 0,
       installmentFrequency: 'MONTHLY',
-      numberOfInstallments: 12
+      numberOfInstallments: 12,
+      recordPayment: false,
+      paymentMethodId: 0,
+      paymentReference: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      bankName: '',
+      transactionReference: '',
+      chequeNumber: '',
+      remarks: ''
     };
   }
 
@@ -321,33 +390,32 @@ export class InstallmentsComponent implements OnInit {
     this.showCreateModal = false;
   }
 
-  openPayModal(sch: any) {
-    this.selectedSchedule = sch;
-    this.showPayModal = true;
-    this.successMessage = '';
-    this.errorMessage = '';
-    this.payAmount = Number(sch.outstandingAmount);
-  }
-
-  closePayModal() {
-    this.showPayModal = false;
-  }
-
   onSubmitPlan(event: Event) {
     event.preventDefault();
     if (this.newPlan.contractId === 0 || !this.newPlan.downPayment || !this.newPlan.installmentFrequency || !this.newPlan.numberOfInstallments) return;
 
-    const payload = {
+    const payload: any = {
       contractId: +this.newPlan.contractId,
       totalContractAmount: +this.newPlan.totalContractAmount,
       downPayment: +this.newPlan.downPayment,
       installmentFrequency: this.newPlan.installmentFrequency,
-      numberOfInstallments: +this.newPlan.numberOfInstallments
+      numberOfInstallments: +this.newPlan.numberOfInstallments,
+      recordPayment: this.newPlan.recordPayment
     };
+
+    if (this.newPlan.recordPayment) {
+      payload.paymentMethodId = +this.newPlan.paymentMethodId;
+      payload.paymentReference = this.newPlan.paymentReference;
+      payload.paymentDate = this.newPlan.paymentDate;
+      payload.bankName = this.newPlan.bankName;
+      payload.transactionReference = this.newPlan.transactionReference;
+      payload.chequeNumber = this.newPlan.chequeNumber;
+      payload.remarks = this.newPlan.remarks;
+    }
 
     this.salesService.generateInstallmentPlan(payload).subscribe({
       next: (res) => {
-        this.successMessage = `Installment scheduling generated with ${payload.numberOfInstallments} payments. Ledger synchronized!`;
+        this.successMessage = `Installment plan generated successfully! ${this.newPlan.recordPayment ? 'Down payment recorded for verification.' : 'Ledger synchronized.'}`;
         this.loadPlans();
         this.closeCreateModal();
       },
@@ -358,20 +426,4 @@ export class InstallmentsComponent implements OnInit {
     });
   }
 
-  onSubmitPayment(event: Event) {
-    event.preventDefault();
-    if (!this.selectedSchedule || !this.payAmount || this.payAmount <= 0) return;
-
-    this.salesService.payInstallment(this.selectedSchedule.id, +this.payAmount).subscribe({
-      next: (res) => {
-        this.successMessage = `Payment collected. Accrued balance updated!`;
-        this.loadPlans();
-        this.closePayModal();
-      },
-      error: (err) => {
-        console.error('Error logging payment', err);
-        this.errorMessage = err.error?.message || 'Failed to record payment.';
-      }
-    });
-  }
 }

@@ -131,4 +131,21 @@ export class FinanceService {
   triggerReminderEngine(): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/reminders/trigger`, {});
   }
+
+  // --- Global Settings & Signatures ---
+  getSettings(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/settings`);
+  }
+
+  updateSettings(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/settings`, data);
+  }
+
+  getUserSignature(): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/users/signature`);
+  }
+
+  saveUserSignature(signatureBase64: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/users/signature`, { signature_png_base64: signatureBase64 });
+  }
 }

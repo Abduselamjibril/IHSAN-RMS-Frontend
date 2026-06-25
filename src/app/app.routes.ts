@@ -45,6 +45,14 @@ import { CampaignsComponent } from './pages/marketing/campaigns.component';
 import { AdvertisementsComponent } from './pages/marketing/advertisements.component';
 import { MarketingReportsComponent } from './pages/marketing/marketing-reports.component';
 
+// Broker module imports
+import { BrokerDashboardComponent } from './pages/broker/broker-dashboard.component';
+import { BrokerListComponent } from './pages/broker/broker-list.component';
+import { BrokerAssignmentsComponent } from './pages/broker/broker-assignments.component';
+import { BrokerPlansComponent } from './pages/broker/broker-plans.component';
+import { BrokerCommissionsComponent } from './pages/broker/broker-commissions.component';
+import { BrokerPaymentsComponent } from './pages/broker/broker-payments.component';
+
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'leads', component: LeadsComponent },
@@ -95,6 +103,14 @@ export const routes: Routes = [
   { path: 'marketing/campaigns', component: CampaignsComponent },
   { path: 'marketing/ads', component: AdvertisementsComponent },
   { path: 'marketing/reports', component: MarketingReportsComponent },
+
+  // Broker module routes
+  { path: 'broker/dashboard', component: BrokerDashboardComponent },
+  { path: 'broker/list', component: BrokerListComponent },
+  { path: 'broker/assignments', component: BrokerAssignmentsComponent },
+  { path: 'broker/plans', component: BrokerPlansComponent },
+  { path: 'broker/commissions', component: BrokerCommissionsComponent },
+  { path: 'broker/payments', component: BrokerPaymentsComponent },
 
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },

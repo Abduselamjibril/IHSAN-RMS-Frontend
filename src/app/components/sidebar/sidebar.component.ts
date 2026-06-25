@@ -296,6 +296,53 @@ import { filter } from 'rxjs/operators';
             </ul>
           </li>
 
+          <!-- Collapsible Broker Management Section -->
+          <li>
+            <a (click)="toggleBroker()" class="menu-item cursor-pointer" [class.active-parent]="isBrokerActive()">
+              <span class="material-icons-outlined">support_agent</span>
+              <span class="menu-text">Broker Module</span>
+              <span class="material-icons-outlined arrow-icon">{{ brokerExpanded() ? 'expand_less' : 'expand_more' }}</span>
+            </a>
+            <ul class="submenu" [class.open]="brokerExpanded()">
+              <li>
+                <a routerLink="/broker/dashboard" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">dashboard</span>
+                  <span class="menu-text">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/broker/list" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">people</span>
+                  <span class="menu-text">Brokers Directory</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/broker/assignments" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">assignment_ind</span>
+                  <span class="menu-text">Assignments</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/broker/plans" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">settings_suggest</span>
+                  <span class="menu-text">Commission Plans</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/broker/commissions" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">payments</span>
+                  <span class="menu-text">Sales & Commissions</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/broker/payments" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">account_balance</span>
+                  <span class="menu-text">Payouts</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">settings</span>
@@ -570,6 +617,7 @@ export class SidebarComponent implements OnInit {
   salesExpanded = signal(false);
   financeExpanded = signal(false);
   marketingExpanded = signal(false);
+  brokerExpanded = signal(false);
   
   private manualClosed = false;
   private manualOpened = false;
@@ -589,6 +637,9 @@ export class SidebarComponent implements OnInit {
     if (this.router.url.includes('/marketing')) {
       this.marketingExpanded.set(true);
     }
+    if (this.router.url.includes('/broker')) {
+      this.brokerExpanded.set(true);
+    }
   }
 
   toggleProperties() {
@@ -607,6 +658,10 @@ export class SidebarComponent implements OnInit {
     this.marketingExpanded.update(v => !v);
   }
 
+  toggleBroker() {
+    this.brokerExpanded.update(v => !v);
+  }
+
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
   }
@@ -621,6 +676,10 @@ export class SidebarComponent implements OnInit {
 
   isMarketingActive(): boolean {
     return this.router.url.includes('/marketing');
+  }
+
+  isBrokerActive(): boolean {
+    return this.router.url.includes('/broker');
   }
 
   isLeadsActive(): boolean {

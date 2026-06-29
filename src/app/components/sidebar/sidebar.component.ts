@@ -20,6 +20,12 @@ import { filter } from 'rxjs/operators';
       <nav class="sidebar-menu">
         <ul>
           <li>
+            <a routerLink="/dashboard" routerLinkActive="active" class="menu-item">
+              <span class="material-icons-outlined">dashboard</span>
+              <span class="menu-text">Executive Dashboard</span>
+            </a>
+          </li>
+          <li>
             <a (click)="toggleLeads($event)" class="menu-item cursor-pointer" [class.active-parent]="isLeadsActive()">
               <span class="material-icons-outlined">people_outline</span>
               <span class="menu-text">Leads Module</span>
@@ -27,12 +33,6 @@ import { filter } from 'rxjs/operators';
             </a>
             
             <ul class="submenu" [class.open]="isLeadsSubmenuOpen">
-              <li>
-                <a routerLink="/dashboard" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">dashboard</span>
-                  <span class="menu-text">Dashboard</span>
-                </a>
-              </li>
               <li>
                 <a routerLink="/leads" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people_outline</span>
@@ -111,12 +111,6 @@ import { filter } from 'rxjs/operators';
             </a>
             <ul class="submenu" [class.open]="propertiesExpanded()">
               <li>
-                <a routerLink="/properties/dashboard" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">dashboard</span>
-                  <span class="menu-text">Dashboard</span>
-                </a>
-              </li>
-              <li>
                 <a routerLink="/properties/list" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">business</span>
                   <span class="menu-text">Properties</span>
@@ -175,12 +169,6 @@ import { filter } from 'rxjs/operators';
               <span class="material-icons-outlined arrow-icon">{{ salesExpanded() ? 'expand_less' : 'expand_more' }}</span>
             </a>
             <ul class="submenu" [class.open]="salesExpanded()">
-              <li>
-                <a routerLink="/sales/dashboard" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">dashboard</span>
-                  <span class="menu-text">Dashboard</span>
-                </a>
-              </li>
               <li>
                 <a routerLink="/sales/customers" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people</span>
@@ -252,12 +240,6 @@ import { filter } from 'rxjs/operators';
                   <span class="menu-text">Receipts & Templates</span>
                 </a>
               </li>
-              <li>
-                <a routerLink="/finance/reports" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">analytics</span>
-                  <span class="menu-text">Statements & Aging</span>
-                </a>
-              </li>
             </ul>
           </li>
 
@@ -270,12 +252,6 @@ import { filter } from 'rxjs/operators';
             </a>
             <ul class="submenu" [class.open]="marketingExpanded()">
               <li>
-                <a routerLink="/marketing/dashboard" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">dashboard</span>
-                  <span class="menu-text">Dashboard</span>
-                </a>
-              </li>
-              <li>
                 <a routerLink="/marketing/campaigns" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">campaign</span>
                   <span class="menu-text">Campaigns</span>
@@ -285,12 +261,6 @@ import { filter } from 'rxjs/operators';
                 <a routerLink="/marketing/ads" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">ads_click</span>
                   <span class="menu-text">Ads & Channels</span>
-                </a>
-              </li>
-              <li>
-                <a routerLink="/marketing/reports" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">bar_chart</span>
-                  <span class="menu-text">Reports</span>
                 </a>
               </li>
             </ul>
@@ -304,12 +274,6 @@ import { filter } from 'rxjs/operators';
               <span class="material-icons-outlined arrow-icon">{{ brokerExpanded() ? 'expand_less' : 'expand_more' }}</span>
             </a>
             <ul class="submenu" [class.open]="brokerExpanded()">
-              <li>
-                <a routerLink="/broker/dashboard" routerLinkActive="active" class="submenu-item">
-                  <span class="material-icons-outlined font-sm">dashboard</span>
-                  <span class="menu-text">Dashboard</span>
-                </a>
-              </li>
               <li>
                 <a routerLink="/broker/list" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people</span>
@@ -341,6 +305,13 @@ import { filter } from 'rxjs/operators';
                 </a>
               </li>
             </ul>
+          </li>
+
+          <li>
+            <a routerLink="/reports" routerLinkActive="active" class="menu-item">
+              <span class="material-icons-outlined">bar_chart</span>
+              <span class="menu-text">Reports Center</span>
+            </a>
           </li>
 
           <li>
@@ -684,8 +655,7 @@ export class SidebarComponent implements OnInit {
 
   isLeadsActive(): boolean {
     const url = this.router.url;
-    return url === '/dashboard' ||
-           url === '/' ||
+    return url === '/' ||
            url.includes('/leads') || 
            url.includes('/agents') || 
            url.includes('/lead-sources') || 
@@ -701,8 +671,7 @@ export class SidebarComponent implements OnInit {
 
   get isLeadsSubmenuOpen(): boolean {
     const url = this.router.url;
-    const isLeadsUrl = url === '/dashboard' ||
-                        url === '/' ||
+    const isLeadsUrl = url === '/' ||
                         url.includes('/leads') || 
                         url.includes('/agents') || 
                         url.includes('/lead-sources') || 

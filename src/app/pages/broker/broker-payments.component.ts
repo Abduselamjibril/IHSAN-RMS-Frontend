@@ -90,8 +90,8 @@ import { customConfirm } from '../../utils/confirm';
               <div class="form-group col-span-2">
                 <label for="payBrokerId">Select Broker *</label>
                 <select id="payBrokerId" name="payBrokerId" [(ngModel)]="paymentFormModel.brokerId" required class="form-control" (change)="onBrokerSelect()">
-                  <option [value]="null" disabled selected>-- Choose Broker --</option>
-                  <option *ngFor="let b of brokers" [value]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
+                  <option [ngValue]="null" disabled selected>-- Choose Broker --</option>
+                  <option *ngFor="let b of brokers" [ngValue]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
                 </select>
               </div>
 
@@ -99,14 +99,18 @@ import { customConfirm } from '../../utils/confirm';
               <div class="form-group col-span-2" *ngIf="paymentFormModel.brokerId">
                 <label style="font-weight: 600; margin-bottom: 8px;">Select Commissions to Pay *</label>
                 <div class="flex flex-col gap-2 border p-3 rounded-md max-height-200" style="overflow-y: auto; background-color: var(--bg-main);">
-                  <div *ngFor="let comm of approvedCommissions" class="flex justify-between items-center border p-2 rounded-md bg-glass">
-                    <div class="flex align-center gap-2">
-                      <input type="checkbox" [id]="'comm-' + comm.id" (change)="toggleCommissionSelection(comm)" [checked]="isCommissionSelected(comm)">
-                      <label [for]="'comm-' + comm.id" style="margin-bottom: 0; cursor: pointer; font-size: 13px;">
-                        {{ comm.brokerSale?.property?.propertyName }} - Vol: ETB {{ comm.saleAmount | number }}
+                  <div *ngFor="let comm of approvedCommissions" class="flex justify-between items-center border p-3 rounded-md bg-glass" style="gap: 12px;">
+                    <div class="flex align-center gap-3" style="flex: 1; min-width: 0;">
+                      <input type="checkbox" [id]="'comm-' + comm.id" (change)="toggleCommissionSelection(comm)" [checked]="isCommissionSelected(comm)" style="width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;">
+                      <label [for]="'comm-' + comm.id" style="margin-bottom: 0; cursor: pointer; display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                        <span class="font-semibold text-main" style="font-size: 13px; line-height: 1.4; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ comm.brokerSale?.property?.propertyName || 'N/A' }}</span>
+                        <span class="text-muted" style="font-size: 11px; margin-top: 2px;">Sale Vol: ETB {{ comm.saleAmount | number:'1.2-2' }}</span>
                       </label>
                     </div>
-                    <strong class="font-mono text-indigo" style="font-size: 13px;">ETB {{ comm.commissionAmount | number }}</strong>
+                    <div class="text-right" style="flex-shrink: 0; min-width: 100px;">
+                      <strong class="font-mono text-indigo" style="font-size: 14px;">ETB {{ comm.commissionAmount | number:'1.2-2' }}</strong>
+                      <span class="text-muted" style="display: block; font-size: 10px; margin-top: 2px;">Earned Comm.</span>
+                    </div>
                   </div>
                   <div *ngIf="!approvedCommissions.length" class="text-secondary py-3 text-center font-sm">
                     No approved outstanding commissions found for this broker.
@@ -223,7 +227,7 @@ export class BrokerPaymentsComponent implements OnInit {
     if (!this.paymentFormModel.brokerId) return;
     this.brokerService.getCommissions().subscribe(res => {
       // Find commissions belonging to selected broker that are APPROVED
-      this.approvedCommissions = res.filter(c => c.broker?.id === Number(this.paymentFormModel.brokerId) && c.statusId === 'APPROVED');
+      this.approvedCommissions = res.filter(c => Number(c.broker?.id) === Number(this.paymentFormModel.brokerId) && c.statusId === 'APPROVED');
       this.selectedCommissions = [];
     });
   }

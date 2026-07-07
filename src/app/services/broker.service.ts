@@ -92,6 +92,10 @@ export class BrokerService {
     return this.http.get<any[]>(`${this.apiBase}/commission-plans/projects/${propertyId}`);
   }
 
+  getAllProjectCommissionPlans(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBase}/commission-plans/projects/all`);
+  }
+
   // --- Sales Attributions ---
   logBrokerSale(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/sales`, data);

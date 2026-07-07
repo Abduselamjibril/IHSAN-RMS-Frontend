@@ -27,8 +27,8 @@ import { customConfirm } from '../../utils/confirm';
         <div class="form-group" style="max-width: 400px; margin-bottom: 0;">
           <label for="brokerSelect" style="font-weight: 600; font-size: 14px;">Select Broker to Manage *</label>
           <select id="brokerSelect" class="form-control" [(ngModel)]="selectedBrokerId" (change)="onBrokerSelect()">
-            <option [value]="null" disabled selected>-- Select a Broker --</option>
-            <option *ngFor="let b of brokers" [value]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
+            <option [ngValue]="null" disabled selected>-- Select a Broker --</option>
+            <option *ngFor="let b of brokers" [ngValue]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
           </select>
         </div>
       </div>
@@ -44,8 +44,8 @@ import { customConfirm } from '../../utils/confirm';
             <div class="form-group margin-b-3">
               <label for="leadId">Select Lead *</label>
               <select id="leadId" name="leadId" [(ngModel)]="leadFormModel.leadId" required class="form-control">
-                <option [value]="null" disabled selected>-- Choose Lead --</option>
-                <option *ngFor="let lead of unassignedLeads" [value]="lead.id">{{ lead.fullName }} ({{ lead.primaryPhone }})</option>
+                <option [ngValue]="null" disabled selected>-- Choose Lead --</option>
+                <option *ngFor="let lead of unassignedLeads" [ngValue]="lead.id">{{ lead.fullName }} ({{ lead.primaryPhone }})</option>
               </select>
             </div>
             <div class="form-group margin-b-4">
@@ -66,8 +66,8 @@ import { customConfirm } from '../../utils/confirm';
             <div class="form-group margin-b-3">
               <label for="propertyId">Select Project/Property *</label>
               <select id="propertyId" name="propertyId" [(ngModel)]="projFormModel.propertyId" required class="form-control">
-                <option [value]="null" disabled selected>-- Choose Project --</option>
-                <option *ngFor="let prop of properties" [value]="prop.id">{{ prop.propertyName }} ({{ prop.city }})</option>
+                <option [ngValue]="null" disabled selected>-- Choose Project --</option>
+                <option *ngFor="let prop of properties" [ngValue]="prop.id">{{ prop.propertyName }} ({{ prop.city }})</option>
               </select>
             </div>
             <div class="grid col-2 gap-3 margin-b-4">
@@ -224,20 +224,20 @@ export class BrokerAssignmentsComponent implements OnInit {
 
   loadProperties() {
     this.propertiesService.getProperties().subscribe(res => {
-      this.properties = res;
+      this.properties = res?.items || res || [];
     });
   }
 
   loadLeads() {
     this.crmService.getLeads({ limit: 100 }).subscribe(res => {
       // In this simple CRM context, we will fetch the leads list
-      this.unassignedLeads = res.items || res;
+      this.unassignedLeads = res.data || res.items || res || [];
     });
   }
 
   onBrokerSelect() {
     if (!this.selectedBrokerId) return;
-    this.selectedBroker = this.brokers.find(b => b.id === Number(this.selectedBrokerId));
+    this.selectedBroker = this.brokers.find(b => Number(b.id) === Number(this.selectedBrokerId));
     this.refreshBrokerAssignments();
   }
 

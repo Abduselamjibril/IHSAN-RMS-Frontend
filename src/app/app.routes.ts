@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { LeadsComponent } from './pages/leads/leads.component';
-import { PropertiesDashboardComponent } from './pages/properties/dashboard/properties-dashboard.component';
 import { PropertiesListComponent } from './pages/properties/list/properties-list.component';
 import { PropertiesDetailsComponent } from './pages/properties/details/properties-details.component';
 import { BuildingsComponent } from './pages/properties/buildings/buildings.component';
@@ -11,7 +10,7 @@ import { PricingComponent } from './pages/properties/pricing/pricing.component';
 import { FloorPlansComponent } from './pages/properties/floor-plans/floor-plans.component';
 import { MediaDocumentsComponent } from './pages/properties/media-documents/media-documents.component';
 import { AmenitiesComponent } from './pages/properties/amenities/amenities.component';
-import { ReportsComponent } from './pages/properties/reports/reports.component';
+import { ReportsComponent } from './pages/reports/reports.component';
 import { AgentsComponent } from './pages/agents/agents.component';
 import { LeadSourcesComponent } from './pages/lead-sources/lead-sources.component';
 import { FollowupsComponent } from './pages/followups/followups.component';
@@ -24,7 +23,6 @@ import { ForecastingComponent } from './pages/forecasting/forecasting.component'
 import { SegmentationComponent } from './pages/segmentation/segmentation.component';
 
 // Sales module imports
-import { SalesDashboardComponent } from './pages/sales/sales-dashboard.component';
 import { CustomersComponent } from './pages/sales/customers.component';
 import { ReservationsComponent } from './pages/sales/reservations.component';
 import { QuotationsComponent } from './pages/sales/quotations.component';
@@ -37,16 +35,12 @@ import { CommissionsComponent } from './pages/sales/commissions.component';
 import { CollectionsComponent } from './pages/finance/collections.component';
 import { FinanceInstallmentsComponent } from './pages/finance/installments.component';
 import { ReceiptsComponent } from './pages/finance/receipts.component';
-import { FinanceReportsComponent } from './pages/finance/reports.component';
 
 // Marketing module imports
-import { MarketingDashboardComponent } from './pages/marketing/marketing-dashboard.component';
 import { CampaignsComponent } from './pages/marketing/campaigns.component';
 import { AdvertisementsComponent } from './pages/marketing/advertisements.component';
-import { MarketingReportsComponent } from './pages/marketing/marketing-reports.component';
 
 // Broker module imports
-import { BrokerDashboardComponent } from './pages/broker/broker-dashboard.component';
 import { BrokerListComponent } from './pages/broker/broker-list.component';
 import { BrokerAssignmentsComponent } from './pages/broker/broker-assignments.component';
 import { BrokerPlansComponent } from './pages/broker/broker-plans.component';
@@ -58,7 +52,6 @@ export const routes: Routes = [
   { path: 'leads', component: LeadsComponent },
   
   // Property management routes
-  { path: 'properties/dashboard', component: PropertiesDashboardComponent },
   { path: 'properties/list', component: PropertiesListComponent },
   { path: 'properties/details/:id', component: PropertiesDetailsComponent },
   { path: 'properties/buildings', component: BuildingsComponent },
@@ -68,7 +61,6 @@ export const routes: Routes = [
   { path: 'properties/floor-plans', component: FloorPlansComponent },
   { path: 'properties/media', component: MediaDocumentsComponent },
   { path: 'properties/amenities', component: AmenitiesComponent },
-  { path: 'properties/reports', component: ReportsComponent },
 
   // CRM/Agent management routes
   { path: 'agents', component: AgentsComponent },
@@ -83,7 +75,6 @@ export const routes: Routes = [
   { path: 'lead-tracking', component: LeadTrackingComponent },
 
   // Sales module routes
-  { path: 'sales/dashboard', component: SalesDashboardComponent },
   { path: 'sales/customers', component: CustomersComponent },
   { path: 'sales/reservations', component: ReservationsComponent },
   { path: 'sales/quotations', component: QuotationsComponent },
@@ -96,22 +87,19 @@ export const routes: Routes = [
   { path: 'finance/collections', component: CollectionsComponent },
   { path: 'finance/installments', component: FinanceInstallmentsComponent },
   { path: 'finance/receipts', component: ReceiptsComponent },
-  { path: 'finance/reports', component: FinanceReportsComponent },
 
   // Marketing module routes
-  { path: 'marketing/dashboard', component: MarketingDashboardComponent },
   { path: 'marketing/campaigns', component: CampaignsComponent },
   { path: 'marketing/ads', component: AdvertisementsComponent },
-  { path: 'marketing/reports', component: MarketingReportsComponent },
 
   // Broker module routes
-  { path: 'broker/dashboard', component: BrokerDashboardComponent },
   { path: 'broker/list', component: BrokerListComponent },
   { path: 'broker/assignments', component: BrokerAssignmentsComponent },
   { path: 'broker/plans', component: BrokerPlansComponent },
   { path: 'broker/commissions', component: BrokerCommissionsComponent },
   { path: 'broker/payments', component: BrokerPaymentsComponent },
 
+  { path: 'reports', component: ReportsComponent },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },
 ];

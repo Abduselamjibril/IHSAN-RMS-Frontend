@@ -47,59 +47,75 @@ import { BrokerPlansComponent } from './pages/broker/broker-plans.component';
 import { BrokerCommissionsComponent } from './pages/broker/broker-commissions.component';
 import { BrokerPaymentsComponent } from './pages/broker/broker-payments.component';
 
+// Security module imports
+import { authGuard } from './guards/auth.guard';
+import { LoginComponent } from './pages/security/login.component';
+import { UsersComponent } from './pages/security/users.component';
+import { RolesComponent } from './pages/security/roles.component';
+import { WorkflowsComponent } from './pages/security/workflows.component';
+import { AuditComponent } from './pages/security/audit.component';
+
 export const routes: Routes = [
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'leads', component: LeadsComponent },
+  { path: 'login', component: LoginComponent },
+  
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'leads', component: LeadsComponent, canActivate: [authGuard] },
   
   // Property management routes
-  { path: 'properties/list', component: PropertiesListComponent },
-  { path: 'properties/details/:id', component: PropertiesDetailsComponent },
-  { path: 'properties/buildings', component: BuildingsComponent },
-  { path: 'properties/units', component: UnitsComponent },
-  { path: 'properties/unit-status', component: UnitStatusComponent },
-  { path: 'properties/pricing', component: PricingComponent },
-  { path: 'properties/floor-plans', component: FloorPlansComponent },
-  { path: 'properties/media', component: MediaDocumentsComponent },
-  { path: 'properties/amenities', component: AmenitiesComponent },
+  { path: 'properties/list', component: PropertiesListComponent, canActivate: [authGuard] },
+  { path: 'properties/details/:id', component: PropertiesDetailsComponent, canActivate: [authGuard] },
+  { path: 'properties/buildings', component: BuildingsComponent, canActivate: [authGuard] },
+  { path: 'properties/units', component: UnitsComponent, canActivate: [authGuard] },
+  { path: 'properties/unit-status', component: UnitStatusComponent, canActivate: [authGuard] },
+  { path: 'properties/pricing', component: PricingComponent, canActivate: [authGuard] },
+  { path: 'properties/floor-plans', component: FloorPlansComponent, canActivate: [authGuard] },
+  { path: 'properties/media', component: MediaDocumentsComponent, canActivate: [authGuard] },
+  { path: 'properties/amenities', component: AmenitiesComponent, canActivate: [authGuard] },
 
   // CRM/Agent management routes
-  { path: 'agents', component: AgentsComponent },
-  { path: 'lead-sources', component: LeadSourcesComponent },
-  { path: 'log-interaction', component: LogInteractionComponent },
-  { path: 'follow-ups', component: FollowupsComponent },
-  { path: 'opportunities', component: OpportunitiesComponent },
-  { path: 'forecasting', component: ForecastingComponent },
-  { path: 'communications', component: CommunicationsComponent },
-  { path: 'documents', component: DocumentsComponent },
-  { path: 'segmentation', component: SegmentationComponent },
-  { path: 'lead-tracking', component: LeadTrackingComponent },
+  { path: 'agents', component: AgentsComponent, canActivate: [authGuard] },
+  { path: 'lead-sources', component: LeadSourcesComponent, canActivate: [authGuard] },
+  { path: 'log-interaction', component: LogInteractionComponent, canActivate: [authGuard] },
+  { path: 'follow-ups', component: FollowupsComponent, canActivate: [authGuard] },
+  { path: 'opportunities', component: OpportunitiesComponent, canActivate: [authGuard] },
+  { path: 'forecasting', component: ForecastingComponent, canActivate: [authGuard] },
+  { path: 'communications', component: CommunicationsComponent, canActivate: [authGuard] },
+  { path: 'documents', component: DocumentsComponent, canActivate: [authGuard] },
+  { path: 'segmentation', component: SegmentationComponent, canActivate: [authGuard] },
+  { path: 'lead-tracking', component: LeadTrackingComponent, canActivate: [authGuard] },
 
   // Sales module routes
-  { path: 'sales/customers', component: CustomersComponent },
-  { path: 'sales/reservations', component: ReservationsComponent },
-  { path: 'sales/quotations', component: QuotationsComponent },
-  { path: 'sales/bookings', component: BookingsComponent },
-  { path: 'sales/contracts', component: ContractsComponent },
-  { path: 'sales/installments', component: InstallmentsComponent },
-  { path: 'sales/commissions', component: CommissionsComponent },
+  { path: 'sales/customers', component: CustomersComponent, canActivate: [authGuard] },
+  { path: 'sales/reservations', component: ReservationsComponent, canActivate: [authGuard] },
+  { path: 'sales/quotations', component: QuotationsComponent, canActivate: [authGuard] },
+  { path: 'sales/bookings', component: BookingsComponent, canActivate: [authGuard] },
+  { path: 'sales/contracts', component: ContractsComponent, canActivate: [authGuard] },
+  { path: 'sales/installments', component: InstallmentsComponent, canActivate: [authGuard] },
+  { path: 'sales/commissions', component: CommissionsComponent, canActivate: [authGuard] },
 
   // Finance module routes
-  { path: 'finance/collections', component: CollectionsComponent },
-  { path: 'finance/installments', component: FinanceInstallmentsComponent },
-  { path: 'finance/receipts', component: ReceiptsComponent },
+  { path: 'finance/collections', component: CollectionsComponent, canActivate: [authGuard] },
+  { path: 'finance/installments', component: FinanceInstallmentsComponent, canActivate: [authGuard] },
+  { path: 'finance/receipts', component: ReceiptsComponent, canActivate: [authGuard] },
 
   // Marketing module routes
-  { path: 'marketing/campaigns', component: CampaignsComponent },
-  { path: 'marketing/ads', component: AdvertisementsComponent },
+  { path: 'marketing/campaigns', component: CampaignsComponent, canActivate: [authGuard] },
+  { path: 'marketing/ads', component: AdvertisementsComponent, canActivate: [authGuard] },
 
   // Broker module routes
-  { path: 'broker/list', component: BrokerListComponent },
-  { path: 'broker/assignments', component: BrokerAssignmentsComponent },
-  { path: 'broker/plans', component: BrokerPlansComponent },
-  { path: 'broker/commissions', component: BrokerCommissionsComponent },
-  { path: 'broker/payments', component: BrokerPaymentsComponent },
+  { path: 'broker/list', component: BrokerListComponent, canActivate: [authGuard] },
+  { path: 'broker/assignments', component: BrokerAssignmentsComponent, canActivate: [authGuard] },
+  { path: 'broker/plans', component: BrokerPlansComponent, canActivate: [authGuard] },
+  { path: 'broker/commissions', component: BrokerCommissionsComponent, canActivate: [authGuard] },
+  { path: 'broker/payments', component: BrokerPaymentsComponent, canActivate: [authGuard] },
 
-  { path: 'reports', component: ReportsComponent },
+  // User & Role security management routes
+  { path: 'security/users', component: UsersComponent, canActivate: [authGuard] },
+  { path: 'security/roles', component: RolesComponent, canActivate: [authGuard] },
+  { path: 'security/workflows', component: WorkflowsComponent, canActivate: [authGuard] },
+  { path: 'security/audit', component: AuditComponent, canActivate: [authGuard] },
+
+  { path: 'reports', component: ReportsComponent, canActivate: [authGuard] },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' },
 ];

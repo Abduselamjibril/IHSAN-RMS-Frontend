@@ -1,7 +1,7 @@
 <!-- IHSAN REMS – App Shell -->
 <div class="app-shell">
-  <app-sidebar></app-sidebar>
-  <main class="main-content">
+  <app-sidebar *ngIf="authService.isAuthenticated()"></app-sidebar>
+  <main class="main-content" [style.padding]="authService.isAuthenticated() ? '24px 32px' : '0'">
     <router-outlet></router-outlet>
   </main>
 </div>

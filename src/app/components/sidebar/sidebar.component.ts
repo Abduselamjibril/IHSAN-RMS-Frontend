@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -314,6 +315,40 @@ import { filter } from 'rxjs/operators';
             </a>
           </li>
 
+          <li *ngIf="authService.currentUser()?.roles?.includes('System Administrator')">
+            <a (click)="toggleSecurity()" class="menu-item cursor-pointer" [class.active-parent]="isSecurityActive()">
+              <span class="material-icons-outlined">admin_panel_settings</span>
+              <span class="menu-text">Security & Roles</span>
+              <span class="material-icons-outlined arrow-icon">{{ securityExpanded() ? 'expand_less' : 'expand_more' }}</span>
+            </a>
+            <ul class="submenu" [class.open]="securityExpanded() || isSecurityActive()">
+              <li>
+                <a routerLink="/security/users" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">people_outline</span>
+                  <span class="menu-text">User Directory</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/security/roles" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">lock_open</span>
+                  <span class="menu-text">Permissions Matrix</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/security/workflows" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">task_alt</span>
+                  <span class="menu-text">Approval Workflows</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/security/audit" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">receipt_long</span>
+                  <span class="menu-text">Security Auditing</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+
           <li>
             <a class="menu-item disabled">
               <span class="material-icons-outlined">settings</span>
@@ -323,12 +358,17 @@ import { filter } from 'rxjs/operators';
         </ul>
       </nav>
 
-      <div class="sidebar-profile">
-        <div class="avatar">AK</div>
-        <div class="profile-info">
-          <span class="profile-name">Abebe Kebede</span>
-          <span class="profile-role">Sales Manager</span>
+      <div class="sidebar-profile" *ngIf="authService.currentUser() as user">
+        <div class="avatar" style="background-color: #5b46b8; color: white;">
+          {{ getInitials(user.firstName, user.lastName) }}
         </div>
+        <div class="profile-info">
+          <span class="profile-name">{{ user.firstName }} {{ user.lastName }}</span>
+          <span class="profile-role">{{ user.roles?.[0] || 'User' }}</span>
+        </div>
+        <button (click)="authService.logout()" title="Sign Out" class="icon-btn text-danger" style="margin-left: auto; width: 28px; height: 28px; background-color: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;">
+          <span class="material-icons-outlined" style="font-size: 16px; color: #ef4444;">logout</span>
+        </button>
       </div>
     </aside>
   `,
@@ -584,11 +624,14 @@ import { filter } from 'rxjs/operators';
 })
 export class SidebarComponent implements OnInit {
   private router = inject(Router);
+  public authService = inject(AuthService);
+  
   propertiesExpanded = signal(false);
   salesExpanded = signal(false);
   financeExpanded = signal(false);
   marketingExpanded = signal(false);
   brokerExpanded = signal(false);
+  securityExpanded = signal(false);
   
   private manualClosed = false;
   private manualOpened = false;
@@ -610,6 +653,9 @@ export class SidebarComponent implements OnInit {
     }
     if (this.router.url.includes('/broker')) {
       this.brokerExpanded.set(true);
+    }
+    if (this.router.url.includes('/security')) {
+      this.securityExpanded.set(true);
     }
   }
 
@@ -633,6 +679,10 @@ export class SidebarComponent implements OnInit {
     this.brokerExpanded.update(v => !v);
   }
 
+  toggleSecurity() {
+    this.securityExpanded.update(v => !v);
+  }
+
   isPropertyActive(): boolean {
     return this.router.url.includes('/properties');
   }
@@ -651,6 +701,14 @@ export class SidebarComponent implements OnInit {
 
   isBrokerActive(): boolean {
     return this.router.url.includes('/broker');
+  }
+
+  isSecurityActive(): boolean {
+    return this.router.url.includes('/security');
+  }
+
+  getInitials(first: string, last: string): string {
+    return `${first?.charAt(0) || ''}${last?.charAt(0) || ''}`.toUpperCase();
   }
 
   isLeadsActive(): boolean {

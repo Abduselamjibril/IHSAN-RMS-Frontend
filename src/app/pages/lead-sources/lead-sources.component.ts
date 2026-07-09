@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-lead-sources',
@@ -15,7 +16,7 @@ import { customConfirm } from '../../utils/confirm';
         <p>Configure and manage customer referral channels and marketing campaigns</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('crm.lead_sources.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Lead Source
         </button>
@@ -273,6 +274,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class LeadSourcesComponent implements OnInit {
   private crmService = inject(CrmService);
+  public authService = inject(AuthService);
 
   leadSources: any[] = [];
   searchQuery = '';

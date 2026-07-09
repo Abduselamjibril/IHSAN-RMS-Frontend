@@ -5,6 +5,7 @@ import { customConfirm } from '../../../utils/confirm';
 import { RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-units',
@@ -21,11 +22,11 @@ import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/d
           <span class="material-icons-outlined">palette</span>
           Status Colors
         </button>
-        <button class="btn btn-secondary flex align-center gap-1" (click)="openImportModal()">
+        <button class="btn btn-secondary flex align-center gap-1" (click)="openImportModal()" *ngIf="authService.hasPermission('properties.units.import', 'create')">
           <span class="material-icons-outlined">file_upload</span>
           Bulk Import CSV
         </button>
-        <button class="btn btn-primary flex align-center gap-1" (click)="openCreateModal()">
+        <button class="btn btn-primary flex align-center gap-1" (click)="openCreateModal()" *ngIf="authService.hasPermission('properties.units.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Unit
         </button>
@@ -494,6 +495,7 @@ import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/d
 export class UnitsComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);
+  public authService = inject(AuthService);
 
   units: any[] = [];
   totalUnits = 0;

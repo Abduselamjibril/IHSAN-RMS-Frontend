@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { PropertiesService } from '../../services/properties.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-bookings',
@@ -16,7 +17,7 @@ import { customConfirm } from '../../utils/confirm';
         <p>Convert reservations, log initial sales down-payments, and authorize bookings</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('sales.bookings.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Booking
         </button>
@@ -248,6 +249,7 @@ import { customConfirm } from '../../utils/confirm';
 export class BookingsComponent implements OnInit {
   private salesService = inject(SalesService);
   private propertiesService = inject(PropertiesService);
+  public authService = inject(AuthService);
 
   bookings: any[] = [];
   filteredBookings: any[] = [];

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { CrmService } from '../../services/crm.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-customers',
@@ -16,7 +17,7 @@ import { customConfirm } from '../../utils/confirm';
         <p>Manage real estate buyers, lead conversions, and customer records</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('sales.customers.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Customer
         </button>
@@ -279,6 +280,7 @@ import { customConfirm } from '../../utils/confirm';
 export class CustomersComponent implements OnInit {
   private salesService = inject(SalesService);
   private crmService = inject(CrmService);
+  public authService = inject(AuthService);
 
   customers: any[] = [];
   filteredCustomers: any[] = [];

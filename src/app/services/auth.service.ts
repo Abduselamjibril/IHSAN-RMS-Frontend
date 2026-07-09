@@ -117,4 +117,16 @@ export class AuthService {
         return false;
     }
   }
+
+  hasModuleAccess(modulePrefix: string): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    
+    // Superadmin bypass
+    if (user.roles.includes('System Administrator')) return true;
+    
+    return user.permissions.some(
+      (p) => p.code.toLowerCase().startsWith(modulePrefix.toLowerCase()) && p.canView
+    );
+  }
 }

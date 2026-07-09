@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrokerService } from '../../services/broker.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-broker-list',
@@ -15,7 +16,7 @@ import { customConfirm } from '../../utils/confirm';
         <p>Manage and onboard property brokers, configure bank details, and track credentials</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('broker.list.create', 'create')">
           <span class="material-icons-outlined">add</span> Onboard Broker
         </button>
       </div>
@@ -447,6 +448,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class BrokerListComponent implements OnInit {
   private brokerService = inject(BrokerService);
+  public authService = inject(AuthService);
 
   brokers: any[] = [];
   filteredBrokers: any[] = [];

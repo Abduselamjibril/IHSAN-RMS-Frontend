@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MarketingService } from '../../services/marketing.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-leads',
@@ -17,11 +18,11 @@ import { MarketingService } from '../../services/marketing.service';
       </div>
       <div class="app-header-actions">
         <!-- Export Button -->
-        <a [href]="getExportCsvUrl()" class="btn btn-secondary">
+        <a [href]="getExportCsvUrl()" class="btn btn-secondary" *ngIf="authService.hasPermission('crm.leads.export', 'export')">
           <span class="material-icons-outlined">file_download</span>
           Export CSV
         </a>
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('crm.leads.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Lead
         </button>
@@ -763,6 +764,7 @@ import { MarketingService } from '../../services/marketing.service';
 export class LeadsComponent implements OnInit {
   private crmService = inject(CrmService);
   private marketingService = inject(MarketingService);
+  public authService = inject(AuthService);
 
   campaigns: any[] = [];
   leadAttribution: any = null;

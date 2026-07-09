@@ -26,7 +26,7 @@ import { AuthService } from '../../services/auth.service';
               <span class="menu-text">Executive Dashboard</span>
             </a>
           </li>
-          <li>
+          <li *ngIf="authService.hasModuleAccess('crm.')">
             <a (click)="toggleLeads($event)" class="menu-item cursor-pointer" [class.active-parent]="isLeadsActive()">
               <span class="material-icons-outlined">people_outline</span>
               <span class="menu-text">Leads Module</span>
@@ -34,67 +34,67 @@ import { AuthService } from '../../services/auth.service';
             </a>
             
             <ul class="submenu" [class.open]="isLeadsSubmenuOpen">
-              <li>
+              <li *ngIf="authService.hasPermission('crm.leads.read_all', 'view')">
                 <a routerLink="/leads" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people_outline</span>
                   <span class="menu-text">Leads</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.agents.read', 'view')">
                 <a routerLink="/agents" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">people</span>
                   <span class="menu-text">Sales Agents</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.lead_sources.read_all', 'view')">
                 <a routerLink="/lead-sources" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">share</span>
                   <span class="menu-text">Lead Sources</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.leads.activities.create', 'create')">
                 <a routerLink="/log-interaction" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">history_edu</span>
                   <span class="menu-text">Log Interaction</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.agents.reminders.read', 'view')">
                 <a routerLink="/follow-ups" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">alarm</span>
                   <span class="menu-text">Follow-ups</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.opportunities.read_all', 'view')">
                 <a routerLink="/opportunities" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">trending_up</span>
                   <span class="menu-text">Opportunities</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.opportunities.forecast.read', 'view')">
                 <a routerLink="/forecasting" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">insights</span>
                   <span class="menu-text">Forecasting</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.leads.read_all', 'view')">
                 <a routerLink="/lead-tracking" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">timeline</span>
                   <span class="menu-text">Lead Tracking</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.leads.read_all', 'view')">
                 <a routerLink="/communications" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">chat_bubble_outline</span>
                   <span class="menu-text">Communications</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.documents.read_all', 'view')">
                 <a routerLink="/documents" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">description</span>
                   <span class="menu-text">Documents</span>
                 </a>
               </li>
-              <li>
+              <li *ngIf="authService.hasPermission('crm.segments.read_all', 'view')">
                 <a routerLink="/segmentation" routerLinkActive="active" class="submenu-item">
                   <span class="material-icons-outlined font-sm">segment</span>
                   <span class="menu-text">Segmentation</span>
@@ -104,7 +104,7 @@ import { AuthService } from '../../services/auth.service';
           </li>
 
           <!-- Collapsible Property Management Section -->
-          <li>
+          <li *ngIf="authService.hasModuleAccess('properties.')">
             <a (click)="toggleProperties()" class="menu-item cursor-pointer" [class.active-parent]="isPropertyActive()">
               <span class="material-icons-outlined">business</span>
               <span class="menu-text">Property Module</span>
@@ -163,7 +163,7 @@ import { AuthService } from '../../services/auth.service';
           </li>
 
           <!-- Collapsible Sales Management Section -->
-          <li>
+          <li *ngIf="authService.hasModuleAccess('sales.')">
             <a (click)="toggleSales()" class="menu-item cursor-pointer" [class.active-parent]="isSalesActive()">
               <span class="material-icons-outlined">monetization_on</span>
               <span class="menu-text">Sales Module</span>
@@ -216,7 +216,7 @@ import { AuthService } from '../../services/auth.service';
           </li>
 
           <!-- Collapsible Finance & Collections Section -->
-          <li>
+          <li *ngIf="authService.hasModuleAccess('finance.')">
             <a (click)="toggleFinance()" class="menu-item cursor-pointer" [class.active-parent]="isFinanceActive()">
               <span class="material-icons-outlined">account_balance_wallet</span>
               <span class="menu-text">Finance & Collections</span>
@@ -245,7 +245,7 @@ import { AuthService } from '../../services/auth.service';
           </li>
 
           <!-- Collapsible Marketing Management Section -->
-          <li>
+          <li *ngIf="authService.hasModuleAccess('marketing.')">
             <a (click)="toggleMarketing()" class="menu-item cursor-pointer" [class.active-parent]="isMarketingActive()">
               <span class="material-icons-outlined">campaign</span>
               <span class="menu-text">Marketing Module</span>
@@ -268,7 +268,7 @@ import { AuthService } from '../../services/auth.service';
           </li>
 
           <!-- Collapsible Broker Management Section -->
-          <li>
+          <li *ngIf="authService.hasModuleAccess('broker.')">
             <a (click)="toggleBroker()" class="menu-item cursor-pointer" [class.active-parent]="isBrokerActive()">
               <span class="material-icons-outlined">support_agent</span>
               <span class="menu-text">Broker Module</span>
@@ -308,7 +308,7 @@ import { AuthService } from '../../services/auth.service';
             </ul>
           </li>
 
-          <li>
+          <li *ngIf="authService.hasModuleAccess('reports.')">
             <a routerLink="/reports" routerLinkActive="active" class="menu-item">
               <span class="material-icons-outlined">bar_chart</span>
               <span class="menu-text">Reports Center</span>

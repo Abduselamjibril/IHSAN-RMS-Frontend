@@ -67,9 +67,14 @@ interface PermissionMatrixRow {
             <h2>{{ selectedRole.roleName }} Matrix</h2>
             <p class="text-secondary text-xs" style="margin-top: 4px;">{{ selectedRole.description || 'No description provided.' }}</p>
           </div>
-          <button class="btn btn-primary" (click)="savePermissions()">
-            <span class="material-icons-outlined">save</span> Save Matrix Changes
-          </button>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn" (click)="applySuggestedPermissions()" style="background: rgba(124, 58, 237, 0.15); border: 1px solid rgba(124, 58, 237, 0.3); color: #a78bfa; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+              <span class="material-icons-outlined" style="font-size: 18px;">psychology</span> Suggest Permissions
+            </button>
+            <button class="btn btn-primary" (click)="savePermissions()">
+              <span class="material-icons-outlined">save</span> Save Matrix Changes
+            </button>
+          </div>
         </div>
 
         <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
@@ -341,5 +346,134 @@ export class RolesComponent implements OnInit {
       },
       error: (err) => console.error('Failed to save permissions matrix', err)
     });
+  }
+
+  applySuggestedPermissions() {
+    if (!this.selectedRole) return;
+    const roleCode = this.selectedRole.roleCode.toUpperCase();
+
+    for (const row of this.matrixRows) {
+      const code = row.permissionCode.toLowerCase();
+
+      // Reset first
+      row.canView = false;
+      row.canCreate = false;
+      row.canEdit = false;
+      row.canDelete = false;
+      row.canApprove = false;
+      row.canExport = false;
+
+      // 1. System Admin gets everything
+      if (roleCode === 'SYS_ADMIN') {
+        row.canView = true;
+        row.canCreate = true;
+        row.canEdit = true;
+        row.canDelete = true;
+        row.canApprove = true;
+        row.canExport = true;
+      }
+      // 2. Sales Manager
+      else if (roleCode === 'SALES_MGR') {
+        if (code.startsWith('crm.') || code.startsWith('sales.')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+          row.canExport = true;
+          if (code.includes('approve') || code.includes('discount') || code.includes('reservation')) {
+            row.canApprove = true;
+          }
+        }
+        if (code.startsWith('properties.')) {
+          row.canView = true;
+        }
+      }
+      // 3. Sales Officer
+      else if (roleCode === 'SALES_OFFICER') {
+        if (code.startsWith('crm.leads') || code.startsWith('crm.opportunities') || code.startsWith('crm.agents')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+        }
+        if (code.startsWith('properties.units') || code.startsWith('properties.sites')) {
+          row.canView = true;
+        }
+        if (code.startsWith('sales.quotations') || code.startsWith('sales.bookings') || code.startsWith('sales.reservations')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+        }
+      }
+      // 4. Finance Manager
+      else if (roleCode === 'FINANCE_MGR') {
+        if (code.startsWith('finance.') || code.includes('commission') || code.includes('payment') || code.includes('payout')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+          row.canApprove = true;
+          row.canExport = true;
+        }
+        if (code.startsWith('reports.')) {
+          row.canView = true;
+          row.canExport = true;
+        }
+      }
+      // 5. Finance Officer
+      else if (roleCode === 'FINANCE_OFFICER') {
+        if (code.startsWith('finance.collections') || code.startsWith('finance.receipts')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+        }
+        if (code.includes('payout') || code.includes('commission')) {
+          row.canView = true;
+        }
+      }
+      // 6. Inventory Manager
+      else if (roleCode === 'INV_MGR') {
+        if (code.startsWith('properties.')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+          row.canDelete = true;
+          row.canExport = true;
+        }
+      }
+      // 7. Marketing Manager
+      else if (roleCode === 'MKT_MGR') {
+        if (code.startsWith('marketing.')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+          row.canDelete = true;
+          row.canExport = true;
+        }
+        if (code.startsWith('crm.leads')) {
+          row.canView = true;
+        }
+      }
+      // 8. Broker Manager
+      else if (roleCode === 'BROKER_MGR') {
+        if (code.startsWith('broker.') || code.includes('commission')) {
+          row.canView = true;
+          row.canCreate = true;
+          row.canEdit = true;
+          row.canDelete = true;
+          row.canApprove = true;
+          row.canExport = true;
+        }
+      }
+      // 9. Executive Management
+      else if (roleCode === 'EXEC') {
+        row.canView = true;
+        row.canExport = true;
+        if (code.includes('approve') || code.includes('discount') || code.includes('workflow')) {
+          row.canApprove = true;
+        }
+      }
+      // Fallback for custom roles: give basic view access
+      else {
+        row.canView = true;
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
 import { customConfirm } from '../../../utils/confirm';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-amenities',
@@ -15,7 +16,7 @@ import { customConfirm } from '../../../utils/confirm';
         <p>Manage physical structures, features, and comfort amenities offered across projects</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('properties.amenities.create', 'create')">
           <span class="material-icons-outlined">add</span>
           Add Amenity Master
         </button>
@@ -36,8 +37,8 @@ import { customConfirm } from '../../../utils/confirm';
         </div>
         <p class="text-secondary font-sm mt-3">{{ am.description || 'No description provided.' }}</p>
         <div class="card-actions flex justify-end gap-2 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
-          <button class="btn btn-secondary btn-xs" (click)="openEditModal(am)">Edit</button>
-          <button class="btn btn-danger btn-xs" (click)="onDelete(am.id)">Delete</button>
+          <button class="btn btn-secondary btn-xs" (click)="openEditModal(am)" *ngIf="authService.hasPermission('properties.amenities.update', 'edit')">Edit</button>
+          <button class="btn btn-danger btn-xs" (click)="onDelete(am.id)" *ngIf="authService.hasPermission('properties.amenities.delete', 'delete')">Delete</button>
         </div>
       </div>
 
@@ -99,6 +100,7 @@ import { customConfirm } from '../../../utils/confirm';
 export class AmenitiesComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);
+  public authService = inject(AuthService);
 
   amenities: any[] = [];
   showModal = false;

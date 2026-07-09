@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrokerService } from '../../services/broker.service';
 import { PropertiesService } from '../../services/properties.service';
-import { customConfirm } from '../../utils/confirm';
+import { customConfirm, customAlert } from '../../utils/confirm';
 
 @Component({
   selector: 'app-broker-plans',
@@ -92,15 +92,15 @@ import { customConfirm } from '../../utils/confirm';
             <div class="form-group margin-b-3">
               <label for="mapPropertyId">Select Project/Property *</label>
               <select id="mapPropertyId" name="mapPropertyId" [(ngModel)]="mappingFormModel.propertyId" required class="form-control">
-                <option [value]="null" disabled selected>-- Choose Project --</option>
-                <option *ngFor="let prop of properties" [value]="prop.id">{{ prop.propertyName }}</option>
+                <option [ngValue]="null" disabled selected>-- Choose Project --</option>
+                <option *ngFor="let prop of properties" [ngValue]="prop.id">{{ prop.propertyName }}</option>
               </select>
             </div>
             <div class="form-group margin-b-3">
               <label for="mapPlanId">Select Commission Plan *</label>
               <select id="mapPlanId" name="mapPlanId" [(ngModel)]="mappingFormModel.commissionPlanId" required class="form-control">
-                <option [value]="null" disabled selected>-- Choose Plan --</option>
-                <option *ngFor="let p of plans" [value]="p.id">{{ p.commissionPlanName }}</option>
+                <option [ngValue]="null" disabled selected>-- Choose Plan --</option>
+                <option *ngFor="let p of plans" [ngValue]="p.id">{{ p.commissionPlanName }}</option>
               </select>
             </div>
             <div class="form-group margin-b-4">
@@ -109,6 +109,51 @@ import { customConfirm } from '../../utils/confirm';
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%;" [disabled]="!mappingForm.valid">Map Plan</button>
           </form>
+        </div>
+
+        <!-- Active Project Mappings (2 columns span) -->
+        <div class="card p-6 col-span-2">
+          <h3 class="margin-b-4 flex align-center gap-2">
+            <span class="material-icons-outlined text-indigo">link</span>
+            Active Project Mappings
+          </h3>
+          <div class="table-container">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th style="width: 40%;">Project/Property</th>
+                  <th style="width: 40%;">Mapped Commission Plan</th>
+                  <th style="width: 20%;">Start Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let mapping of projectMappings">
+                  <td>
+                    <div class="flex flex-col">
+                      <span class="font-semibold text-main">{{ mapping.property?.propertyName }}</span>
+                      <span class="text-xs text-muted">{{ mapping.property?.propertyCode }} • {{ mapping.property?.city }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex flex-col">
+                      <span class="font-semibold text-indigo">{{ mapping.commissionPlan?.commissionPlanName }}</span>
+                      <span class="text-xs text-muted">{{ mapping.commissionPlan?.commissionPlanCode }} ({{ mapping.commissionPlan?.commissionTypeId }})</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="text-xs font-mono text-secondary">
+                      {{ mapping.effectiveFromDate | date:'mediumDate' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="!projectMappings.length">
+                  <td colspan="3" class="text-center text-secondary py-6">
+                    No active commission plan mappings registered.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>
@@ -221,7 +266,7 @@ import { customConfirm } from '../../utils/confirm';
             <!-- Detail configurations rows -->
             <div class="border-top mt-4 pt-4">
               <div class="flex justify-between items-center margin-b-3">
-                <h4 class="font-semibold text-main">Structure Parameters</h4>
+                <h4 class="parameters-accent-title">Structure Parameters</h4>
                 <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" *ngIf="planFormModel.commissionTypeId === 'TIERED'" (click)="addDetailRow()">
                   <span class="material-icons-outlined font-xs">add</span> Add Tier Row
                 </button>
@@ -247,11 +292,11 @@ import { customConfirm } from '../../utils/confirm';
 
                 <!-- TIERED -->
                 <div *ngIf="planFormModel.commissionTypeId === 'TIERED'" class="flex flex-col gap-3">
-                  <div *ngFor="let tier of planFormModel.details; let idx = index" class="border p-3 rounded-md bg-glass flex flex-col gap-2 relative">
+                  <div *ngFor="let tier of planFormModel.details; let idx = index" class="tier-card flex flex-col gap-2 relative">
                     <button type="button" class="icon-btn text-danger" style="position: absolute; right: 10px; top: 10px;" (click)="removeDetailRow(idx)">
                       <span class="material-icons-outlined font-sm">close</span>
                     </button>
-                    <span class="text-indigo font-bold text-xs uppercase tracking-wider">Tier #{{ idx + 1 }}</span>
+                    <span class="tier-badge" style="width: max-content;">Tier #{{ idx + 1 }}</span>
                     <div class="grid col-4 gap-2">
                       <div class="form-group">
                         <label class="font-xs">From Amount *</label>
@@ -307,6 +352,82 @@ import { customConfirm } from '../../utils/confirm';
       font-size: 11px;
       margin-bottom: 2px;
     }
+    
+    /* Premium Modal Styling */
+    .modal-container {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    }
+    .modal-header {
+      background: linear-gradient(135deg, var(--brand-primary) 0%, #2f2070 100%) !important;
+      color: white !important;
+      padding: 22px 28px;
+      position: relative;
+      border-bottom: none;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: white !important;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .modal-header .close-btn {
+      color: rgba(255, 255, 255, 0.8) !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-header .close-btn:hover {
+      color: white !important;
+      background: rgba(255, 255, 255, 0.2) !important;
+      transform: rotate(90deg);
+    }
+    
+    /* Parameters Accent Badge */
+    .parameters-accent-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 800;
+      color: var(--brand-primary);
+      border-left: 3px solid var(--brand-primary);
+      padding-left: 10px;
+      margin: 0;
+    }
+    
+    /* Tier Cards Design */
+    .tier-card {
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.02) 0%, rgba(99, 102, 241, 0.05) 100%);
+      padding: 20px;
+      border-radius: 12px;
+      transition: all 0.25s;
+    }
+    .tier-card:hover {
+      border-color: var(--brand-primary);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+      transform: translateY(-1px);
+    }
+    .tier-badge {
+      background-color: var(--brand-primary);
+      color: white;
+      font-weight: 800;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
   `]
 })
 export class BrokerPlansComponent implements OnInit {
@@ -315,6 +436,7 @@ export class BrokerPlansComponent implements OnInit {
 
   plans: any[] = [];
   properties: any[] = [];
+  projectMappings: any[] = [];
   selectedPlan: any = null;
 
   showPlanModal = false;
@@ -324,6 +446,7 @@ export class BrokerPlansComponent implements OnInit {
   ngOnInit() {
     this.loadPlans();
     this.loadProperties();
+    this.loadProjectMappings();
   }
 
   loadPlans() {
@@ -334,7 +457,13 @@ export class BrokerPlansComponent implements OnInit {
 
   loadProperties() {
     this.propertiesService.getProperties().subscribe(res => {
-      this.properties = res;
+      this.properties = res?.items || res || [];
+    });
+  }
+
+  loadProjectMappings() {
+    this.brokerService.getAllProjectCommissionPlans().subscribe(res => {
+      this.projectMappings = res;
     });
   }
 
@@ -404,7 +533,8 @@ export class BrokerPlansComponent implements OnInit {
     this.brokerService.assignProjectCommissionPlan(this.mappingFormModel).subscribe({
       next: () => {
         this.mappingFormModel = { propertyId: null, commissionPlanId: null, effectiveFromDate: '' };
-        alert('Plan successfully mapped to project scope!');
+        customAlert('Plan successfully mapped to project scope!', 'Success');
+        this.loadProjectMappings();
       },
       error: err => console.error('Failed to map plan', err)
     });

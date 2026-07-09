@@ -64,8 +64,10 @@ import { customConfirm } from '../../utils/confirm';
                 </div>
               </td>
               <td>
-                <strong class="font-mono text-main">ETB {{ item.saleAmount | number:'1.2-2' }}</strong>
-                <span class="text-xs text-muted block" *ngIf="item.commissionRate">Rate: {{ item.commissionRate }}%</span>
+                <div class="flex flex-col">
+                  <strong class="font-mono text-main" style="font-size: 13px;">ETB {{ item.saleAmount | number:'1.2-2' }}</strong>
+                  <span class="text-xs text-muted" style="margin-top: 4px;" *ngIf="item.commissionRate">Rate: {{ item.commissionRate }}%</span>
+                </div>
               </td>
               <td>
                 <strong class="font-mono text-indigo">ETB {{ item.commissionAmount | number:'1.2-2' }}</strong>
@@ -164,24 +166,24 @@ import { customConfirm } from '../../utils/confirm';
               <div class="form-group col-span-2">
                 <label for="brokerId">Attributable Broker *</label>
                 <select id="brokerId" name="brokerId" [(ngModel)]="saleFormModel.brokerId" required class="form-control">
-                  <option [value]="null" disabled selected>-- Choose Broker --</option>
-                  <option *ngFor="let b of brokers" [value]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
+                  <option [ngValue]="null" disabled selected>-- Choose Broker --</option>
+                  <option *ngFor="let b of brokers" [ngValue]="b.id">{{ b.brokerName }} ({{ b.brokerCode }})</option>
                 </select>
               </div>
 
               <div class="form-group col-span-2">
                 <label for="customerId">Customer / Client *</label>
                 <select id="customerId" name="customerId" [(ngModel)]="saleFormModel.customerId" required class="form-control">
-                  <option [value]="null" disabled selected>-- Choose Customer --</option>
-                  <option *ngFor="let c of customers" [value]="c.id">{{ c.fullName }} ({{ c.primaryPhone }})</option>
+                  <option [ngValue]="null" disabled selected>-- Choose Customer --</option>
+                  <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.fullName }} ({{ c.primaryPhone }})</option>
                 </select>
               </div>
 
               <div class="form-group col-span-2">
                 <label for="propertyId">Property Project *</label>
                 <select id="propertyId" name="propertyId" [(ngModel)]="saleFormModel.propertyId" required class="form-control">
-                  <option [value]="null" disabled selected>-- Choose Property --</option>
-                  <option *ngFor="let p of properties" [value]="p.id">{{ p.propertyName }}</option>
+                  <option [ngValue]="null" disabled selected>-- Choose Property --</option>
+                  <option *ngFor="let p of properties" [ngValue]="p.id">{{ p.propertyName }}</option>
                 </select>
               </div>
 
@@ -322,7 +324,7 @@ export class BrokerCommissionsComponent implements OnInit {
 
   loadProperties() {
     this.propertiesService.getProperties().subscribe(res => {
-      this.properties = res;
+      this.properties = res?.items || res || [];
     });
   }
 

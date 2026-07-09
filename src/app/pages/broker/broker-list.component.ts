@@ -21,7 +21,7 @@ import { customConfirm } from '../../utils/confirm';
       </div>
     </header>
 
-    <div class="leads-workspace-grid">
+    <div class="leads-workspace-grid flex flex-col gap-6" style="padding-bottom: 40px;">
       <!-- Brokers list -->
       <div class="leads-list-area card">
         <div class="flex justify-between items-center pb-3 border-bottom margin-b-3">
@@ -93,105 +93,118 @@ import { customConfirm } from '../../utils/confirm';
         </div>
       </div>
 
-      <!-- Broker Details Drawer/Card -->
-      <div *ngIf="selectedBroker" class="card p-6 border-indigo">
-        <div class="flex justify-between items-start border-bottom pb-4 margin-b-4">
-          <div>
-            <span class="text-indigo text-xs uppercase tracking-wider font-semibold">Broker Portfolio Profile</span>
-            <h2>{{ selectedBroker.brokerName }} ({{ selectedBroker.brokerCode }})</h2>
+      <!-- Broker Details Bottom Card -->
+      <div *ngIf="selectedBroker" class="card p-6 border-indigo margin-t-6" style="border-radius: 16px; position: relative;">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center border-bottom pb-4 margin-b-4">
+          <div class="flex align-center gap-4">
+            <div class="avatar-lg">{{ getInitials(selectedBroker.brokerName) }}</div>
+            <div class="flex flex-col">
+              <span class="text-indigo text-xs uppercase tracking-wider font-semibold">Broker Portfolio Profile</span>
+              <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--text-main);">{{ selectedBroker.brokerName }} ({{ selectedBroker.brokerCode }})</h2>
+            </div>
           </div>
-          <button class="header-icon-btn" (click)="selectedBroker = null">
-            <span class="material-icons-outlined">close</span>
+          <button class="header-icon-btn close-btn" (click)="selectedBroker = null" style="background-color: var(--bg-main) !important; border: 1px solid var(--border-color) !important; border-radius: 50%; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
+            <span class="material-icons-outlined" style="color: var(--text-secondary);">close</span>
           </button>
         </div>
 
+        <!-- Content Grid -->
         <div class="flex flex-col gap-6">
-          <!-- Contact Detail Cards -->
-          <div class="grid col-2 gap-4">
-            <div class="detail-card border p-3 rounded-md">
-              <span class="text-secondary text-xs block">Trade License & TIN:</span>
-              <strong class="text-main">{{ selectedBroker.tradeLicenseNumber || 'N/A' }} / {{ selectedBroker.tinNumber || 'N/A' }}</strong>
+          
+          <!-- Metadata Cards Row -->
+          <div class="grid col-3 gap-4">
+            <div class="detail-card">
+              <span class="text-secondary">Trade License / TIN</span>
+              <strong>{{ selectedBroker.tradeLicenseNumber || 'N/A' }} / {{ selectedBroker.tinNumber || 'N/A' }}</strong>
             </div>
-            <div class="detail-card border p-3 rounded-md">
-              <span class="text-secondary text-xs block">Address & City:</span>
-              <strong class="text-main">{{ selectedBroker.address || 'N/A' }}, {{ selectedBroker.city || '' }}</strong>
+            <div class="detail-card">
+              <span class="text-secondary">Address Details</span>
+              <strong>{{ selectedBroker.address || 'N/A' }}, {{ selectedBroker.city || '' }}</strong>
+            </div>
+            <div class="detail-card">
+              <span class="text-secondary">Remarks / Onboarding Notes</span>
+              <p style="margin: 0; font-size: 13px; color: var(--text-main);">{{ selectedBroker.remarks || 'No remarks provided.' }}</p>
             </div>
           </div>
 
-          <div class="detail-card border p-3 rounded-md" *ngIf="selectedBroker.remarks">
-            <span class="text-secondary text-xs block">Remarks / Notes:</span>
-            <p class="text-secondary mt-1 font-sm">{{ selectedBroker.remarks }}</p>
-          </div>
+          <!-- Bottom Columns: Bank and Documents -->
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+            
+            <!-- Bank Accounts Column -->
+            <div>
+              <div class="flex justify-between items-center pb-2" style="border-bottom: 1px solid var(--border-color); margin-bottom: 16px; gap: 16px;">
+                <h4 class="font-semibold text-main flex items-center gap-2" style="margin: 0; font-size: 15px;">
+                  <span class="material-icons-outlined text-indigo" style="font-size: 20px;">account_balance</span>
+                  Bank Routing Configurations
+                </h4>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" (click)="openAddBankModal()">
+                  <span class="material-icons-outlined" style="font-size: 14px;">add</span> Add Bank Account
+                </button>
+              </div>
 
-          <!-- Section: Bank Accounts -->
-          <div>
-            <div class="flex justify-between items-center border-bottom pb-2 margin-b-3">
-              <h4 class="font-semibold text-main flex items-center gap-2">
-                <span class="material-icons-outlined text-indigo font-sm">account_balance</span>
-                Bank Routing Configurations
-              </h4>
-              <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" (click)="openAddBankModal()">
-                <span class="material-icons-outlined font-xs">add</span> Add Bank
-              </button>
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <div *ngFor="let bank of selectedBrokerDetails?.bankAccounts" class="flex justify-between items-center border p-3 rounded-md bg-glass">
-                <div class="flex align-center gap-3">
-                  <span class="material-icons-outlined text-secondary">payment</span>
-                  <div class="flex flex-col">
-                    <span class="font-semibold text-main">{{ bank.bankName }}</span>
-                    <span class="text-secondary text-xs">Acc: {{ bank.accountNumber }} • Title: {{ bank.accountName }}</span>
+              <div class="flex flex-col gap-3" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <div *ngFor="let bank of selectedBrokerDetails?.bankAccounts" class="flex justify-between items-center border p-3 rounded-md bg-glass" style="border-radius: 10px;">
+                  <div class="flex align-center gap-3">
+                    <span class="material-icons-outlined text-secondary" style="font-size: 24px;">payment</span>
+                    <div class="flex flex-col">
+                      <span class="font-semibold text-main" style="font-size: 13px;">{{ bank.bankName }}</span>
+                      <span class="text-xs text-secondary">Acc: {{ bank.accountNumber }} • Holder: {{ bank.accountName }}</span>
+                    </div>
+                  </div>
+                  <div class="flex align-center gap-3">
+                    <span *ngIf="bank.isDefault" class="badge badge-qualified" style="font-size: 9px; padding: 2px 6px;">Default</span>
+                    <button class="icon-btn text-danger" (click)="deleteBankAccount(bank.id)" title="Remove Account">
+                      <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+                    </button>
                   </div>
                 </div>
-                <div class="flex items-center gap-3">
-                  <span *ngIf="bank.isDefault" class="badge badge-qualified" style="font-size: 9px; padding: 2px 6px;">Default</span>
-                  <button class="icon-btn text-danger" (click)="deleteBankAccount(bank.id)" title="Remove Bank Account">
-                    <span class="material-icons-outlined font-sm">delete</span>
-                  </button>
+                <div *ngIf="!selectedBrokerDetails?.bankAccounts?.length" class="text-center text-secondary py-6 border rounded-md" style="border-style: dashed; background-color: rgba(255,255,255,0.01);">
+                  <span class="material-icons-outlined text-muted" style="font-size: 32px; display: block; margin-bottom: 6px;">credit_card_off</span>
+                  No bank accounts configured.
                 </div>
               </div>
-              <div *ngIf="!selectedBrokerDetails?.bankAccounts?.length" class="text-secondary py-3 text-center font-sm">
-                No bank accounts registered for payments.
+            </div>
+
+            <!-- Documents Column -->
+            <div>
+              <div class="flex justify-between items-center pb-2" style="border-bottom: 1px solid var(--border-color); margin-bottom: 16px; gap: 16px;">
+                <h4 class="font-semibold text-main flex items-center gap-2" style="margin: 0; font-size: 15px;">
+                  <span class="material-icons-outlined text-indigo" style="font-size: 20px;">folder</span>
+                  Onboarding Credentials
+                </h4>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" (click)="openAddDocModal()">
+                  <span class="material-icons-outlined" style="font-size: 14px;">upload</span> Upload Document
+                </button>
               </div>
-            </div>
-          </div>
 
-          <!-- Section: Documents -->
-          <div>
-            <div class="flex justify-between items-center border-bottom pb-2 margin-b-3">
-              <h4 class="font-semibold text-main flex items-center gap-2">
-                <span class="material-icons-outlined text-indigo font-sm">folder</span>
-                Onboarding Credentials
-              </h4>
-              <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" (click)="openAddDocModal()">
-                <span class="material-icons-outlined font-xs">upload</span> Upload Document
-              </button>
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <div *ngFor="let doc of selectedBrokerDetails?.documents" class="flex justify-between items-center border p-3 rounded-md bg-glass">
-                <div class="flex align-center gap-3">
-                  <span class="material-icons-outlined text-secondary">insert_drive_file</span>
-                  <div class="flex flex-col">
-                    <span class="font-semibold text-main">{{ doc.documentName }}</span>
-                    <span class="text-secondary text-xs">Type: {{ doc.documentTypeId }} <span *ngIf="doc.expiryDate">• Expiry: {{ doc.expiryDate | date:'mediumDate' }}</span></span>
+              <div class="flex flex-col gap-3" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <div *ngFor="let doc of selectedBrokerDetails?.documents" class="flex justify-between items-center border p-3 rounded-md bg-glass" style="border-radius: 10px;">
+                  <div class="flex align-center gap-3" style="flex: 1; min-width: 0;">
+                    <span class="material-icons-outlined text-secondary" style="font-size: 24px;">insert_drive_file</span>
+                    <div class="flex flex-col" style="flex: 1; min-width: 0;">
+                      <span class="font-semibold text-main" style="font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ doc.documentName }}</span>
+                      <span class="text-xs text-secondary">{{ doc.documentTypeId }} • Expiry: {{ doc.expiryDate ? (doc.expiryDate | date:'mediumDate') : 'N/A' }}</span>
+                    </div>
+                  </div>
+                  <div class="flex align-center gap-2">
+                    <a [href]="'http://localhost:3000' + doc.filePath" target="_blank" class="icon-btn text-indigo" title="View Document" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background-color: var(--bg-main);">
+                      <span class="material-icons-outlined" style="font-size: 16px;">visibility</span>
+                    </a>
+                    <button class="icon-btn text-danger" (click)="deleteDocument(doc.id)" title="Remove Document" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background-color: var(--bg-main);">
+                      <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+                    </button>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <a [href]="'http://localhost:3000' + doc.filePath" target="_blank" class="icon-btn text-indigo" title="View Document File">
-                    <span class="material-icons-outlined font-sm">visibility</span>
-                  </a>
-                  <button class="icon-btn text-danger" (click)="deleteDocument(doc.id)" title="Remove Document">
-                    <span class="material-icons-outlined font-sm">delete</span>
-                  </button>
+                <div *ngIf="!selectedBrokerDetails?.documents?.length" class="text-center text-secondary py-6 border rounded-md" style="border-style: dashed; background-color: rgba(255,255,255,0.01);">
+                  <span class="material-icons-outlined text-muted" style="font-size: 32px; display: block; margin-bottom: 6px;">no_accounts</span>
+                  No credential documents uploaded.
                 </div>
               </div>
-              <div *ngIf="!selectedBrokerDetails?.documents?.length" class="text-secondary py-3 text-center font-sm">
-                No licensing/onboarding documents uploaded.
-              </div>
             </div>
+
           </div>
+
         </div>
       </div>
     </div>
@@ -388,6 +401,47 @@ import { customConfirm } from '../../utils/confirm';
     }
     .form-control:focus {
       border-color: var(--brand-primary);
+    }
+    .detail-card {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      transition: all 0.2s;
+    }
+    .detail-card:hover {
+      border-color: var(--brand-primary);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
+    }
+    .detail-card .text-secondary {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .detail-card strong {
+      font-size: 13px;
+      color: var(--text-main);
+    }
+    .detail-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .avatar-lg {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-primary) 0%, #2f2070 100%);
+      color: white;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(76, 58, 147, 0.2);
     }
   `]
 })

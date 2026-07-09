@@ -74,6 +74,7 @@ import { CrmService } from '../../services/crm.service';
               <th>Commission (ETB)</th>
               <th>Status</th>
               <th>Date Generated</th>
+              <th style="text-align: center;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -94,10 +95,38 @@ import { CrmService } from '../../services/crm.service';
                 </span>
               </td>
               <td>{{ comm.createdAt | date:'mediumDate' }}</td>
+              <td>
+                <div class="flex gap-2 justify-center" style="display: flex; gap: 8px; justify-content: center;">
+                  <button *ngIf="comm.status === 'CALCULATED'" 
+                          class="btn btn-secondary" 
+                          style="font-size: 11px; padding: 4px 8px; font-weight: 600;"
+                          (click)="changeStatus(comm.id, 'PENDING_APPROVAL')">
+                    Submit Approval
+                  </button>
+                  <button *ngIf="comm.status === 'PENDING_APPROVAL'" 
+                          class="btn btn-primary" 
+                          style="font-size: 11px; padding: 4px 8px; font-weight: 600;"
+                          (click)="changeStatus(comm.id, 'APPROVED')">
+                    Approve
+                  </button>
+                  <button *ngIf="comm.status === 'APPROVED'" 
+                          class="btn" 
+                          style="font-size: 11px; padding: 4px 8px; font-weight: 600; background-color: var(--color-qualified); border-color: var(--color-qualified); color: white;"
+                          (click)="changeStatus(comm.id, 'PAID')">
+                    Mark Paid
+                  </button>
+                  <button *ngIf="['APPROVED', 'PAID'].includes(comm.status)" 
+                          class="btn" 
+                          style="font-size: 11px; padding: 4px 8px; font-weight: 600; background-color: var(--color-lost); border-color: var(--color-lost); color: white;"
+                          (click)="changeStatus(comm.id, 'REVERSED')">
+                    Reverse
+                  </button>
+                </div>
+              </td>
             </tr>
             <tr *ngIf="commissions.length === 0">
-              <td colspan="8" class="text-center py-6 text-secondary">
-                No commission payouts calculated yet. Earnings will appear automatically when contracts are executed.
+              <td colspan="9" class="text-center py-6 text-secondary">
+                No commission payouts calculated yet. Earnings will appear automatically when contracts are executed and down payments approved.
               </td>
             </tr>
           </tbody>
@@ -203,9 +232,11 @@ import { CrmService } from '../../services/crm.service';
     </div>
   `,
   styles: [`
+    .badge-calculated { background-color: rgba(107, 114, 128, 0.15); color: #6b7280; }
     .badge-pending { background-color: rgba(234, 179, 8, 0.15); color: var(--color-contacted); }
     .badge-approved { background-color: rgba(59, 130, 246, 0.15); color: var(--color-new); }
     .badge-paid { background-color: rgba(16, 185, 129, 0.15); color: var(--color-qualified); }
+    .badge-reversed { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
     .badge-active { background-color: rgba(16, 185, 129, 0.15); color: var(--color-qualified); }
     .badge-disabled { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
     .badge-indigo { background-color: var(--brand-primary-fade); color: var(--brand-primary); }
@@ -251,11 +282,28 @@ export class CommissionsComponent implements OnInit {
 
   getCommissionStatusBadge(status: string): string {
     switch (status) {
-      case 'PENDING': return 'badge-pending';
+      case 'CALCULATED': return 'badge-calculated';
+      case 'PENDING_APPROVAL': return 'badge-pending';
       case 'APPROVED': return 'badge-approved';
       case 'PAID': return 'badge-paid';
+      case 'REVERSED': return 'badge-reversed';
       default: return '';
     }
+  }
+
+  changeStatus(id: number, status: string) {
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.salesService.updateCommissionStatus(id, status).subscribe({
+      next: () => {
+        this.successMessage = `Commission status successfully updated to ${status}!`;
+        this.loadCommissions();
+      },
+      error: (err) => {
+        console.error('Error updating status', err);
+        this.errorMessage = err.error?.message || 'Failed to update commission status.';
+      }
+    });
   }
 
   openCreateRuleModal() {

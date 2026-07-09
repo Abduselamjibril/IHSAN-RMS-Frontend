@@ -156,6 +156,14 @@ export class SalesService {
     return this.http.get<any[]>(`${this.apiBase}/commissions`);
   }
 
+  updateCommissionStatus(id: number, status: string): Observable<any> {
+    return this.http.patch<any>(`${this.apiBase}/commissions/${id}/status`, { status });
+  }
+
+  terminateContract(id: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiBase}/contracts/${id}/terminate`, {});
+  }
+
   // --- Dashboard Stats ---
   getSalesDashboardStats(): Observable<any> {
     return this.http.get<any>(`${this.apiBase}/dashboard/stats`);

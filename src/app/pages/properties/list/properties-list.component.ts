@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
 import { customConfirm } from '../../../utils/confirm';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-properties-list',
@@ -17,7 +18,7 @@ import { customConfirm } from '../../../utils/confirm';
         <p>Manage projects, buildings, and development units</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary flex align-center gap-2" (click)="openCreateModal()">
+        <button class="btn btn-primary flex align-center gap-2" (click)="openCreateModal()" *ngIf="authService.hasPermission('properties.sites.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Property
         </button>
@@ -390,6 +391,7 @@ export class PropertiesListComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
+  public authService = inject(AuthService);
 
   properties: any[] = [];
   propertyTypes: any[] = [];

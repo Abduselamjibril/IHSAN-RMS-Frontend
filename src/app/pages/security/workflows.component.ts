@@ -29,6 +29,9 @@ import { customConfirm } from '../../utils/confirm';
       <button class="btn" [class.btn-primary]="activeTab === 'config'" [class.btn-secondary]="activeTab !== 'config'" (click)="setTab('config')">
         Workflow Configurations
       </button>
+      <button class="btn" [class.btn-primary]="activeTab === 'simulate'" [class.btn-secondary]="activeTab !== 'simulate'" (click)="setTab('simulate')">
+        Simulate Submission
+      </button>
     </div>
 
     <!-- Tab 1: Inbox (Active Instances) -->
@@ -154,6 +157,59 @@ import { customConfirm } from '../../utils/confirm';
       </div>
     </div>
 
+    <!-- Tab 3: Simulation -->
+    <div *ngIf="activeTab === 'simulate'" class="card p-6" style="max-width: 500px; margin: 0 auto;">
+      <h3 class="margin-b-4">Simulate Workflow Submission</h3>
+      <p class="text-secondary font-sm margin-b-4">Submit custom items to trigger and test workflow approvals without using external tools.</p>
+      
+      <form (submit)="submitSimulation($event)" class="flex flex-col gap-4">
+        <div class="form-group flex flex-col">
+          <label class="font-semibold text-main mb-1">Workflow Trigger Code *</label>
+          <select [(ngModel)]="simModel.workflowCode" name="workflowCode" required class="form-control">
+            <option value="DISCOUNT_APPROVAL">DISCOUNT_APPROVAL</option>
+            <option value="PROPERTY_APPROVAL">PROPERTY_APPROVAL</option>
+            <option value="SALE_APPROVAL">SALE_APPROVAL</option>
+            <option value="PAYMENT_APPROVAL">PAYMENT_APPROVAL</option>
+            <option value="COMMISSION_APPROVAL">COMMISSION_APPROVAL</option>
+          </select>
+        </div>
+
+        <div class="form-group flex flex-col">
+          <label class="font-semibold text-main mb-1">Reference Item Type *</label>
+          <select [(ngModel)]="simModel.referenceTypeId" name="referenceTypeId" required class="form-control">
+            <option value="DISCOUNT">DISCOUNT</option>
+            <option value="PROPERTY">PROPERTY</option>
+            <option value="UNIT">UNIT</option>
+            <option value="BOOKING">BOOKING</option>
+            <option value="COMMISSION">COMMISSION</option>
+          </select>
+        </div>
+
+        <div class="form-group flex flex-col">
+          <label class="font-semibold text-main mb-1">Reference Item ID *</label>
+          <input type="text" [(ngModel)]="simModel.referenceId" name="referenceId" required placeholder="e.g. 1002" class="form-control">
+        </div>
+
+        <div class="form-group flex flex-col">
+          <label class="font-semibold text-main mb-1">Initiator User ID *</label>
+          <input type="number" [(ngModel)]="simModel.initiatorId" name="initiatorId" required class="form-control">
+        </div>
+
+        <div class="alert alert-success" *ngIf="simSuccessMessage" style="margin-top: 10px; padding: 10px; border-radius: 4px; background: rgba(16,185,129,0.1); border: 1px solid var(--color-qualified); color: var(--color-qualified); font-size: 13px;">
+          {{ simSuccessMessage }}
+        </div>
+        <div class="alert alert-danger" *ngIf="simErrorMessage" style="margin-top: 10px; padding: 10px; border-radius: 4px; background: rgba(239,68,68,0.1); border: 1px solid var(--color-lost); color: var(--color-lost); font-size: 13px;">
+          {{ simErrorMessage }}
+        </div>
+
+        <div class="flex justify-end mt-4">
+          <button type="submit" class="btn btn-primary" [disabled]="!simModel.workflowCode || !simModel.referenceTypeId || !simModel.referenceId">
+            Trigger Workflow Submission
+          </button>
+        </div>
+      </form>
+    </div>
+
     <!-- Create/Update Workflow Configuration Modal -->
     <div class="modal-overlay" *ngIf="showConfigModal">
       <div class="modal-container card" style="max-width: 600px; width: 90%;">
@@ -199,19 +255,19 @@ import { customConfirm } from '../../utils/confirm';
               </div>
 
               <div class="flex flex-col gap-3">
-                <div *ngFor="let row of configModel.steps; let idx = index" class="grid col-4 gap-2 align-center border p-2 rounded-md bg-glass">
-                  <div class="flex align-center gap-2">
-                    <span class="font-semibold text-main text-xs">Lv {{ row.stepNumber }}:</span>
-                    <input type="text" name="stepName-{{idx}}" [(ngModel)]="row.stepName" required placeholder="Step Name" class="form-control" style="padding: 6px 10px; font-size: 12px;">
+                <div *ngFor="let row of configModel.steps; let idx = index" class="flex align-center gap-3 border p-2 rounded-md bg-glass" style="border: 1px solid var(--border-color); background: rgba(255,255,255,0.03);">
+                  <div class="flex align-center gap-2" style="flex: 2; min-width: 140px;">
+                    <span class="font-semibold text-main text-xs" style="white-space: nowrap;">Lv {{ row.stepNumber }}:</span>
+                    <input type="text" name="stepName-{{idx}}" [(ngModel)]="row.stepName" required placeholder="Step Name" class="form-control" style="padding: 6px 10px; font-size: 12px; width: 100%;">
                   </div>
                   
-                  <select name="roleId-{{idx}}" [(ngModel)]="row.roleId" required class="form-control" style="padding: 6px 10px; font-size: 12px;">
+                  <select name="roleId-{{idx}}" [(ngModel)]="row.roleId" required class="form-control" style="padding: 6px 10px; font-size: 12px; flex: 2; min-width: 150px;">
                     <option *ngFor="let r of roles" [value]="r.roleId">{{ r.roleName }}</option>
                   </select>
 
-                  <input type="number" name="threshold-{{idx}}" [(ngModel)]="row.approvalThreshold" placeholder="Min Amount ETB" class="form-control" style="padding: 6px 10px; font-size: 12px;">
+                  <input type="number" name="threshold-{{idx}}" [(ngModel)]="row.approvalThreshold" placeholder="Min Amount ETB" class="form-control" style="padding: 6px 10px; font-size: 12px; flex: 1.5; min-width: 110px;">
 
-                  <button type="button" class="icon-btn text-danger" style="margin-left: auto;" (click)="removeStepRow(idx)">
+                  <button type="button" class="icon-btn text-danger" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; margin-left: auto;" (click)="removeStepRow(idx)">
                     <span class="material-icons-outlined font-sm">delete</span>
                   </button>
                 </div>
@@ -300,6 +356,15 @@ export class WorkflowsComponent implements OnInit {
   selectedInstance: any = null;
   approvalDecisionType = '';
   approvalRemarks = '';
+
+  simModel = {
+    workflowCode: 'DISCOUNT_APPROVAL',
+    referenceTypeId: 'DISCOUNT',
+    referenceId: '1002',
+    initiatorId: 1
+  };
+  simSuccessMessage = '';
+  simErrorMessage = '';
 
   ngOnInit() {
     this.loadDefinitions();
@@ -412,6 +477,25 @@ export class WorkflowsComponent implements OnInit {
         this.closeApprovalDialog();
       },
       error: (err) => console.error('Failed to submit approval decision', err)
+    });
+  }
+
+  submitSimulation(event: Event) {
+    event.preventDefault();
+    this.simSuccessMessage = '';
+    this.simErrorMessage = '';
+    
+    this.http.post(`${this.apiBase}/workflows/submit`, this.simModel).subscribe({
+      next: (res: any) => {
+        this.simSuccessMessage = `Workflow successfully triggered! Instance ID: ${res.workflowInstanceId ?? 'Created'}`;
+        setTimeout(() => {
+          this.setTab('inbox');
+        }, 1500);
+      },
+      error: (err) => {
+        console.error('Failed to trigger workflow simulation', err);
+        this.simErrorMessage = err.error?.message || 'Failed to submit workflow simulation item.';
+      }
     });
   }
 }

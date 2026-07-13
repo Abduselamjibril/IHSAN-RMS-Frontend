@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '../../services/marketing.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-campaigns',
@@ -15,7 +16,7 @@ import { customConfirm } from '../../utils/confirm';
         <p>Plan marketing campaigns, allocate spending, and track conversion lifecycles</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-primary flex items-center gap-2" (click)="openCreateModal()">
+        <button class="btn btn-primary flex items-center gap-2" (click)="openCreateModal()" *ngIf="authService.hasPermission('marketing.campaigns.create', 'create')">
           <span class="material-icons-outlined">add</span> Create Campaign
         </button>
       </div>
@@ -274,6 +275,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class CampaignsComponent implements OnInit {
   private marketingService = inject(MarketingService);
+  public authService = inject(AuthService);
 
   campaigns: any[] = [];
   selectedCampaign: any = null;

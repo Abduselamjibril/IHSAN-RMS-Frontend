@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { customConfirm } from '../../utils/confirm';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-contracts',
@@ -15,11 +16,11 @@ import { customConfirm } from '../../utils/confirm';
         <p>Register binding property buyer sales agreements and execute official contracts</p>
       </div>
       <div class="app-header-actions">
-        <button class="btn btn-secondary" (click)="openCreateAgreementModal()">
+        <button class="btn btn-secondary" (click)="openCreateAgreementModal()" *ngIf="authService.hasPermission('sales.contracts.create', 'create')">
           <span class="material-icons-outlined">add</span>
           New Agreement
         </button>
-        <button class="btn btn-primary" (click)="openCreateContractModal()">
+        <button class="btn btn-primary" (click)="openCreateContractModal()" *ngIf="authService.hasPermission('sales.contracts.create', 'create')">
           <span class="material-icons-outlined">gavel</span>
           New Contract
         </button>
@@ -384,6 +385,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class ContractsComponent implements OnInit {
   private salesService = inject(SalesService);
+  public authService = inject(AuthService);
 
   activeTab = 'agreements';
   agreements: any[] = [];

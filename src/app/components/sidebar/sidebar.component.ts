@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { NotificationsService } from '../../services/notifications.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -313,6 +314,36 @@ import { AuthService } from '../../services/auth.service';
               <span class="material-icons-outlined">bar_chart</span>
               <span class="menu-text">Reports Center</span>
             </a>
+          </li>
+
+          <!-- Collapsible Notifications Section -->
+          <li>
+            <a (click)="toggleNotifications()" class="menu-item cursor-pointer" [class.active-parent]="isNotificationsActive()">
+              <span class="material-icons-outlined">notifications</span>
+              <span class="menu-text">Notifications</span>
+              <span class="badge badge-rejected" *ngIf="unreadCount > 0" style="margin-left: auto; padding: 2px 6px; font-size: 10px; border-radius: 10px; background: #ef4444; color: white;">{{ unreadCount }}</span>
+              <span class="material-icons-outlined arrow-icon" [style.margin-left]="unreadCount > 0 ? '8px' : 'auto'">{{ notificationsExpanded() ? 'expand_less' : 'expand_more' }}</span>
+            </a>
+            <ul class="submenu" [class.open]="notificationsExpanded() || isNotificationsActive()">
+              <li>
+                <a routerLink="/notifications/inbox" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">inbox</span>
+                  <span class="menu-text">Inbox</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/notifications/preferences" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">toggle_on</span>
+                  <span class="menu-text">Preferences</span>
+                </a>
+              </li>
+              <li>
+                <a routerLink="/notifications/templates" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">palette</span>
+                  <span class="menu-text">Templates</span>
+                </a>
+              </li>
+            </ul>
           </li>
 
           <li *ngIf="authService.currentUser()?.roles?.includes('System Administrator')">
@@ -632,6 +663,10 @@ export class SidebarComponent implements OnInit {
   marketingExpanded = signal(false);
   brokerExpanded = signal(false);
   securityExpanded = signal(false);
+  notificationsExpanded = signal(false);
+
+  unreadCount = 0;
+  private notificationsService = inject(NotificationsService);
   
   private manualClosed = false;
   private manualOpened = false;
@@ -657,6 +692,22 @@ export class SidebarComponent implements OnInit {
     if (this.router.url.includes('/security')) {
       this.securityExpanded.set(true);
     }
+    if (this.router.url.includes('/notifications')) {
+      this.notificationsExpanded.set(true);
+    }
+
+    this.loadUnreadCount();
+    // Poll unread count every 30s
+    setInterval(() => this.loadUnreadCount(), 30000);
+  }
+
+  loadUnreadCount() {
+    if (this.authService.isAuthenticated()) {
+      this.notificationsService.getUnreadCount().subscribe({
+        next: (count) => this.unreadCount = count,
+        error: () => {}
+      });
+    }
   }
 
   toggleProperties() {
@@ -681,6 +732,14 @@ export class SidebarComponent implements OnInit {
 
   toggleSecurity() {
     this.securityExpanded.update(v => !v);
+  }
+
+  toggleNotifications() {
+    this.notificationsExpanded.update(v => !v);
+  }
+
+  isNotificationsActive(): boolean {
+    return this.router.url.includes('/notifications');
   }
 
   isPropertyActive(): boolean {

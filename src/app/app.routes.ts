@@ -1,6 +1,9 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { LeadsComponent } from './pages/leads/leads.component';
+import { NotificationInboxComponent } from './pages/notifications/inbox.component';
+import { NotificationPreferencesComponent } from './pages/notifications/preferences.component';
+import { NotificationTemplatesComponent } from './pages/notifications/templates.component';
 import { PropertiesListComponent } from './pages/properties/list/properties-list.component';
 import { PropertiesDetailsComponent } from './pages/properties/details/properties-details.component';
 import { BuildingsComponent } from './pages/properties/buildings/buildings.component';
@@ -83,6 +86,11 @@ export const routes: Routes = [
   { path: 'documents', component: DocumentsComponent, canActivate: [authGuard] },
   { path: 'segmentation', component: SegmentationComponent, canActivate: [authGuard] },
   { path: 'lead-tracking', component: LeadTrackingComponent, canActivate: [authGuard] },
+
+  // Notification module routes
+  { path: 'notifications/inbox', component: NotificationInboxComponent, canActivate: [authGuard] },
+  { path: 'notifications/preferences', component: NotificationPreferencesComponent, canActivate: [authGuard] },
+  { path: 'notifications/templates', component: NotificationTemplatesComponent, canActivate: [authGuard] },
 
   // Sales module routes
   { path: 'sales/customers', component: CustomersComponent, canActivate: [authGuard] },

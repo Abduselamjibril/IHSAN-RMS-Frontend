@@ -10,10 +10,17 @@ import { NotificationsService } from '../../services/notifications.service';
   template: `
     <header class="app-header">
       <div class="app-title-section">
-        <h1>Delivery Channels & Preferences</h1>
-        <p>Choose which alerts you receive and toggle Email, Telegram or In-App delivery channels per category.</p>
+        <h1>Notification Preferences</h1>
+        <p>Choose how your operational alerts are delivered across every notification category.</p>
       </div>
+      <div class="preference-status"><span class="material-icons-outlined">cloud_done</span> Changes save automatically</div>
     </header>
+
+    <div class="preference-summary">
+      <div class="preference-summary-card"><span class="material-icons-outlined blue">notifications_active</span><div><small>Alert categories</small><strong>{{ categories.length }}</strong></div></div>
+      <div class="preference-summary-card"><span class="material-icons-outlined green">inbox</span><div><small>In-app delivery</small><strong>Enabled</strong></div></div>
+      <div class="preference-summary-card"><span class="material-icons-outlined gold">security</span><div><small>Critical alerts</small><strong>Always on</strong></div></div>
+    </div>
 
     <div class="grid grid-cols-3 gap-6 margin-y-4">
       <!-- Matrix Settings Card -->
@@ -167,6 +174,16 @@ import { NotificationsService } from '../../services/notifications.service';
     .list-decimal {
       list-style-type: decimal;
     }
+    .preference-status { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid rgba(16,185,129,.22); border-radius: 10px; color: #118563; background: rgba(16,185,129,.06); font-size: 12px; font-weight: 700; }
+    .preference-status .material-icons-outlined { font-size: 18px; }
+    .preference-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin: 25px 0; }
+    .preference-summary-card { min-height: 95px; padding: 18px 22px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--bg-card); box-shadow: 0 6px 16px rgba(12,56,97,.05); }
+    .preference-summary-card > .material-icons-outlined { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; font-size: 22px; color: white; }
+    .preference-summary-card .blue { background: #087fce; } .preference-summary-card .green { background: #10b981; } .preference-summary-card .gold { background: #e7a72e; }
+    .preference-summary-card small { display: block; color: var(--text-secondary); font-size: 12px; } .preference-summary-card strong { color: var(--text-main); font-size: 19px; }
+    .col-span-2.card, .card { border-radius: 18px; }
+    input:checked + .slider { background-color: var(--brand-primary); }
+    @media (max-width: 900px) { .preference-summary { grid-template-columns: 1fr; gap: 12px; } .grid-cols-3 { grid-template-columns: 1fr !important; } .col-span-2 { grid-column: auto !important; } }
   `]
 })
 export class NotificationPreferencesComponent implements OnInit {

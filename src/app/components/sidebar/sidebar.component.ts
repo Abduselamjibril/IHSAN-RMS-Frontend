@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -12,21 +12,23 @@ import { NotificationsService } from '../../services/notifications.service';
   template: `
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="logo-icon">I</div>
+        <img class="brand-logo" src="/IHSAN LOGO 2.jpg" alt="IHSAN Properties and Business Services">
         <div class="brand-text-wrapper">
           <span class="brand-title">IHSAN</span>
-          <span class="brand-subtitle">PROPERTIES & BUSINESS</span>
+          <span class="brand-subtitle">PROPERTY MANAGEMENT</span>
         </div>
       </div>
 
       <nav class="sidebar-menu">
         <ul>
+          <li class="menu-label">OVERVIEW</li>
           <li>
             <a routerLink="/dashboard" routerLinkActive="active" class="menu-item">
               <span class="material-icons-outlined">dashboard</span>
               <span class="menu-text">Executive Dashboard</span>
             </a>
           </li>
+          <li class="menu-label">OPERATIONS</li>
           <li *ngIf="authService.hasModuleAccess('crm.')">
             <a (click)="toggleLeads($event)" class="menu-item cursor-pointer" [class.active-parent]="isLeadsActive()">
               <span class="material-icons-outlined">people_outline</span>
@@ -216,6 +218,7 @@ import { NotificationsService } from '../../services/notifications.service';
             </ul>
           </li>
 
+          <li class="menu-label">FINANCE & GROWTH</li>
           <!-- Collapsible Finance & Collections Section -->
           <li *ngIf="authService.hasModuleAccess('finance.')">
             <a (click)="toggleFinance()" class="menu-item cursor-pointer" [class.active-parent]="isFinanceActive()">
@@ -309,13 +312,15 @@ import { NotificationsService } from '../../services/notifications.service';
             </ul>
           </li>
 
+          <li class="menu-label" *ngIf="authService.hasModuleAccess('reports.')">REPORTING & INSIGHTS</li>
           <li *ngIf="authService.hasModuleAccess('reports.')">
             <a routerLink="/reports" routerLinkActive="active" class="menu-item">
-              <span class="material-icons-outlined">bar_chart</span>
-              <span class="menu-text">Reports Center</span>
+              <span class="material-icons-outlined">analytics</span>
+              <span class="menu-text">Reports & Analytics</span>
             </a>
           </li>
 
+          <li class="menu-label">SYSTEM</li>
           <!-- Collapsible Notifications Section -->
           <li>
             <a (click)="toggleNotifications()" class="menu-item cursor-pointer" [class.active-parent]="isNotificationsActive()">
@@ -390,13 +395,16 @@ import { NotificationsService } from '../../services/notifications.service';
       </nav>
 
       <div class="sidebar-profile" *ngIf="authService.currentUser() as user">
-        <div class="avatar" style="background-color: #5b46b8; color: white;">
+        <div class="avatar">
           {{ getInitials(user.firstName, user.lastName) }}
         </div>
         <div class="profile-info">
           <span class="profile-name">{{ user.firstName }} {{ user.lastName }}</span>
           <span class="profile-role">{{ user.roles?.[0] || 'User' }}</span>
         </div>
+        <button (click)="themeToggle.emit()" [title]="darkMode ? 'Use light mode' : 'Use dark mode'" class="theme-toggle">
+          <span class="material-icons-outlined">{{ darkMode ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
         <button (click)="authService.logout()" title="Sign Out" class="icon-btn text-danger" style="margin-left: auto; width: 28px; height: 28px; background-color: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;">
           <span class="material-icons-outlined" style="font-size: 16px; color: #ef4444;">logout</span>
         </button>
@@ -407,35 +415,31 @@ import { NotificationsService } from '../../services/notifications.service';
     .sidebar {
       width: 260px;
       height: 100vh;
-      background-color: var(--bg-sidebar);
+      background: linear-gradient(180deg, #071a3c 0%, #03102a 58%, #020a1c 100%);
       color: #94a3b8;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: 1px solid rgba(93, 177, 255, 0.14);
       font-weight: 500;
     }
 
     .sidebar-brand {
-      height: 72px;
-      padding: 0 24px;
+      min-height: 82px;
+      padding: 12px 20px;
       display: flex;
       align-items: center;
       gap: 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, #7c3aed, #4c3a93);
-      color: white;
-      font-weight: 800;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      object-position: center 22%;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 190, 67, .6);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
     }
 
     .brand-text-wrapper {
@@ -446,20 +450,20 @@ import { NotificationsService } from '../../services/notifications.service';
     .brand-title {
       color: white;
       font-weight: 700;
-      font-size: 16px;
-      letter-spacing: 0.5px;
+      font-size: 18px;
+      letter-spacing: 1.4px;
     }
 
     .brand-subtitle {
       font-size: 8px;
-      color: #7c73b0;
-      letter-spacing: 1px;
+      color: #91caff;
+      letter-spacing: .7px;
       font-weight: 700;
     }
 
     .sidebar-menu {
       flex: 1;
-      padding: 24px 16px;
+      padding: 18px 14px;
       overflow-y: auto;
     }
 
@@ -471,6 +475,15 @@ import { NotificationsService } from '../../services/notifications.service';
       margin-bottom: 6px;
     }
 
+    .sidebar-menu .menu-label {
+      margin: 20px 10px 8px;
+      color: #6f9ed1;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.3px;
+    }
+    .sidebar-menu .menu-label:first-child { margin-top: 3px; }
+
     .menu-group {
       display: flex;
       flex-direction: column;
@@ -479,10 +492,10 @@ import { NotificationsService } from '../../services/notifications.service';
     .menu-item {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
+      gap: 12px;
+      padding: 11px 13px;
       border-radius: var(--radius-md);
-      color: #a0aec0;
+      color: #b7cce6;
       transition: var(--transition-fast);
       user-select: none;
       cursor: pointer;
@@ -491,19 +504,19 @@ import { NotificationsService } from '../../services/notifications.service';
 
     .menu-item:hover {
       color: white;
-      background-color: rgba(255, 255, 255, 0.04);
+      background-color: rgba(49, 150, 237, 0.12);
     }
 
     .menu-item.active {
       color: white;
-      background-color: var(--brand-primary);
-      box-shadow: 0 4px 12px rgba(76, 58, 147, 0.25);
+      background: linear-gradient(90deg, #0878ca, #0466b1);
+      box-shadow: 0 8px 18px rgba(0, 126, 211, .25);
     }
 
     .menu-item.active-parent {
       color: white;
       background-color: rgba(255, 255, 255, 0.04);
-      border-left: 3px solid var(--brand-primary);
+      border-left: 3px solid #f4bf4f;
       border-radius: 0 var(--radius-md) var(--radius-md) 0;
     }
 
@@ -514,7 +527,7 @@ import { NotificationsService } from '../../services/notifications.service';
     .expand-icon {
       margin-left: auto;
       font-size: 18px;
-      color: #718096;
+      color: #72a9dc;
       transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -542,7 +555,7 @@ import { NotificationsService } from '../../services/notifications.service';
       padding: 9px 12px;
       font-size: 13px;
       gap: 10px;
-      color: #94a3b8;
+      color: #9ab8d8;
     }
 
     .submenu-item .material-icons-outlined {
@@ -550,7 +563,7 @@ import { NotificationsService } from '../../services/notifications.service';
     }
 
     .submenu-item.active {
-      background-color: rgba(124, 58, 237, 0.12);
+      background-color: rgba(20, 138, 227, .16);
       color: white;
       box-shadow: none;
     }
@@ -592,7 +605,7 @@ import { NotificationsService } from '../../services/notifications.service';
       width: 40px;
       height: 40px;
       border-radius: var(--radius-round);
-      background-color: #5b46b8;
+      background: linear-gradient(135deg, #f3c45c, #b97818);
       color: white;
       font-weight: 700;
       font-size: 14px;
@@ -615,7 +628,7 @@ import { NotificationsService } from '../../services/notifications.service';
 
     .profile-role {
       font-size: 11px;
-      color: #7c73b0;
+      color: #8fb9e3;
     }
 
     .cursor-pointer {
@@ -626,6 +639,20 @@ import { NotificationsService } from '../../services/notifications.service';
       margin-left: auto;
       font-size: 18px;
     }
+
+    .theme-toggle {
+      width: 32px;
+      height: 32px;
+      margin-left: auto;
+      border: 1px solid rgba(140, 197, 244, .22);
+      border-radius: 10px;
+      color: #f4bf4f;
+      background: rgba(43, 126, 202, .13);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-toggle .material-icons-outlined { color: inherit; font-size: 18px; }
 
     .submenu-item {
       display: flex;
@@ -656,6 +683,8 @@ import { NotificationsService } from '../../services/notifications.service';
 export class SidebarComponent implements OnInit {
   private router = inject(Router);
   public authService = inject(AuthService);
+  @Input() darkMode = false;
+  @Output() themeToggle = new EventEmitter<void>();
   
   propertiesExpanded = signal(false);
   salesExpanded = signal(false);

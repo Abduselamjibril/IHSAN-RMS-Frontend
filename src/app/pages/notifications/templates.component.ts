@@ -25,6 +25,12 @@ import { NotificationsService } from '../../services/notifications.service';
       </div>
     </header>
 
+    <div class="template-summary">
+      <div class="template-summary-card"><span class="material-icons-outlined blue">article</span><div><small>Active templates</small><strong>{{ templates.length }}</strong></div></div>
+      <div class="template-summary-card"><span class="material-icons-outlined green">category</span><div><small>Categories</small><strong>{{ categories.length }}</strong></div></div>
+      <div class="template-summary-card"><span class="material-icons-outlined gold">send</span><div><small>Delivery channels</small><strong>{{ channels.length }}</strong></div></div>
+    </div>
+
     <div class="grid grid-cols-4 gap-6 margin-y-4">
       <!-- Templates Table -->
       <div class="col-span-3 card p-6">
@@ -207,12 +213,13 @@ import { NotificationsService } from '../../services/notifications.service';
 
     <!-- Template Form Modal -->
     <div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
-      <div class="modal-content card max-width-600" (click)="$event.stopPropagation()">
-        <div class="modal-header border-bottom pb-3">
-          <h3>{{ editingTemplateId ? 'Edit Notification Template' : 'New Notification Template' }}</h3>
+      <div class="modal-content template-modal" role="dialog" aria-modal="true" aria-label="Notification template editor" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div><span class="modal-kicker">NOTIFICATION STUDIO</span><h3>{{ editingTemplateId ? 'Edit Notification Template' : 'New Notification Template' }}</h3></div>
+          <button class="close-btn" (click)="closeModal()" title="Close">&times;</button>
         </div>
 
-        <div class="modal-body py-4 flex flex-col gap-3">
+        <div class="modal-body flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="form-group">
               <label>Template Code <span class="text-danger">*</span></label>
@@ -250,7 +257,7 @@ import { NotificationsService } from '../../services/notifications.service';
           </div>
         </div>
 
-        <div class="modal-footer border-top pt-3 flex justify-end gap-2">
+        <div class="modal-footer flex justify-end gap-2">
           <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
           <button class="btn btn-primary" (click)="saveTemplate()">Save Template</button>
         </div>
@@ -258,6 +265,12 @@ import { NotificationsService } from '../../services/notifications.service';
     </div>
   `,
   styles: [`
+    .template-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin: 25px 0; }
+    .template-summary-card { min-height: 95px; padding: 18px 22px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--bg-card); box-shadow: 0 6px 16px rgba(12,56,97,.05); }
+    .template-summary-card > .material-icons-outlined { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; color: white; font-size: 22px; }
+    .template-summary-card .blue { background: #087fce; } .template-summary-card .green { background: #10b981; } .template-summary-card .gold { background: #e7a72e; }
+    .template-summary-card small { display: block; color: var(--text-secondary); font-size: 12px; } .template-summary-card strong { color: var(--text-main); font-size: 19px; }
+    .col-span-3.card { border-radius: 18px; } .variable-item { background: var(--bg-main) !important; border-color: var(--border-color) !important; border-radius: 10px; }
     .font-xxs { font-size: 11px; }
     .btn-delete:hover {
       background: var(--error-color, #ef4444) !important;
@@ -279,15 +292,15 @@ import { NotificationsService } from '../../services/notifications.service';
       animation: fadeIn 0.2s ease-out;
     }
     .modal-content {
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
+      background: var(--bg-card);
+      border-radius: 20px;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, .33);
+      width: min(980px, 94vw);
+      max-width: 980px;
+      max-height: calc(100vh - 48px);
       overflow-y: auto;
       animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(128, 193, 238, .3);
     }
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -304,17 +317,24 @@ import { NotificationsService } from '../../services/notifications.service';
       }
     }
     .modal-header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid #f3f4f6;
+      padding: 20px 26px;
+      background: linear-gradient(118deg, #061c3d, #087fce);
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+    .modal-header h3 { color: #fff; margin-top: 4px; font-size: 20px; }
+    .modal-kicker { color: #f4c764; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
     .modal-body {
-      padding: 1.5rem;
+      padding: 26px;
     }
     .modal-footer {
-      padding: 1.25rem 1.5rem;
-      border-top: 1px solid #f3f4f6;
-      background: #f9fafb;
+      padding: 16px 26px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-main);
     }
+    @media (max-width: 900px) { .template-summary { grid-template-columns: 1fr; gap: 12px; } .grid-cols-4 { grid-template-columns: 1fr !important; } .col-span-3 { grid-column: auto !important; } }
   `]
 })
 export class NotificationTemplatesComponent implements OnInit {

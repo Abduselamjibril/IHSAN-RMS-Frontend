@@ -113,14 +113,14 @@ import { NotificationsService } from '../../services/notifications.service';
           </div>
         </div>
 
-        <!-- Telegram Admin Integration Settings -->
+        <!-- Telegram Setup Wizard Settings -->
         <div class="card p-6 bg-light">
           <h4 class="text-main mb-3 flex align-center gap-2">
             <span class="material-icons-outlined text-indigo">telegram</span>
-            Telegram MTProto Settings
+            Telegram MTProto Setup Wizard
           </h4>
           <p class="font-xs text-secondary mb-4">
-            Configure the administrator's Telegram API credentials and user session string token to direct-message user alerts.
+            Connect the system userbot to send direct notifications without touching a terminal.
           </p>
 
           <div class="flex flex-col gap-3">
@@ -131,32 +131,75 @@ import { NotificationsService } from '../../services/notifications.service';
               </span>
             </div>
 
-            <div class="form-group">
-              <label>Telegram API ID</label>
-              <input type="number" [(ngModel)]="telegramConfig.telegramApiId" placeholder="e.g. 123456" />
+            <!-- Error Banner -->
+            <div class="alert-banner error p-2 rounded text-red bg-red-light font-xs border-red" *ngIf="wizardError" style="color: #ef4444; background: #fee2e2; border: 1px solid #fca5a5;">
+              <strong>Error:</strong> {{ wizardError }}
             </div>
 
-            <div class="form-group">
-              <label>Telegram API Hash</label>
-              <input type="password" [(ngModel)]="telegramConfig.telegramApiHash" placeholder="Enter API Hash" />
-              <span class="font-xxs text-muted" *ngIf="telegramConfig.telegramApiHashMasked">Saved: {{ telegramConfig.telegramApiHashMasked }}</span>
+            <!-- Step 1: Input Credentials -->
+            <div *ngIf="telegramStep === 1" class="flex flex-col gap-3">
+              <div class="form-group">
+                <label>Telegram API ID</label>
+                <input type="number" [(ngModel)]="telegramConfig.telegramApiId" placeholder="e.g. 123456" />
+              </div>
+
+              <div class="form-group">
+                <label>Telegram API Hash</label>
+                <input type="password" [(ngModel)]="telegramConfig.telegramApiHash" placeholder="Enter API Hash" />
+                <span class="font-xxs text-muted" *ngIf="telegramConfig.telegramApiHashMasked">Saved: {{ telegramConfig.telegramApiHashMasked }}</span>
+              </div>
+
+              <div class="form-group">
+                <label>Phone Number (with Country Code)</label>
+                <input type="text" [(ngModel)]="telegramPhone" placeholder="e.g. +251911..." />
+              </div>
+
+              <button 
+                class="btn btn-secondary flex align-center gap-2 mt-2" 
+                style="width: 100%; justify-content: center;"
+                [disabled]="isRequestingCode" 
+                (click)="requestCode()"
+              >
+                <span class="material-icons-outlined" *ngIf="!isRequestingCode">send</span>
+                {{ isRequestingCode ? 'Requesting Code...' : 'Request Login Code' }}
+              </button>
             </div>
 
-            <div class="form-group">
-              <label>Telegram Session String</label>
-              <textarea rows="3" [(ngModel)]="telegramConfig.telegramSessionString" placeholder="MTProto session string..."></textarea>
-              <span class="font-xxs text-muted" *ngIf="telegramConfig.telegramSessionStringMasked">Saved: {{ telegramConfig.telegramSessionStringMasked }}</span>
-            </div>
+            <!-- Step 2: Verification Code -->
+            <div *ngIf="telegramStep === 2" class="flex flex-col gap-3">
+              <div class="p-3 bg-white border rounded font-xs text-secondary">
+                Verification code sent to <strong>{{ telegramPhone }}</strong>. Please check your Telegram app.
+              </div>
 
-            <button 
-              class="btn btn-secondary flex align-center gap-2 mt-2" 
-              style="width: 100%; justify-content: center;"
-              [disabled]="isTelegramSaving" 
-              (click)="saveTelegramSettings()"
-            >
-              <span class="material-icons-outlined">save</span>
-              {{ isTelegramSaving ? 'Saving & Reconnecting...' : 'Save & Reconnect' }}
-            </button>
+              <div class="form-group">
+                <label>Verification Code</label>
+                <input type="text" [(ngModel)]="verificationCode" placeholder="Enter 5-digit code" />
+              </div>
+
+              <div class="form-group">
+                <label>2FA Password (Optional)</label>
+                <input type="password" [(ngModel)]="twoFactorPassword" placeholder="Enter 2FA password if enabled" />
+              </div>
+
+              <div class="flex gap-2 mt-2">
+                <button 
+                  class="btn btn-secondary flex-grow flex align-center gap-2" 
+                  style="justify-content: center;"
+                  [disabled]="isVerifyingCode" 
+                  (click)="verifyCode()"
+                >
+                  <span class="material-icons-outlined" *ngIf="!isVerifyingCode">verified_user</span>
+                  {{ isVerifyingCode ? 'Verifying...' : 'Verify & Login' }}
+                </button>
+                <button 
+                  class="btn btn-muted" 
+                  (click)="resetWizard()"
+                  [disabled]="isVerifyingCode"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -221,6 +264,57 @@ import { NotificationsService } from '../../services/notifications.service';
       color: white !important;
       border-color: var(--error-color, #ef4444) !important;
     }
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .modal-content {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modalSlideUp {
+      from {
+        transform: translateY(24px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .modal-body {
+      padding: 1.5rem;
+    }
+    .modal-footer {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid #f3f4f6;
+      background: #f9fafb;
+    }
   `]
 })
 export class NotificationTemplatesComponent implements OnInit {
@@ -243,7 +337,7 @@ export class NotificationTemplatesComponent implements OnInit {
     bodyTemplate: ''
   };
 
-  // Telegram Dynamic settings state
+  // Telegram Dynamic settings state and Wizard properties
   telegramConfig = {
     telegramApiId: null as number | null,
     telegramApiHash: '',
@@ -255,7 +349,14 @@ export class NotificationTemplatesComponent implements OnInit {
     isConnected: false,
     isSimulation: true
   };
-  isTelegramSaving = false;
+  
+  telegramStep = 1;
+  telegramPhone = '';
+  verificationCode = '';
+  twoFactorPassword = '';
+  wizardError = '';
+  isRequestingCode = false;
+  isVerifyingCode = false;
 
   ngOnInit() {
     this.loadData();
@@ -301,36 +402,72 @@ export class NotificationTemplatesComponent implements OnInit {
     });
   }
 
-  saveTelegramSettings() {
-    if (!this.telegramConfig.telegramApiId || !this.telegramConfig.telegramApiHash || !this.telegramConfig.telegramSessionString) {
-      alert('Please enter all Telegram configuration values to save and test connection.');
+  requestCode() {
+    if (!this.telegramConfig.telegramApiId || !this.telegramConfig.telegramApiHash || !this.telegramPhone) {
+      alert('Please enter API ID, API Hash, and Phone Number.');
       return;
     }
 
-    this.isTelegramSaving = true;
-    this.service.saveTelegramConfig({
-      telegramApiId: this.telegramConfig.telegramApiId,
-      telegramApiHash: this.telegramConfig.telegramApiHash,
-      telegramSessionString: this.telegramConfig.telegramSessionString
-    }).subscribe({
+    this.isRequestingCode = true;
+    this.wizardError = '';
+
+    this.service.requestTelegramCode(
+      this.telegramConfig.telegramApiId,
+      this.telegramConfig.telegramApiHash,
+      this.telegramPhone
+    ).subscribe({
       next: (res) => {
-        this.isTelegramSaving = false;
+        this.isRequestingCode = false;
         if (res.success) {
-          alert('Telegram credentials updated and connected successfully!');
-          // Clear text input fields and mask them locally
-          this.telegramConfig.telegramApiHash = '';
-          this.telegramConfig.telegramSessionString = '';
-          this.loadTelegramSettings();
+          this.telegramStep = 2;
         } else {
-          alert('Saved, but connection failed: ' + res.error);
-          this.loadTelegramSettings();
+          this.wizardError = res.error || 'Failed to request verification code.';
         }
       },
       error: (err) => {
-        this.isTelegramSaving = false;
-        alert('Failed to update telegram configurations: ' + err.message);
+        this.isRequestingCode = false;
+        this.wizardError = err.error?.message || err.message || 'Request failed.';
       }
     });
+  }
+
+  verifyCode() {
+    if (!this.verificationCode) {
+      alert('Please enter the verification code.');
+      return;
+    }
+
+    this.isVerifyingCode = true;
+    this.wizardError = '';
+
+    this.service.verifyTelegramCode(
+      this.telegramPhone,
+      this.verificationCode,
+      this.twoFactorPassword
+    ).subscribe({
+      next: (res) => {
+        this.isVerifyingCode = false;
+        if (res.success) {
+          alert('Telegram userbot authorized and connected successfully!');
+          this.resetWizard();
+          this.loadTelegramSettings();
+        } else {
+          this.wizardError = res.error || 'Verification failed.';
+        }
+      },
+      error: (err) => {
+        this.isVerifyingCode = false;
+        this.wizardError = err.error?.message || err.message || 'Verification failed.';
+      }
+    });
+  }
+
+  resetWizard() {
+    this.telegramStep = 1;
+    this.verificationCode = '';
+    this.twoFactorPassword = '';
+    this.wizardError = '';
+    this.telegramPhone = '';
   }
 
   getFilteredTemplates(): any[] {
@@ -378,8 +515,32 @@ export class NotificationTemplatesComponent implements OnInit {
       return;
     }
 
+    const selectedCategory = this.categories.find(c => Number(c.id) === Number(this.form.categoryId));
+    const selectedChannel = this.channels.find(ch => Number(ch.id) === Number(this.form.channelId));
+
+    if (!selectedCategory || !selectedChannel) {
+      alert('Invalid Category or Channel selection.');
+      return;
+    }
+
+    const payload = {
+      templateCode: this.form.templateCode,
+      templateName: this.form.templateName,
+      subjectTemplate: this.form.subjectTemplate || null,
+      bodyTemplate: this.form.bodyTemplate,
+      categoryCode: selectedCategory.categoryCode,
+      channelCode: selectedChannel.channelCode,
+      variables: []
+    };
+
     if (this.editingTemplateId) {
-      this.service.updateTemplate(this.editingTemplateId, this.form).subscribe({
+      const updatePayload = {
+        templateName: this.form.templateName,
+        subjectTemplate: this.form.subjectTemplate || null,
+        bodyTemplate: this.form.bodyTemplate,
+        isActive: true
+      };
+      this.service.updateTemplate(this.editingTemplateId, updatePayload).subscribe({
         next: () => {
           this.loadData();
           this.closeModal();
@@ -387,7 +548,7 @@ export class NotificationTemplatesComponent implements OnInit {
         error: (err) => alert('Error saving template: ' + (err.error?.message || err.message))
       });
     } else {
-      this.service.createTemplate(this.form).subscribe({
+      this.service.createTemplate(payload).subscribe({
         next: () => {
           this.loadData();
           this.closeModal();

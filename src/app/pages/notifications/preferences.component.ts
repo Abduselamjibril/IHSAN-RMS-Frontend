@@ -173,7 +173,6 @@ export class NotificationPreferencesComponent implements OnInit {
   private service = inject(NotificationsService);
 
   categories: any[] = [];
-  channels: any[] = [];
   preferences: any[] = [];
 
   ngOnInit() {
@@ -186,11 +185,6 @@ export class NotificationPreferencesComponent implements OnInit {
       error: (err) => console.error('Error fetching categories:', err)
     });
 
-    this.service.getChannels().subscribe({
-      next: (res) => this.channels = res,
-      error: (err) => console.error('Error fetching channels:', err)
-    });
-
     this.service.getPreferences().subscribe({
       next: (res) => this.preferences = res,
       error: (err) => console.error('Error fetching preferences:', err)
@@ -198,49 +192,49 @@ export class NotificationPreferencesComponent implements OnInit {
   }
 
   hasPreference(categoryId: number, channelCode: string): boolean {
-    const channel = this.channels.find(ch => ch.channelCode === channelCode);
-    if (!channel) return false;
-
-    const pref = this.preferences.find(p => 
-      Number(p.category?.id) === Number(categoryId) && 
-      Number(p.channel?.id) === Number(channel.id)
-    );
-
-    // If no preference set yet, default to enabled for INAPP and EMAIL, disabled for TELEGRAM
+    const pref = this.preferences.find(p => Number(p.category?.id) === Number(categoryId));
     if (!pref) {
+      // Default configurations: INAPP and EMAIL are true, TELEGRAM is false
       return channelCode !== 'TELEGRAM';
     }
-    return pref.isEnabled;
+
+    switch (channelCode) {
+      case 'EMAIL': return pref.enableEmail;
+      case 'INAPP': return pref.enableInApp;
+      case 'TELEGRAM': return pref.enableTelegram;
+      default: return true;
+    }
   }
 
   togglePreference(categoryId: number, channelCode: string, event: Event) {
     const isEnabled = (event.target as HTMLInputElement).checked;
-    const channel = this.channels.find(ch => ch.channelCode === channelCode);
-    if (!channel) return;
 
-    this.service.updatePreference({
+    let updateField = '';
+    switch (channelCode) {
+      case 'EMAIL': updateField = 'enableEmail'; break;
+      case 'INAPP': updateField = 'enableInApp'; break;
+      case 'TELEGRAM': updateField = 'enableTelegram'; break;
+      default: return;
+    }
+
+    const payload = {
       categoryId,
-      channelId: channel.id,
-      isEnabled
-    }).subscribe({
-      next: () => {
-        // Update local list
-        const idx = this.preferences.findIndex(p => 
-          Number(p.category?.id) === Number(categoryId) && 
-          Number(p.channel?.id) === Number(channel.id)
-        );
+      [updateField]: isEnabled
+    };
 
-        if (idx !== -1) {
-          this.preferences[idx].isEnabled = isEnabled;
+    this.service.updatePreferences([payload]).subscribe({
+      next: () => {
+        const prefIdx = this.preferences.findIndex(p => Number(p.category?.id) === Number(categoryId));
+        if (prefIdx !== -1) {
+          this.preferences[prefIdx][updateField] = isEnabled;
         } else {
           this.preferences.push({
             category: { id: categoryId },
-            channel: { id: channel.id },
-            isEnabled
+            [updateField]: isEnabled
           });
         }
       },
-      error: (err) => console.error('Failed to update channel preference:', err)
+      error: (err) => console.error('Failed to update channel preferences:', err)
     });
   }
 

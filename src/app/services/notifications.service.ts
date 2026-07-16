@@ -18,8 +18,8 @@ export class NotificationsService {
     return this.http.get<number>(`${this.apiBase}/unread-count`);
   }
 
-  markAsRead(notificationId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiBase}/read`, { notificationId });
+  markAsRead(recipientId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/read`, { recipientId });
   }
 
   // --- Delivery Audit Logs / Stats ---
@@ -36,8 +36,8 @@ export class NotificationsService {
     return this.http.get<any[]>(`${this.apiBase}/preferences`);
   }
 
-  updatePreference(data: { categoryId: number; channelId: number; isEnabled: boolean }): Observable<any> {
-    return this.http.post<any>(`${this.apiBase}/preferences`, data);
+  updatePreferences(preferences: any[]): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/preferences`, { preferences });
   }
 
   // --- Categories & Channels ---
@@ -82,5 +82,13 @@ export class NotificationsService {
 
   saveTelegramConfig(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/telegram/config`, data);
+  }
+
+  requestTelegramCode(apiId: number, apiHash: string, phoneNumber: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/telegram/request-code`, { apiId, apiHash, phoneNumber });
+  }
+
+  verifyTelegramCode(phoneNumber: string, code: string, password?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/telegram/verify-code`, { phoneNumber, code, password });
   }
 }

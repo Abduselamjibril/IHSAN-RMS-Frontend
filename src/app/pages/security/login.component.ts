@@ -10,11 +10,14 @@ import { AuthService } from '../../services/auth.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="login-container">
+      <div class="login-backdrop-orb orb-one"></div>
+      <div class="login-backdrop-orb orb-two"></div>
       <div class="login-card">
         <div class="brand-header">
-          <div class="logo-circle">I</div>
-          <h2>IHSAN REMS</h2>
-          <p>Real Estate Management System Security Portal</p>
+          <img class="login-logo" src="/IHSAN LOGO 2.jpg" alt="IHSAN Properties and Business Services">
+          <span class="portal-label">SECURE MANAGEMENT PORTAL</span>
+          <h2>Welcome back</h2>
+          <p>Sign in to IHSAN Properties & Business Services.</p>
         </div>
 
         <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
@@ -70,44 +73,52 @@ import { AuthService } from '../../services/auth.service';
       justify-content: center;
       min-height: 100vh;
       width: 100vw;
-      background: linear-gradient(135deg, #0e0a24 0%, #17113a 100%);
-      font-family: 'Outfit', sans-serif;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at 10% 10%, #0b4a86 0%, transparent 30%), linear-gradient(135deg, #020b1e 0%, #062752 55%, #03142e 100%);
+      font-family: var(--font-family);
     }
 
     .login-card {
       width: 100%;
-      max-width: 420px;
-      padding: 40px;
-      background-color: #1c1543;
-      border: 1px solid rgba(124, 58, 237, 0.15);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+      z-index: 1;
+      max-width: 440px;
+      padding: 38px 40px 40px;
+      background: rgba(6, 27, 57, .88);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(127, 193, 242, .25);
+      border-radius: 22px;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.4);
       animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .brand-header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 30px;
     }
 
-    .logo-circle {
-      width: 54px;
-      height: 54px;
-      background: linear-gradient(135deg, #7c3aed 0%, #4c3a93 100%);
-      color: white;
+    .login-logo {
+      width: 82px;
+      height: 82px;
+      object-fit: cover;
+      object-position: center 20%;
+      display: block;
+      margin: 0 auto 15px;
+      border: 2px solid rgba(244, 199, 100, .78);
+      border-radius: 20px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
+    }
+    .portal-label {
+      color: #f4c764;
+      font-size: 10px;
       font-weight: 800;
-      font-size: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 12px;
-      margin: 0 auto 16px auto;
-      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+      letter-spacing: 1.2px;
     }
 
     .brand-header h2 {
       margin: 0;
-      font-size: 24px;
+      font-size: 28px;
       font-weight: 700;
       color: white;
       letter-spacing: -0.5px;
@@ -116,7 +127,7 @@ import { AuthService } from '../../services/auth.service';
     .brand-header p {
       margin: 6px 0 0 0;
       font-size: 13px;
-      color: #8c85b5;
+      color: #b4cee6;
     }
 
     .login-form {
@@ -134,7 +145,7 @@ import { AuthService } from '../../services/auth.service';
     .form-group label {
       font-size: 12px;
       font-weight: 600;
-      color: #9c97c1;
+      color: #bdd3e9;
     }
 
     .input-wrapper {
@@ -147,15 +158,15 @@ import { AuthService } from '../../services/auth.service';
       position: absolute;
       left: 14px;
       font-size: 20px;
-      color: #6a6396;
+      color: #77b9ee;
     }
 
     .form-control {
       width: 100%;
       padding: 12px 14px 12px 42px;
       border-radius: var(--radius-md);
-      border: 1px solid #2d2460;
-      background-color: #130d30;
+      border: 1px solid rgba(126, 181, 229, .28);
+      background-color: rgba(1, 14, 35, .72);
       color: white;
       font-size: 14px;
       outline: none;
@@ -163,9 +174,9 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .form-control:focus {
-      border-color: #7c3aed;
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
-      background-color: #0f0a28;
+      border-color: #38a4eb;
+      box-shadow: 0 0 0 3px rgba(56, 164, 235, 0.16);
+      background-color: #03152f;
     }
 
     .btn-block {
@@ -175,6 +186,11 @@ import { AuthService } from '../../services/auth.service';
       font-weight: 700;
       margin-top: 10px;
     }
+    .btn-primary { background: linear-gradient(135deg, #087fce, #075eac); box-shadow: 0 10px 20px rgba(5, 121, 202, .25); }
+    .btn-primary:hover { background: linear-gradient(135deg, #1093e3, #0870c0); }
+    .login-backdrop-orb { position: absolute; border-radius: 50%; filter: blur(2px); opacity: .42; }
+    .orb-one { width: 310px; height: 310px; background: #0d8ade; left: -140px; bottom: -100px; }
+    .orb-two { width: 230px; height: 230px; background: #dca52d; right: -100px; top: -85px; opacity: .2; }
 
     .alert-danger {
       background-color: rgba(239, 68, 68, 0.15);
@@ -192,6 +208,7 @@ import { AuthService } from '../../services/auth.service';
       from { transform: scale(0.95); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
     }
+    @media (max-width: 520px) { .login-card { margin: 18px; padding: 30px 24px; } }
   `]
 })
 export class LoginComponent {

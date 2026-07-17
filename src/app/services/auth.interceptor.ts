@@ -5,21 +5,11 @@ import { catchError, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.getToken();
-
-  if (token) {
-    const cloned = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return next(cloned).pipe(
-      catchError((error) => {
-        if (error.status === 401) authService.endExpiredSession();
-        return throwError(() => error);
-      })
-    );
-  }
-
-  return next(req);
+  const cloned = req.clone({ withCredentials: true });
+  return next(cloned).pipe(
+    catchError((error) => {
+      if (error.status === 401) authService.endExpiredSession();
+      return throwError(() => error);
+    })
+  );
 };

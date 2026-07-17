@@ -40,24 +40,24 @@ export class AuthService {
     if (!filePath) return '#';
     if (filePath.startsWith('http')) return filePath;
     const base = this.apiBase.replace('/api', '');
-    const token = this.getToken();
-    return `${base}${filePath}${token ? '?token=' + token : ''}`;
+    // Authentication is sent as an HttpOnly cookie; never expose a token in URLs.
+    return `${base}${filePath}`;
   }
 
   currentUser = signal<AuthenticatedUser | null>(null);
 
   constructor() {
-    const session = localStorage.getItem('auth_session');
+    const session = sessionStorage.getItem('auth_user');
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        if (parsed?.token && parsed?.user && !this.isTokenExpired(parsed.token)) {
+        if (parsed?.user) {
           this.currentUser.set(parsed.user);
         } else {
-          localStorage.removeItem('auth_session');
+          sessionStorage.removeItem('auth_user');
         }
       } catch (err) {
-        localStorage.removeItem('auth_session');
+        sessionStorage.removeItem('auth_user');
       }
     }
   }
@@ -65,8 +65,8 @@ export class AuthService {
   login(credentials: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/auth/login`, credentials).pipe(
       tap((res) => {
-        if (res && res.token) {
-          localStorage.setItem('auth_session', JSON.stringify(res));
+        if (res?.user) {
+          sessionStorage.setItem('auth_user', JSON.stringify({ user: res.user }));
           this.currentUser.set(res.user);
         }
       })
@@ -74,15 +74,13 @@ export class AuthService {
   }
 
   updatePassword(userId: string, password: string): Observable<any> {
-    const token = this.getToken();
-    const headers = new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
-    return this.http.put<any>(`${this.apiBase}/users/${userId}`, { password }, { headers }).pipe(
+    return this.http.put<any>(`${this.apiBase}/users/${userId}`, { password }).pipe(
       tap((res) => {
-        const session = localStorage.getItem('auth_session');
+        const session = sessionStorage.getItem('auth_user');
         if (session && res) {
           const parsed = JSON.parse(session);
           parsed.user = res;
-          localStorage.setItem('auth_session', JSON.stringify(parsed));
+          sessionStorage.setItem('auth_user', JSON.stringify(parsed));
           this.currentUser.set(res);
         }
       })
@@ -90,17 +88,15 @@ export class AuthService {
   }
 
   logout() {
-    const token = this.getToken();
-    const headers = new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
-    
-    this.http.post(`${this.apiBase}/auth/logout`, {}, { headers }).subscribe({
+    this.http.post(`${this.apiBase}/auth/logout`, {}).subscribe({
       next: () => this.clearSession(),
       error: () => this.clearSession(),
     });
   }
 
   private clearSession(redirect = true) {
-    localStorage.removeItem('auth_session');
+    localStorage.removeItem('auth_session'); // Remove legacy persisted JWTs.
+    sessionStorage.removeItem('auth_user');
     this.currentUser.set(null);
     if (redirect) this.router.navigate(['/login']);
   }
@@ -110,22 +106,11 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    const session = localStorage.getItem('auth_session');
-    if (!session) return null;
-    try {
-      const token = JSON.parse(session).token;
-      if (!token || this.isTokenExpired(token)) {
-        this.clearSession(false);
-        return null;
-      }
-      return token;
-    } catch {
-      return null;
-    }
+    return null; // Tokens are intentionally held only in the HttpOnly auth cookie.
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser() !== null && this.getToken() !== null;
+    return this.currentUser() !== null;
   }
 
   private isTokenExpired(token: string): boolean {

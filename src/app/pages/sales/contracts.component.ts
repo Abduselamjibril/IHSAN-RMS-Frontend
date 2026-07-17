@@ -685,9 +685,7 @@ export class ContractsComponent implements OnInit {
   }
 
   getDownloadUrl(filePath: string): string {
-    if (!filePath) return '#';
-    if (filePath.startsWith('http')) return filePath;
-    return `http://localhost:3000${filePath}`;
+    return this.authService.getDownloadUrl(filePath);
   }
 
   private formatDate(date: Date): string {

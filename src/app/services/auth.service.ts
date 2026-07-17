@@ -30,7 +30,19 @@ export interface AuthenticatedUser {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiBase = 'http://localhost:3000/api';
+  
+  // Enforce secure HTTPS connection scheme in non-development/production environments
+  private apiBase = window.location.origin.includes('localhost') 
+    ? 'http://localhost:3000/api' 
+    : window.location.origin.replace('http:', 'https:') + '/api';
+
+  getDownloadUrl(filePath: string): string {
+    if (!filePath) return '#';
+    if (filePath.startsWith('http')) return filePath;
+    const base = this.apiBase.replace('/api', '');
+    const token = this.getToken();
+    return `${base}${filePath}${token ? '?token=' + token : ''}`;
+  }
 
   currentUser = signal<AuthenticatedUser | null>(null);
 
@@ -56,6 +68,22 @@ export class AuthService {
         if (res && res.token) {
           localStorage.setItem('auth_session', JSON.stringify(res));
           this.currentUser.set(res.user);
+        }
+      })
+    );
+  }
+
+  updatePassword(userId: string, password: string): Observable<any> {
+    const token = this.getToken();
+    const headers = new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
+    return this.http.put<any>(`${this.apiBase}/users/${userId}`, { password }, { headers }).pipe(
+      tap((res) => {
+        const session = localStorage.getItem('auth_session');
+        if (session && res) {
+          const parsed = JSON.parse(session);
+          parsed.user = res;
+          localStorage.setItem('auth_session', JSON.stringify(parsed));
+          this.currentUser.set(res);
         }
       })
     );

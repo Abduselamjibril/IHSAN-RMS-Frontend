@@ -13,56 +13,113 @@ import { AuthService } from '../../services/auth.service';
       <div class="login-backdrop-orb orb-one"></div>
       <div class="login-backdrop-orb orb-two"></div>
       <div class="login-card">
-        <div class="brand-header">
-          <img class="login-logo" src="/IHSAN LOGO 2.jpg" alt="IHSAN Properties and Business Services">
-          <span class="portal-label">SECURE MANAGEMENT PORTAL</span>
-          <h2>Welcome back</h2>
-          <p>Sign in to IHSAN Properties & Business Services.</p>
+        <!-- Standard Login View -->
+        <div *ngIf="!mustChangePassword()">
+          <div class="brand-header">
+            <img class="login-logo" src="/IHSAN LOGO 2.jpg" alt="IHSAN Properties and Business Services">
+            <span class="portal-label">SECURE MANAGEMENT PORTAL</span>
+            <h2>Welcome back</h2>
+            <p>Sign in to IHSAN Properties & Business Services.</p>
+          </div>
+
+          <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
+            <div *ngIf="errorMessage()" class="alert-danger animate-fade-in">
+              <span class="material-icons-outlined font-sm">error_outline</span>
+              {{ errorMessage() }}
+            </div>
+
+            <div class="form-group">
+              <label for="username">Username</label>
+              <div class="input-wrapper">
+                <span class="material-icons-outlined input-icon">person</span>
+                <input 
+                  type="text" 
+                  id="username" 
+                  name="username" 
+                  [(ngModel)]="username" 
+                  required 
+                  placeholder="Enter your username"
+                  class="form-control"
+                >
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+              <div class="input-wrapper">
+                <span class="material-icons-outlined input-icon">lock</span>
+                <input 
+                  type="password" 
+                  id="password" 
+                  name="password" 
+                  [(ngModel)]="password" 
+                  required 
+                  placeholder="Enter your password"
+                  class="form-control"
+                >
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="!loginForm.valid || isLoading()">
+              <span *ngIf="!isLoading()">Sign In</span>
+              <span *ngIf="isLoading()" class="loading-dots">Authenticating...</span>
+            </button>
+          </form>
         </div>
 
-        <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
-          <div *ngIf="errorMessage()" class="alert-danger animate-fade-in">
-            <span class="material-icons-outlined font-sm">error_outline</span>
-            {{ errorMessage() }}
+        <!-- Forced Password Change View -->
+        <div *ngIf="mustChangePassword()">
+          <div class="brand-header">
+            <img class="login-logo" src="/IHSAN LOGO 2.jpg" alt="IHSAN Properties and Business Services">
+            <span class="portal-label" style="color: #ef4444;">SECURITY POLICY ENFORCEMENT</span>
+            <h2 style="font-size: 22px; margin-top: 8px;">Reset Password</h2>
+            <p>First login detected. Please set a secure password.</p>
           </div>
 
-          <div class="form-group">
-            <label for="username">Username</label>
-            <div class="input-wrapper">
-              <span class="material-icons-outlined input-icon">person</span>
-              <input 
-                type="text" 
-                id="username" 
-                name="username" 
-                [(ngModel)]="username" 
-                required 
-                placeholder="Enter your username"
-                class="form-control"
-              >
+          <form (ngSubmit)="onChangePassword()" #changeForm="ngForm" class="login-form">
+            <div *ngIf="changePasswordError()" class="alert-danger animate-fade-in">
+              <span class="material-icons-outlined font-sm">error_outline</span>
+              {{ changePasswordError() }}
             </div>
-          </div>
 
-          <div class="form-group">
-            <label for="password">Password</label>
-            <div class="input-wrapper">
-              <span class="material-icons-outlined input-icon">lock</span>
-              <input 
-                type="password" 
-                id="password" 
-                name="password" 
-                [(ngModel)]="password" 
-                required 
-                placeholder="Enter your password"
-                class="form-control"
-              >
+            <div class="form-group">
+              <label for="newPassword">New Password</label>
+              <div class="input-wrapper">
+                <span class="material-icons-outlined input-icon">lock</span>
+                <input 
+                  type="password" 
+                  id="newPassword" 
+                  name="newPassword" 
+                  [(ngModel)]="newPassword" 
+                  required 
+                  placeholder="At least 8 characters"
+                  class="form-control"
+                >
+              </div>
             </div>
-          </div>
 
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="!loginForm.valid || isLoading()">
-            <span *ngIf="!isLoading()">Sign In</span>
-            <span *ngIf="isLoading()" class="loading-dots">Authenticating...</span>
-          </button>
-        </form>
+            <div class="form-group">
+              <label for="confirmPassword">Confirm New Password</label>
+              <div class="input-wrapper">
+                <span class="material-icons-outlined input-icon">lock_reset</span>
+                <input 
+                  type="password" 
+                  id="confirmPassword" 
+                  name="confirmPassword" 
+                  [(ngModel)]="confirmPassword" 
+                  required 
+                  placeholder="Verify new password"
+                  class="form-control"
+                >
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="!changeForm.valid || isLoading()">
+              <span *ngIf="!isLoading()">Update Password & Enter Portal</span>
+              <span *ngIf="isLoading()" class="loading-dots">Updating Password...</span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   `,
@@ -218,6 +275,12 @@ export class LoginComponent {
   username = '';
   password = '';
 
+  // Forced password change variables
+  mustChangePassword = signal(false);
+  newPassword = '';
+  confirmPassword = '';
+  changePasswordError = signal<string | null>(null);
+
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
 
@@ -231,13 +294,51 @@ export class LoginComponent {
       browserName: navigator.userAgent.split(' ')[0] || 'Browser',
       deviceType: 'Desktop'
     }).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res?.user?.forcePasswordChange) {
+          this.mustChangePassword.set(true);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.error?.message || 'Authentication failed. Please verify credentials.');
+      }
+    });
+  }
+
+  onChangePassword() {
+    if (!this.newPassword || this.newPassword.length < 8) {
+      this.changePasswordError.set('New password must be at least 8 characters long.');
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.changePasswordError.set('Passwords do not match.');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.changePasswordError.set(null);
+
+    const currentUser = this.authService.currentUser();
+    const userId = currentUser?.userId || JSON.parse(localStorage.getItem('auth_session') || '{}')?.user?.userId;
+
+    if (!userId) {
+      this.changePasswordError.set('Session user identity not found. Please log in again.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    this.authService.updatePassword(userId, this.newPassword).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.message || 'Authentication failed. Please verify credentials.');
+        this.changePasswordError.set(err.error?.message || 'Failed to update password. Please try again.');
       }
     });
   }

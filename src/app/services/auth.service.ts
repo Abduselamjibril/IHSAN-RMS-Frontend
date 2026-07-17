@@ -39,7 +39,11 @@ export class AuthService {
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        this.currentUser.set(parsed.user);
+        if (parsed?.token && parsed?.user && !this.isTokenExpired(parsed.token)) {
+          this.currentUser.set(parsed.user);
+        } else {
+          localStorage.removeItem('auth_session');
+        }
       } catch (err) {
         localStorage.removeItem('auth_session');
       }
@@ -67,24 +71,45 @@ export class AuthService {
     });
   }
 
-  private clearSession() {
+  private clearSession(redirect = true) {
     localStorage.removeItem('auth_session');
     this.currentUser.set(null);
-    this.router.navigate(['/login']);
+    if (redirect) this.router.navigate(['/login']);
+  }
+
+  endExpiredSession(): void {
+    this.clearSession(true);
   }
 
   getToken(): string | null {
     const session = localStorage.getItem('auth_session');
     if (!session) return null;
     try {
-      return JSON.parse(session).token;
+      const token = JSON.parse(session).token;
+      if (!token || this.isTokenExpired(token)) {
+        this.clearSession(false);
+        return null;
+      }
+      return token;
     } catch {
       return null;
     }
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser() !== null;
+    return this.currentUser() !== null && this.getToken() !== null;
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return true;
+      const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = JSON.parse(atob(normalizedPayload));
+      return !decoded.exp || Date.now() >= decoded.exp * 1000;
+    } catch {
+      return true;
+    }
   }
 
   hasPermission(

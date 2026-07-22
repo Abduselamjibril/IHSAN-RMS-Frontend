@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { customConfirm } from '../../utils/confirm';
+import { environment } from '../../config';
 
 @Component({
   selector: 'app-workflows',
@@ -342,7 +343,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class WorkflowsComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api';
+  private apiBase = environment.apiBase;
 
   activeTab = 'inbox';
   definitions: any[] = [];

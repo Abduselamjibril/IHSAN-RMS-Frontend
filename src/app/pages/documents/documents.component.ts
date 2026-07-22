@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { environment } from '../../config';
 
 @Component({
   selector: 'app-documents',
@@ -324,7 +325,7 @@ import { CrmService } from '../../services/crm.service';
           <!-- Image File Preview (if image) -->
           <div class="file-preview-card border mb-4 p-2 flex justify-center align-center bg-main" *ngIf="isImageFile(getCurrentVersionFile(selectedDocDetails))">
             <img 
-              [src]="'http://localhost:3000' + getCurrentVersionFile(selectedDocDetails)?.filePath" 
+              [src]="env.serverUrl + getCurrentVersionFile(selectedDocDetails)?.filePath" 
               alt="Document Preview" 
               style="max-width: 100%; max-height: 250px; border-radius: var(--radius-sm);"
             />
@@ -384,7 +385,7 @@ import { CrmService } from '../../services/crm.service';
                 </div>
                 
                 <a 
-                  [href]="'http://localhost:3000' + ver.filePath" 
+                  [href]="env.serverUrl + ver.filePath" 
                   target="_blank" 
                   class="btn btn-secondary btn-xs flex align-center gap-1"
                   style="padding: 6px 10px;"
@@ -489,6 +490,7 @@ import { CrmService } from '../../services/crm.service';
   `]
 })
 export class DocumentsComponent implements OnInit {
+  env = environment;
   private crmService = inject(CrmService);
 
   documents: any[] = [];
@@ -605,7 +607,7 @@ export class DocumentsComponent implements OnInit {
 
   getDownloadUrl(doc: any): string {
     const file = this.getCurrentVersionFile(doc);
-    return file ? `http://localhost:3000${file.filePath}` : '#';
+    return file ? `${this.env.serverUrl}${file.filePath}` : '#';
   }
 
   getCurrentVersionFile(doc: any): any {

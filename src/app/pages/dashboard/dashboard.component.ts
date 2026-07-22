@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportsService } from '../../services/reports.service';
+import { environment } from '../../config';
 import { CrmService } from '../../services/crm.service';
 declare var io: any;
 
@@ -726,7 +727,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   connectToWebSocket() {
     if (typeof io !== 'undefined') {
       try {
-        this.socket = io('http://localhost:3000/reports');
+        this.socket = io(`${environment.serverUrl}/reports`);
         this.socket.on('dashboardKpisUpdated', (data: any) => {
           console.log('Realtime Dashboard KPIs update received via WebSockets:', data);
           this.kpis = data;

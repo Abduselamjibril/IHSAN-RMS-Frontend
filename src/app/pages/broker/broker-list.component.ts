@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrokerService } from '../../services/broker.service';
 import { customConfirm } from '../../utils/confirm';
+import { environment } from '../../config';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -189,7 +190,7 @@ import { AuthService } from '../../services/auth.service';
                     </div>
                   </div>
                   <div class="flex align-center gap-2">
-                    <a [href]="'http://localhost:3000' + doc.filePath" target="_blank" class="icon-btn text-indigo" title="View Document" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background-color: var(--bg-main);">
+                    <a [href]="env.serverUrl + doc.filePath" target="_blank" class="icon-btn text-indigo" title="View Document" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background-color: var(--bg-main);">
                       <span class="material-icons-outlined" style="font-size: 16px;">visibility</span>
                     </a>
                     <button class="icon-btn text-danger" (click)="deleteDocument(doc.id)" title="Remove Document" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background-color: var(--bg-main);">
@@ -447,6 +448,7 @@ import { AuthService } from '../../services/auth.service';
   `]
 })
 export class BrokerListComponent implements OnInit {
+  env = environment;
   private brokerService = inject(BrokerService);
   public authService = inject(AuthService);
 

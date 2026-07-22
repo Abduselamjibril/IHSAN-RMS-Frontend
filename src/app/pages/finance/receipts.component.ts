@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewInit, HostLi
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { environment } from '../../config';
 
 @Component({
   selector: 'app-receipts',
@@ -863,6 +864,7 @@ import { FinanceService } from '../../services/finance.service';
   `]
 })
 export class ReceiptsComponent implements OnInit, AfterViewInit {
+  env = environment;
   private financeService = inject(FinanceService);
 
   activeTab = 'receipts';
@@ -1038,7 +1040,7 @@ export class ReceiptsComponent implements OnInit, AfterViewInit {
     this.financeService.getUserSignature().subscribe({
       next: (res) => {
         if (res && res.signaturePngPath) {
-          this.savedSignatureUrl = 'http://localhost:3000' + res.signaturePngPath;
+          this.savedSignatureUrl = environment.serverUrl + res.signaturePngPath;
         } else {
           this.savedSignatureUrl = '';
         }
@@ -1441,7 +1443,7 @@ export class ReceiptsComponent implements OnInit, AfterViewInit {
     const resolveUrl = (url: string) => {
       if (!url) return '';
       if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
-      return 'http://localhost:3000' + (url.startsWith('/') ? '' : '/') + url;
+      return environment.serverUrl + (url.startsWith('/') ? '' : '/') + url;
     };
 
     let structure = this.templateStructure;

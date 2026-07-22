@@ -2,12 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class FinanceService {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api/finance';
+  private apiBase = `${environment.apiBase}/finance`;
 
   // --- Payment Methods ---
   getPaymentMethods(): Observable<any[]> {

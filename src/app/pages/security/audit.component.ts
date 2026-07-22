@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../config';
 
 @Component({
   selector: 'app-audit',
@@ -206,7 +207,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class AuditComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api';
+  private apiBase = environment.apiBase;
 
   activeTab = 'audit';
   auditLogs: any[] = [];

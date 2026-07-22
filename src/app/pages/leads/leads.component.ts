@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { environment } from '../../config';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MarketingService } from '../../services/marketing.service';
 import { AuthService } from '../../services/auth.service';
@@ -484,7 +485,7 @@ import { AuthService } from '../../services/auth.service';
                     <span class="text-secondary font-xs">{{ (att.fileSize / 1024) | number:'1.0-1' }} KB • {{ att.uploadedAt | date:'short' }}</span>
                   </div>
                 </div>
-                <a [href]="'http://localhost:3000' + att.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
+                <a [href]="env.serverUrl + att.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
                   <span class="material-icons-outlined font-sm">download</span> Download
                 </a>
               </div>
@@ -762,6 +763,7 @@ import { AuthService } from '../../services/auth.service';
   styles: []
 })
 export class LeadsComponent implements OnInit {
+  env = environment;
   private crmService = inject(CrmService);
   private marketingService = inject(MarketingService);
   public authService = inject(AuthService);

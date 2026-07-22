@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { customConfirm } from '../../utils/confirm';
+import { environment } from '../../config';
 
 @Component({
   selector: 'app-users',
@@ -346,7 +347,7 @@ import { customConfirm } from '../../utils/confirm';
 })
 export class UsersComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api';
+  private apiBase = environment.apiBase;
 
   users: any[] = [];
   filteredUsers: any[] = [];

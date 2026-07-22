@@ -2,12 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class PropertiesService {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api';
+  private apiBase = environment.apiBase;
 
   // --- Dashboard ---
   getDashboardStats(): Observable<any> {

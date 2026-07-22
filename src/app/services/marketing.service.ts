@@ -2,12 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class MarketingService {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api/marketing';
+  private apiBase = `${environment.apiBase}/marketing`;
 
   // --- Campaigns ---
   getCampaigns(): Observable<any[]> {

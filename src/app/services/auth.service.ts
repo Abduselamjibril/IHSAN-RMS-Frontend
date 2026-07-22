@@ -24,6 +24,8 @@ export interface AuthenticatedUser {
   permissions: UserPermission[];
 }
 
+import { environment } from '../config';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -33,7 +35,7 @@ export class AuthService {
   
   // Enforce secure HTTPS connection scheme in non-development/production environments
   private apiBase = window.location.origin.includes('localhost') 
-    ? 'http://localhost:3000/api' 
+    ? environment.apiBase 
     : window.location.origin.replace('http:', 'https:') + '/api';
 
   getDownloadUrl(filePath: string): string {

@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { environment } from '../../../config';
 
 @Component({
   selector: 'app-media-documents',
@@ -33,7 +34,7 @@ import { PropertiesService } from '../../../services/properties.service';
     <!-- Photos Grid view -->
     <div class="media-deck-grid" *ngIf="viewMode === 'photos'">
       <div class="card media-card-item flex flex-col border" *ngFor="let m of filteredMedia">
-        <img [src]="'http://localhost:3000' + m.filePath" class="grid-img" />
+        <img [src]="env.serverUrl + m.filePath" class="grid-img" />
         <div class="p-3">
           <span class="badge" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured">
             {{ m.isFeatured ? 'Featured' : 'Gallery' }}
@@ -61,7 +62,7 @@ import { PropertiesService } from '../../../services/properties.service';
         </div>
         <div class="flex align-center gap-3">
           <span class="text-secondary font-xs">{{ (d.fileSize / 1024) | number:'1.0-0' }} KB</span>
-          <a [href]="'http://localhost:3000' + d.filePath" target="_blank" class="btn btn-secondary btn-sm">Download File</a>
+          <a [href]="env.serverUrl + d.filePath" target="_blank" class="btn btn-secondary btn-sm">Download File</a>
         </div>
       </div>
 
@@ -91,6 +92,7 @@ import { PropertiesService } from '../../../services/properties.service';
   `]
 })
 export class MediaDocumentsComponent implements OnInit {
+  env = environment;
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);
 

@@ -33,10 +33,7 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
   
-  // Enforce secure HTTPS connection scheme in non-development/production environments
-  private apiBase = window.location.origin.includes('localhost') 
-    ? environment.apiBase 
-    : window.location.origin.replace('http:', 'https:') + '/api';
+  private apiBase = environment.apiBase;
 
   getDownloadUrl(filePath: string): string {
     if (!filePath) return '#';

@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
 import { customConfirm } from '../../../utils/confirm';
+import { environment } from '../../../config';
 
 @Component({
   selector: 'app-properties-details',
@@ -606,7 +607,7 @@ import { customConfirm } from '../../../utils/confirm';
                     <span class="text-secondary font-xs" *ngIf="d.remarks" style="font-style: italic;">{{ d.remarks }}</span>
                   </div>
                 </div>
-                <a [href]="'http://localhost:3000' + d.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
+                <a [href]="env.serverUrl + d.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
                   <span class="material-icons-outlined font-xs">file_download</span>
                   <span>Download</span>
                 </a>
@@ -652,7 +653,7 @@ import { customConfirm } from '../../../utils/confirm';
 
             <div class="media-grid-row flex flex-wrap gap-3 mt-4">
               <div *ngFor="let m of property.media" class="media-box border relative hover-lift" style="width: calc(33.333% - 10px); min-width: 110px;">
-                <img [src]="'http://localhost:3000' + m.filePath" style="width: 100%; height: 95px; object-fit: cover;" />
+                <img [src]="env.serverUrl + m.filePath" style="width: 100%; height: 95px; object-fit: cover;" />
                 <span class="badge absolute top-2 right-2 badge-xs" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured" style="font-size: 8px; padding: 2px 5px; color: white;">
                   {{ m.isFeatured ? 'Cover' : (m.mediaType || 'Gallery') }}
                 </span>
@@ -1340,6 +1341,7 @@ import { customConfirm } from '../../../utils/confirm';
   `]
 })
 export class PropertiesDetailsComponent implements OnInit {
+  env = environment;
   private route = inject(ActivatedRoute);
   private propertiesService = inject(PropertiesService);
   private cdr = inject(ChangeDetectorRef);

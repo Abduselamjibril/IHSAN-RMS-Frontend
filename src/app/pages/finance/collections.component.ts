@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { environment } from '../../config';
 import { SalesService } from '../../services/sales.service';
 
 @Component({
@@ -462,6 +463,7 @@ import { SalesService } from '../../services/sales.service';
   `]
 })
 export class CollectionsComponent implements OnInit {
+  env = environment;
   private financeService = inject(FinanceService);
   private salesService = inject(SalesService);
 
@@ -857,7 +859,7 @@ export class CollectionsComponent implements OnInit {
     this.financeService.getUserSignature().subscribe({
       next: (res) => {
         if (res && res.signaturePngPath) {
-          this.savedSignatureUrl = 'http://localhost:3000' + res.signaturePngPath;
+          this.savedSignatureUrl = environment.serverUrl + res.signaturePngPath;
         } else {
           this.savedSignatureUrl = '';
         }
@@ -964,7 +966,7 @@ export class CollectionsComponent implements OnInit {
     const resolveUrl = (url: string) => {
       if (!url) return '';
       if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
-      return 'http://localhost:3000' + (url.startsWith('/') ? '' : '/') + url;
+      return environment.serverUrl + (url.startsWith('/') ? '' : '/') + url;
     };
 
     let structure = this.templateStructure;

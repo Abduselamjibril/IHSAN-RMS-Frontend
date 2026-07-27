@@ -322,8 +322,7 @@ export class LoginComponent {
     this.isLoading.set(true);
     this.changePasswordError.set(null);
 
-    const currentUser = this.authService.currentUser();
-    const userId = currentUser?.userId || JSON.parse(localStorage.getItem('auth_session') || '{}')?.user?.userId;
+    const userId = this.authService.currentUser()?.userId;
 
     if (!userId) {
       this.changePasswordError.set('Session user identity not found. Please log in again.');

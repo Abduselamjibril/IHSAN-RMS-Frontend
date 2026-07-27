@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { customConfirm } from '../../utils/confirm';
+import { environment } from '../../config';
 
 interface PermissionMatrixRow {
   permissionId: string;
@@ -227,7 +228,7 @@ interface PermissionMatrixRow {
 })
 export class RolesComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiBase = 'http://localhost:3000/api';
+  private apiBase = environment.apiBase;
 
   roles: any[] = [];
   groups: any[] = [];

@@ -442,10 +442,21 @@ export class UsersComponent implements OnInit {
   }
 
   saveUser() {
-    const payload = {
+    const payload: any = {
       ...this.formModel,
-      roleIds: this.formModel.roleId ? [this.formModel.roleId] : []
+      roleIds: this.formModel.roleId ? [String(this.formModel.roleId)] : []
     };
+
+    // Remove UI-specific keys that do not belong to the DTO schema
+    delete payload.roleId;
+
+    // Standardize optional number inputs as string formats matching the DTO schemas
+    if (payload.branchId !== null && payload.branchId !== undefined) {
+      payload.branchId = String(payload.branchId);
+    }
+    if (payload.departmentId !== null && payload.departmentId !== undefined) {
+      payload.departmentId = String(payload.departmentId);
+    }
 
     if (this.editMode && this.selectedUser) {
       this.http.put(`${this.apiBase}/users/${this.selectedUser.userId}`, payload).subscribe({

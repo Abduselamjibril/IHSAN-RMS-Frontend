@@ -280,8 +280,8 @@ import { SalesService } from '../../services/sales.service';
             <div class="form-group flex flex-col">
               <label>Select Sales Contract * [REQUIRED]</label>
               <select [(ngModel)]="newPayment.contractId" name="contractId" required (change)="onContractChange()">
-                <option [value]="0">-- Select Contract --</option>
-                <option *ngFor="let c of contracts" [value]="c.id">
+                <option [ngValue]="0">-- Select Contract --</option>
+                <option *ngFor="let c of contracts" [ngValue]="c.id">
                   {{ c.contractNo }} - {{ c.customer?.fullName }} (ETB {{ c.contractAmount | number }})
                 </option>
               </select>
@@ -298,8 +298,8 @@ import { SalesService } from '../../services/sales.service';
               <div class="form-group flex-1 flex flex-col">
                 <label>Payment Method * [REQUIRED]</label>
                 <select [(ngModel)]="newPayment.paymentMethodId" name="paymentMethodId" required (change)="onPaymentMethodChange()">
-                  <option [value]="0">-- Select Method --</option>
-                  <option *ngFor="let m of paymentMethods" [value]="m.id">
+                  <option [ngValue]="0">-- Select Method --</option>
+                  <option *ngFor="let m of paymentMethods" [ngValue]="m.id">
                     {{ m.paymentMethodName }}
                   </option>
                 </select>
@@ -692,13 +692,29 @@ export class CollectionsComponent implements OnInit {
 
   onSubmitPayment(event: Event) {
     event.preventDefault();
-    if (this.newPayment.contractId === 0 || this.newPayment.paymentMethodId === 0) return;
+    const contractId = Number(this.newPayment.contractId);
+    const customerId = Number(this.newPayment.customerId);
+    const paymentMethodId = Number(this.newPayment.paymentMethodId);
+    const paymentAmount = Number(this.newPayment.paymentAmount);
+
+    if (!contractId || !customerId || !paymentMethodId || !this.newPayment.paymentDate || !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      this.errorMessage = 'Select a contract and payment method, then enter a valid payment amount.';
+      return;
+    }
 
     if (this.targetInstallmentNo !== null) {
       this.newPayment.remarks = `[Installment #${this.targetInstallmentNo}] ${this.newPayment.remarks || ''}`.trim();
     }
 
-    this.financeService.createPayment(this.newPayment).subscribe({
+    const payload = {
+      ...this.newPayment,
+      contractId,
+      customerId,
+      paymentMethodId,
+      paymentAmount,
+    };
+
+    this.financeService.createPayment(payload).subscribe({
       next: (res) => {
         this.successMessage = `Payment recorded successfully with reference ${res.paymentReference}. Pending approval verification!`;
         this.loadPayments();

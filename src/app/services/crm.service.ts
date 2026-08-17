@@ -53,6 +53,7 @@ export class CrmService {
     if (filters.statusId) params = params.set('statusId', filters.statusId.toString());
     if (filters.sourceId) params = params.set('sourceId', filters.sourceId.toString());
     if (filters.agentId) params = params.set('agentId', filters.agentId.toString());
+    if (filters.project) params = params.set('project', filters.project);
     if (filters.budgetMin) params = params.set('budgetMin', filters.budgetMin.toString());
     if (filters.budgetMax) params = params.set('budgetMax', filters.budgetMax.toString());
     if (filters.dateFrom) params = params.set('dateFrom', filters.dateFrom);
@@ -77,6 +78,44 @@ export class CrmService {
 
   addLeadNote(id: number, note: string): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/leads/${id}/notes`, { note });
+  }
+
+  getExportUrl(filters: any): string {
+    let queryParts: string[] = [];
+    if (filters.search) queryParts.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters.statusId) queryParts.push(`statusId=${filters.statusId}`);
+    if (filters.sourceId) queryParts.push(`sourceId=${filters.sourceId}`);
+    if (filters.agentId) queryParts.push(`agentId=${filters.agentId}`);
+    if (filters.project) queryParts.push(`project=${encodeURIComponent(filters.project)}`);
+    if (filters.budgetMin) queryParts.push(`budgetMin=${filters.budgetMin}`);
+    if (filters.budgetMax) queryParts.push(`budgetMax=${filters.budgetMax}`);
+    if (filters.dateFrom) queryParts.push(`dateFrom=${encodeURIComponent(filters.dateFrom)}`);
+    if (filters.dateTo) queryParts.push(`dateTo=${encodeURIComponent(filters.dateTo)}`);
+
+    const token = localStorage.getItem('auth_token') || '';
+    if (token) queryParts.push(`token=${encodeURIComponent(token)}`);
+
+    const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return `${this.apiBase}/leads/export/csv${queryStr}`;
+  }
+
+  getExportExcelUrl(filters: any): string {
+    let queryParts: string[] = [];
+    if (filters.search) queryParts.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters.statusId) queryParts.push(`statusId=${filters.statusId}`);
+    if (filters.sourceId) queryParts.push(`sourceId=${filters.sourceId}`);
+    if (filters.agentId) queryParts.push(`agentId=${filters.agentId}`);
+    if (filters.project) queryParts.push(`project=${encodeURIComponent(filters.project)}`);
+    if (filters.budgetMin) queryParts.push(`budgetMin=${filters.budgetMin}`);
+    if (filters.budgetMax) queryParts.push(`budgetMax=${filters.budgetMax}`);
+    if (filters.dateFrom) queryParts.push(`dateFrom=${encodeURIComponent(filters.dateFrom)}`);
+    if (filters.dateTo) queryParts.push(`dateTo=${encodeURIComponent(filters.dateTo)}`);
+
+    const token = localStorage.getItem('auth_token') || '';
+    if (token) queryParts.push(`token=${encodeURIComponent(token)}`);
+
+    const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return `${this.apiBase}/leads/export/excel${queryStr}`;
   }
 
   assignAgent(id: number, agentId: number): Observable<any> {
@@ -141,21 +180,6 @@ export class CrmService {
     if (filters.leadId) params = params.set('leadId', filters.leadId.toString());
     if (filters.activityType) params = params.set('activityType', filters.activityType);
     return this.http.get<any>(`${this.apiBase}/leads/activities/all`, { params });
-  }
-
-  getExportUrl(filters: any): string {
-    let queryParts: string[] = [];
-    if (filters.search) queryParts.push(`search=${encodeURIComponent(filters.search)}`);
-    if (filters.statusId) queryParts.push(`statusId=${filters.statusId}`);
-    if (filters.sourceId) queryParts.push(`sourceId=${filters.sourceId}`);
-    if (filters.agentId) queryParts.push(`agentId=${filters.agentId}`);
-    if (filters.budgetMin) queryParts.push(`budgetMin=${filters.budgetMin}`);
-    if (filters.budgetMax) queryParts.push(`budgetMax=${filters.budgetMax}`);
-    if (filters.dateFrom) queryParts.push(`dateFrom=${encodeURIComponent(filters.dateFrom)}`);
-    if (filters.dateTo) queryParts.push(`dateTo=${encodeURIComponent(filters.dateTo)}`);
-
-    const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-    return `${this.apiBase}/leads/export${queryStr}`;
   }
 
   // Opportunity Methods
@@ -248,6 +272,43 @@ export class CrmService {
     return this.http.post<any>(`${this.apiBase}/segments/tags`, tag);
   }
 
+  reopenOpportunity(id: number, reason: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/opportunities/${id}/reopen`, { reason });
+  }
+
+  // Communication Timeline & Audit APIs
+  getCommunicationTimeline(filters: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.channel && filters.channel !== 'all') params = params.set('channel', filters.channel);
+    if (filters.dateFrom) params = params.set('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params = params.set('dateTo', filters.dateTo);
+    if (filters.leadId) params = params.set('leadId', filters.leadId.toString());
+
+    return this.http.get<any>(`${this.apiBase}/leads/communications/timeline`, { params });
+  }
+
+  editCommunication(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/leads/communications/${id}`, data);
+  }
+
+  getCommunicationAudits(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/leads/communications/${id}/audits`);
+  }
+
+  // Segmentation & Report APIs
+  getSegmentReport(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/segments/${id}/report`);
+  }
+
+  assignTagsToLead(leadId: number, tagIds: number[]): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/segments/leads/${leadId}/tags`, { tagIds });
+  }
+
+  removeTagFromLead(leadId: number, tagId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/segments/leads/${leadId}/tags/${tagId}`);
+  }
+
   // Document Management APIs
   getCustomerDocuments(filters: any): Observable<any> {
     let params = new HttpParams();
@@ -273,8 +334,16 @@ export class CrmService {
     return this.http.post<any>(`${this.apiBase}/documents/${leadId}`, formData);
   }
 
+  uploadMultipleCustomerDocuments(leadId: number, formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/documents/${leadId}/multiple`, formData);
+  }
+
   uploadNewDocumentVersion(id: number, formData: FormData): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/documents/${id}/version`, formData);
+  }
+
+  restoreDocumentVersion(id: number, versionId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/documents/${id}/versions/${versionId}/restore`, {});
   }
 
   triggerDocumentExpiryCheck(): Observable<any> {

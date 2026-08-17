@@ -84,19 +84,32 @@ export class MarketingService {
   }
 
   // --- Reports & Dashboard ---
-  getCampaignPerformanceReport(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiBase}/reports/performance`);
+  getCampaignPerformanceReport(filters?: any): Observable<any[]> {
+    let params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.campaignId) params.campaignId = filters.campaignId;
+    return this.http.get<any[]>(`${this.apiBase}/reports/performance`, { params });
   }
 
-  getLeadSourceAnalysisReport(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiBase}/reports/lead-sources`);
+  getLeadSourceAnalysisReport(filters?: any): Observable<any[]> {
+    let params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    return this.http.get<any[]>(`${this.apiBase}/reports/lead-sources`, { params });
   }
 
-  getDashboardKpis(): Observable<any> {
-    return this.http.get<any>(`${this.apiBase}/reports/dashboard/kpis`);
+  getDashboardKpis(filters?: any): Observable<any> {
+    let params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    return this.http.get<any>(`${this.apiBase}/reports/dashboard/kpis`, { params });
   }
 
-  getDashboardCharts(): Observable<any> {
-    return this.http.get<any>(`${this.apiBase}/reports/dashboard/charts`);
+  getDashboardCharts(filters?: any): Observable<any> {
+    let params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    return this.http.get<any>(`${this.apiBase}/reports/dashboard/charts`, { params });
   }
 }

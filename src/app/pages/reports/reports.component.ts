@@ -7,6 +7,7 @@ import { CrmService } from '../../services/crm.service';
 import { BrokerService } from '../../services/broker.service';
 import { FinanceService } from '../../services/finance.service';
 import { SalesService } from '../../services/sales.service';
+import { MarketingService } from '../../services/marketing.service';
 
 
 @Component({
@@ -19,10 +20,14 @@ import { SalesService } from '../../services/sales.service';
         <h1>Reports Center</h1>
         <p>Consolidated cross-department operational metrics, auditing ledgers, and data exports</p>
       </div>
-      <div class="app-header-actions">
-        <button class="btn btn-primary" (click)="exportActiveReport()" *ngIf="activeTab !== 'overall'">
-          <span class="material-icons-outlined">file_download</span>
-          Export Current Tab CSV
+      <div class="app-header-actions flex gap-2">
+        <button class="btn btn-secondary flex items-center gap-1" (click)="exportExcelReport()" *ngIf="activeTab !== 'overall'">
+          <span class="material-icons-outlined">table_view</span>
+          Export Excel (.xlsx)
+        </button>
+        <button class="btn btn-primary flex items-center gap-1" (click)="exportPdfReport()" *ngIf="activeTab !== 'overall'">
+          <span class="material-icons-outlined">picture_as_pdf</span>
+          Export PDF
         </button>
       </div>
     </header>
@@ -50,6 +55,12 @@ import { SalesService } from '../../services/sales.service';
         </button>
         <button class="tab-btn" [class.active]="activeTab === 'leads'" (click)="setTab('leads')">
           <span class="material-icons-outlined">filter_alt</span> Lead Conversions
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'lead-sources'" (click)="setTab('lead-sources')">
+          <span class="material-icons-outlined">pie_chart</span> Lead Source Analysis
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'campaigns'" (click)="setTab('campaigns')">
+          <span class="material-icons-outlined">campaign</span> Campaign Performance
         </button>
         <button class="tab-btn" [class.active]="activeTab === 'brokers'" (click)="setTab('brokers')">
           <span class="material-icons-outlined">badge</span> Broker Commissions
@@ -880,6 +891,140 @@ import { SalesService } from '../../services/sales.service';
         </div>
       </div>
 
+      <!-- ==================== LEAD SOURCE ANALYSIS TAB (TC-7.10, TC-7.11, TC-7.17) ==================== -->
+      <div *ngIf="activeTab === 'lead-sources'" class="grid gap-6">
+        <div class="grid grid-4 gap-6">
+          <div class="metric-card card border-indigo">
+            <span class="metric-label">Tracked Lead Sources</span>
+            <span class="metric-value">{{ leadSourceReportData?.length || 0 }}</span>
+          </div>
+          <div class="metric-card card border-blue">
+            <span class="metric-label">Total Leads</span>
+            <span class="metric-value">{{ getTotalLeadSourceLeads() }}</span>
+          </div>
+          <div class="metric-card card border-green">
+            <span class="metric-label">Total Converted</span>
+            <span class="metric-value">{{ getTotalLeadSourceConverted() }}</span>
+          </div>
+          <div class="metric-card card border-purple">
+            <span class="metric-label">Total Source Revenue</span>
+            <span class="metric-value">ETB {{ formatValue(getTotalLeadSourceRevenue()) }}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3>Lead Source Performance Analysis Report</h3>
+              <p class="text-secondary font-xs mt-1">Source-level volume, conversions, Cost per Lead (CPL), and Revenue Contribution</p>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Rank</th>
+                  <th>Lead Source</th>
+                  <th>Channel Type</th>
+                  <th>Total Leads</th>
+                  <th>Converted Leads</th>
+                  <th>Conversion Rate</th>
+                  <th>Total Expense</th>
+                  <th>Cost per Lead (CPL)</th>
+                  <th>Revenue Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of leadSourceReportData">
+                  <td><span class="badge badge-new font-bold">#{{ item.rank }}</span></td>
+                  <td><strong class="text-main">{{ item.sourceName }}</strong></td>
+                  <td><span class="type-pill">{{ item.channelType }}</span></td>
+                  <td>{{ item.totalLeads | number }}</td>
+                  <td><span class="text-green font-semibold">{{ item.convertedLeads | number }}</span></td>
+                  <td><span class="badge badge-qualified">{{ item.conversionRate }}%</span></td>
+                  <td>ETB {{ formatValue(item.totalExpense) }}</td>
+                  <td><strong class="text-indigo">ETB {{ formatValue(item.costPerLead) }}</strong></td>
+                  <td><strong class="text-green">ETB {{ formatValue(item.revenueContribution) }}</strong></td>
+                </tr>
+                <tr *ngIf="!leadSourceReportData || leadSourceReportData.length === 0">
+                  <td colspan="9" class="text-center text-secondary italic py-6">No lead source analytics records available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== CAMPAIGN PERFORMANCE TAB (TC-7.16) ==================== -->
+      <div *ngIf="activeTab === 'campaigns'" class="grid gap-6">
+        <div class="grid grid-4 gap-6">
+          <div class="metric-card card border-indigo">
+            <span class="metric-label">Active Campaigns</span>
+            <span class="metric-value">{{ campaignReportData?.length || 0 }}</span>
+          </div>
+          <div class="metric-card card border-blue">
+            <span class="metric-label">Leads Generated</span>
+            <span class="metric-value">{{ getTotalCampaignLeads() }}</span>
+          </div>
+          <div class="metric-card card border-green">
+            <span class="metric-label">Revenue Generated</span>
+            <span class="metric-value">ETB {{ formatValue(getTotalCampaignRevenue()) }}</span>
+          </div>
+          <div class="metric-card card border-yellow">
+            <span class="metric-label">Average Campaign ROI</span>
+            <span class="metric-value">{{ getAvgCampaignRoi() }}%</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3>Marketing Campaign Performance Report</h3>
+              <p class="text-secondary font-xs mt-1">Detailed evaluation of marketing campaigns across budget, sales, revenue, and ROI metrics</p>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Campaign Code</th>
+                  <th>Campaign Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Allocated Budget</th>
+                  <th>Spent</th>
+                  <th>Leads Generated</th>
+                  <th>Sales Generated</th>
+                  <th>Revenue Generated</th>
+                  <th>Conversion Rate</th>
+                  <th>ROI %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of campaignReportData">
+                  <td><span class="font-xs font-bold text-secondary">{{ item.campaignCode }}</span></td>
+                  <td><strong class="text-main">{{ item.campaignName }}</strong></td>
+                  <td><span class="type-pill">{{ item.campaignType }}</span></td>
+                  <td><span class="badge" [class.badge-qualified]="item.campaignStatus === 'ACTIVE'" [class.badge-new]="item.campaignStatus === 'DRAFT'">{{ item.campaignStatus }}</span></td>
+                  <td>ETB {{ formatValue(item.budgetAmount) }}</td>
+                  <td>ETB {{ formatValue(item.utilizedBudget) }}</td>
+                  <td>{{ item.leadsGenerated | number }}</td>
+                  <td><span class="text-green font-semibold">{{ item.salesGenerated | number }}</span></td>
+                  <td><strong class="text-green">ETB {{ formatValue(item.revenueGenerated) }}</strong></td>
+                  <td><span class="badge badge-proposal">{{ item.conversionRate }}%</span></td>
+                  <td><strong [class.text-green]="item.roi >= 0" [class.text-danger]="item.roi < 0">{{ item.roi }}%</strong></td>
+                </tr>
+                <tr *ngIf="!campaignReportData || campaignReportData.length === 0">
+                  <td colspan="11" class="text-center text-secondary italic py-6">No marketing campaign performance records available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== BROKER COMMISSIONS TAB ==================== -->
       <div *ngIf="activeTab === 'brokers'" class="grid gap-6">
         <div class="grid grid-4 gap-6">
@@ -1214,6 +1359,7 @@ export class ReportsComponent implements OnInit {
   private brokerService = inject(BrokerService);
   private financeService = inject(FinanceService);
   private salesService = inject(SalesService);
+  private marketingService = inject(MarketingService);
 
   activeTab = 'overall';
   properties: any[] = [];
@@ -1228,6 +1374,9 @@ export class ReportsComponent implements OnInit {
   customerDropdownOpen = false;
 
   reportData: any = null;
+  campaignReportData: any[] = [];
+  leadSourceReportData: any[] = [];
+
   filters: any = {
     propertyId: null,
     startDate: null,
@@ -1263,6 +1412,8 @@ export class ReportsComponent implements OnInit {
   setTab(tab: string) {
     this.activeTab = tab;
     this.reportData = null;
+    this.campaignReportData = [];
+    this.leadSourceReportData = [];
     this.resetFilters();
     if (tab !== 'overall') {
       this.fetchReportData();
@@ -1341,10 +1492,191 @@ export class ReportsComponent implements OnInit {
       case 'leads':
         this.reportsService.getLeadFunnelReport(cleanFilters).subscribe(res => this.reportData = res);
         break;
+      case 'lead-sources':
+        this.marketingService.getLeadSourceAnalysisReport(cleanFilters).subscribe(res => this.leadSourceReportData = res);
+        break;
+      case 'campaigns':
+        this.marketingService.getCampaignPerformanceReport(cleanFilters).subscribe(res => this.campaignReportData = res);
+        break;
       case 'brokers':
         this.reportsService.getBrokerCommissionsReport(cleanFilters).subscribe(res => this.reportData = res);
         break;
     }
+  }
+
+  getTotalLeadSourceLeads(): number {
+    return (this.leadSourceReportData || []).reduce((sum, item) => sum + (item.totalLeads || 0), 0);
+  }
+
+  getTotalLeadSourceConverted(): number {
+    return (this.leadSourceReportData || []).reduce((sum, item) => sum + (item.convertedLeads || 0), 0);
+  }
+
+  getTotalLeadSourceRevenue(): number {
+    return (this.leadSourceReportData || []).reduce((sum, item) => sum + (item.revenueContribution || 0), 0);
+  }
+
+  getTotalCampaignLeads(): number {
+    return (this.campaignReportData || []).reduce((sum, item) => sum + (item.leadsGenerated || 0), 0);
+  }
+
+  getTotalCampaignRevenue(): number {
+    return (this.campaignReportData || []).reduce((sum, item) => sum + (item.revenueGenerated || 0), 0);
+  }
+
+  getAvgCampaignRoi(): number {
+    if (!this.campaignReportData || this.campaignReportData.length === 0) return 0;
+    const totalRoi = this.campaignReportData.reduce((sum, item) => sum + (item.roi || 0), 0);
+    return Math.round((totalRoi / this.campaignReportData.length) * 100) / 100;
+  }
+
+  exportExcelReport() {
+    let csvData = '';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    let filename = `Report_${this.activeTab}_${dateStr}.csv`;
+
+    if (this.activeTab === 'lead-sources') {
+      filename = `Lead_Source_Analysis_Report_${dateStr}.csv`;
+      csvData = 'Rank,Lead Source,Channel Type,Total Leads,Converted Leads,Conversion Rate %,Total Expense (ETB),Cost per Lead (CPL ETB),Revenue Contribution (ETB)\n';
+      (this.leadSourceReportData || []).forEach(row => {
+        csvData += `"${row.rank}","${row.sourceName}","${row.channelType}","${row.totalLeads}","${row.convertedLeads}","${row.conversionRate}%","${row.totalExpense}","${row.costPerLead}","${row.revenueContribution}"\n`;
+      });
+    } else if (this.activeTab === 'campaigns') {
+      filename = `Campaign_Performance_Report_${dateStr}.csv`;
+      csvData = 'Campaign Code,Campaign Name,Type,Status,Allocated Budget (ETB),Spent (ETB),Leads Generated,Sales Generated,Revenue Generated (ETB),Conversion Rate %,ROI %\n';
+      (this.campaignReportData || []).forEach(row => {
+        csvData += `"${row.campaignCode}","${row.campaignName}","${row.campaignType}","${row.campaignStatus}","${row.budgetAmount}","${row.utilizedBudget}","${row.leadsGenerated}","${row.salesGenerated}","${row.revenueGenerated}","${row.conversionRate}%","${row.roi}%"\n`;
+      });
+    } else {
+      const rows = this.reportData?.items || [];
+      if (!rows.length) return;
+      const headers = Object.keys(rows[0]).join(',');
+      const body = rows.map((r: any) => Object.values(r).map(v => `"${v}"`).join(',')).join('\n');
+      csvData = `${headers}\n${body}`;
+    }
+
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  exportPdfReport() {
+    const printWin = window.open('', '_blank');
+    if (!printWin) return;
+
+    const dateStr = new Date().toLocaleDateString();
+    let title = `${this.activeTab.toUpperCase()} REPORT`;
+    let tableHtml = '';
+
+    if (this.activeTab === 'lead-sources') {
+      title = 'LEAD SOURCE PERFORMANCE ANALYSIS REPORT';
+      tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <thead>
+            <tr style="background: #1e293b; color: white; text-align: left;">
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Rank</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Lead Source</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Channel Type</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Total Leads</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Converted</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Conv. Rate</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">CPL (ETB)</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Revenue Contribution (ETB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(this.leadSourceReportData || []).map(r => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">#${r.rank}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r.sourceName}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.channelType}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.totalLeads}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; color: #16a34a;">${r.convertedLeads}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.conversionRate}%</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(r.costPerLead).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; color: #16a34a;">ETB ${Number(r.revenueContribution).toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (this.activeTab === 'campaigns') {
+      title = 'MARKETING CAMPAIGN PERFORMANCE REPORT';
+      tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <thead>
+            <tr style="background: #1e293b; color: white; text-align: left;">
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Code</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Campaign Name</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Type</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Status</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Budget</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Spent</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Leads</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Sales</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">Revenue</th>
+              <th style="padding: 10px; border: 1px solid #cbd5e1;">ROI %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(this.campaignReportData || []).map(c => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignCode}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${c.campaignName}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignType}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignStatus}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(c.budgetAmount).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(c.utilizedBudget).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.leadsGenerated}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; color: #16a34a;">${c.salesGenerated}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; color: #16a34a;">ETB ${Number(c.revenueGenerated).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${c.roi}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      tableHtml = `<p>Generic tabular data rendered for ${this.activeTab} tab.</p>`;
+    }
+
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: sans-serif; margin: 30px; color: #0f172a; }
+            .header { border-bottom: 3px solid #4c3a93; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .company { font-size: 20px; font-weight: 800; color: #4c3a93; }
+            .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+            .date { font-size: 12px; color: #475569; font-weight: 600; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="company">IHSAN Properties & Business Service PLC</div>
+              <div class="sub">Executive Reports & Auditing Center • Generated on ${dateStr}</div>
+            </div>
+            <div class="date">${title}</div>
+          </div>
+          ${tableHtml}
+          <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between;">
+            <span>Confidential Executive Report • IHSAN RMS System</span>
+            <span>Audited & Verified</span>
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
   }
 
   onFilterChange() {

@@ -386,7 +386,7 @@ export class FollowupsComponent implements OnInit {
   }
 
   getEscalatedCount(): number {
-    return this.reminders.filter(r => r.status === 'Escalated').length;
+    return this.reminders.filter(r => !r.isCompleted && (r.status === 'Escalated' || this.isOverdue(r))).length;
   }
 
   getDueTodayCount(): number {
@@ -463,7 +463,14 @@ export class FollowupsComponent implements OnInit {
 
   openRescheduleModal(reminder: any) {
     this.selectedReminder = reminder;
-    this.rescheduleDatetime = '';
+    if (reminder.reminderDatetime) {
+      const dt = new Date(reminder.reminderDatetime);
+      const tzOffset = dt.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16);
+      this.rescheduleDatetime = localISOTime;
+    } else {
+      this.rescheduleDatetime = '';
+    }
     this.showRescheduleModal = true;
   }
 

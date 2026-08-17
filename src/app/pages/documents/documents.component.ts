@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import { environment } from '../../config';
 
+declare function customAlert(message: string, title?: string): void;
+
 @Component({
   selector: 'app-documents',
   standalone: true,
@@ -123,7 +125,14 @@ import { environment } from '../../config';
                 <span class="text-secondary italic" *ngIf="!doc.lead">-</span>
               </td>
               <td>
-                <span class="badge badge-low">v{{ doc.versions?.length || 1 }}</span>
+                <span 
+                  class="badge badge-low cursor-pointer" 
+                  (click)="openPreviewDrawer(doc); $event.stopPropagation()"
+                  style="cursor: pointer; transition: transform 0.15s ease;"
+                  title="Click to view Version History"
+                >
+                  v{{ doc.versions?.length || 1 }}
+                </span>
               </td>
               <td class="text-secondary font-xs font-bold">
                 {{ doc.expiryDate ? (doc.expiryDate | date:'mediumDate') : '-' }}
@@ -135,14 +144,27 @@ import { environment } from '../../config';
               </td>
               <td class="text-right" (click)="$event.stopPropagation()">
                 <div class="flex justify-end gap-2">
-                  <a 
-                    [href]="getDownloadUrl(doc)" 
-                    target="_blank" 
-                    class="btn btn-secondary btn-xs flex align-center gap-1"
-                    title="Download Current Version"
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="openPreviewDrawer(doc)"
+                    title="View Version History & Parameters"
+                  >
+                    <span class="material-icons-outlined font-sm">history</span>
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="previewDocument(doc, null, $event)"
+                    title="Preview Document in New Tab"
+                  >
+                    <span class="material-icons-outlined font-sm">visibility</span>
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="downloadDocument(doc, null, $event)"
+                    title="Download Document"
                   >
                     <span class="material-icons-outlined font-sm">download</span>
-                  </a>
+                  </button>
                   <button 
                     class="btn btn-secondary btn-xs flex align-center gap-1" 
                     (click)="openReplaceModal(doc)"
@@ -216,14 +238,14 @@ import { environment } from '../../config';
             </div>
 
             <div class="form-group flex flex-col">
-              <label>Select File *</label>
-              <input type="file" (change)="onFileSelected($event)" required />
+              <label>Select File(s) * (Supports selecting multiple files)</label>
+              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" (change)="onFileSelected($event)" required />
             </div>
 
             <div class="modal-footer flex justify-end gap-3 mt-4">
               <button type="button" class="btn btn-secondary" (click)="closeUploadModal()">Cancel</button>
-              <button type="submit" class="btn btn-primary" [disabled]="uploadData.leadId === 0 || !selectedFile">
-                Upload Document
+              <button type="submit" class="btn btn-primary" [disabled]="uploadData.leadId === 0 || selectedFiles.length === 0">
+                Upload {{ selectedFiles.length > 1 ? (selectedFiles.length + ' Documents') : 'Document' }}
               </button>
             </div>
           </form>
@@ -248,12 +270,12 @@ import { environment } from '../../config';
           <form class="modal-form" (submit)="onSubmitReplace($event)">
             <div class="form-group flex flex-col">
               <label>Select New File *</label>
-              <input type="file" (change)="onFileSelected($event)" required />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.docx" (change)="onFileSelected($event)" required />
             </div>
 
             <div class="modal-footer flex justify-end gap-3 mt-4">
               <button type="button" class="btn btn-secondary" (click)="closeReplaceModal()">Cancel</button>
-              <button type="submit" class="btn btn-primary" [disabled]="!selectedFile">
+              <button type="submit" class="btn btn-primary" [disabled]="selectedFiles.length === 0">
                 Upload Version
               </button>
             </div>
@@ -375,7 +397,7 @@ import { environment } from '../../config';
           <!-- Tab Content 1: Versions list -->
           <div class="tab-content mt-3" *ngIf="activeTab === 'versions'">
             <div class="versions-history-timeline flex flex-col gap-3">
-              <div *ngFor="let ver of docVersions" class="border p-3 rounded flex justify-between align-center bg-main">
+              <div *ngFor="let ver of docVersions; let idx = index" class="border p-3 rounded flex justify-between align-center bg-main">
                 <div class="flex align-center gap-3">
                   <div class="badge badge-low font-bold" style="font-size: 11px;">v{{ ver.versionNumber }}</div>
                   <div class="flex flex-col">
@@ -384,14 +406,33 @@ import { environment } from '../../config';
                   </div>
                 </div>
                 
-                <a 
-                  [href]="env.serverUrl + ver.filePath" 
-                  target="_blank" 
-                  class="btn btn-secondary btn-xs flex align-center gap-1"
-                  style="padding: 6px 10px;"
-                >
-                  <span class="material-icons-outlined font-xs">download</span> Download
-                </a>
+                <div class="flex align-center gap-2">
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="previewDocument(selectedDocDetails, ver, $event)"
+                    style="padding: 6px 10px;"
+                    title="Preview this version"
+                  >
+                    <span class="material-icons-outlined font-xs">visibility</span> Preview
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="downloadDocument(selectedDocDetails, ver, $event)"
+                    style="padding: 6px 10px;"
+                    title="Download this version"
+                  >
+                    <span class="material-icons-outlined font-xs">download</span> Download
+                  </button>
+                  <button 
+                    *ngIf="idx > 0" 
+                    class="btn btn-secondary btn-xs flex align-center gap-1" 
+                    (click)="onRestoreVersion(ver.id)"
+                    style="padding: 6px 10px;"
+                    title="Restore this version"
+                  >
+                    <span class="material-icons-outlined font-xs">restore</span> Restore
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -513,7 +554,7 @@ export class DocumentsComponent implements OnInit {
   expiredCount = 0;
   warningCount = 0;
   selectedDoc: any = null;
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
 
   // Create document payload
   uploadData = {
@@ -610,6 +651,80 @@ export class DocumentsComponent implements OnInit {
     return file ? `${this.env.serverUrl}${file.filePath}` : '#';
   }
 
+  previewDocument(doc: any, version?: any, event?: Event) {
+    if (event) event.preventDefault();
+    const ver = version || this.getCurrentVersionFile(doc);
+    if (!ver || !ver.filePath) return;
+
+    const url = `${this.env.serverUrl}${ver.filePath}`;
+    const fileName = ver.fileName || `${doc?.documentCode || 'document'}.${ver.filePath.split('.').pop()}`;
+
+    fetch(url, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Preview failed');
+        return res.blob();
+      })
+      .then(blob => {
+        const objectUrl = URL.createObjectURL(blob);
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.title = fileName;
+          const isImg = this.isImageFile(ver) || !!fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+          if (isImg) {
+            win.document.body.style.margin = '0';
+            win.document.body.style.background = '#0f172a';
+            win.document.body.style.display = 'flex';
+            win.document.body.style.flexDirection = 'column';
+            win.document.body.style.alignItems = 'center';
+            win.document.body.style.justifyContent = 'center';
+            win.document.body.style.height = '100vh';
+            win.document.body.style.fontFamily = 'sans-serif';
+            win.document.body.innerHTML = `
+              <div style="position: absolute; top: 16px; left: 24px; color: #f8fafc; font-size: 14px; font-weight: 600; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(8px);">
+                📁 Preview: ${fileName}
+              </div>
+              <img src="${objectUrl}" alt="${fileName}" style="max-width: 90%; max-height: 85vh; border-radius: 8px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);" />
+            `;
+          } else {
+            win.location.href = objectUrl;
+          }
+        }
+      })
+      .catch(() => {
+        window.open(url, '_blank');
+      });
+  }
+
+  downloadDocument(doc: any, version?: any, event?: Event) {
+    if (event) event.preventDefault();
+    const ver = version || this.getCurrentVersionFile(doc);
+    if (!ver || !ver.filePath) return;
+
+    const url = `${this.env.serverUrl}${ver.filePath}`;
+    const fileName = ver.fileName || `${doc?.documentCode || 'document'}.${ver.filePath.split('.').pop()}`;
+
+    fetch(url, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Download failed');
+        return res.blob();
+      })
+      .then(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      })
+      .catch(err => {
+        console.error('Error downloading document:', err);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.target = '_blank';
+        link.click();
+      });
+  }
+
   getCurrentVersionFile(doc: any): any {
     if (!doc || !doc.versions || doc.versions.length === 0) return null;
     // Sort and get max version number
@@ -656,7 +771,7 @@ export class DocumentsComponent implements OnInit {
       expiryDate: '',
       accessRole: 'Sales'
     };
-    this.selectedFile = null;
+    this.selectedFiles = [];
     this.showUploadModal = true;
   }
 
@@ -666,36 +781,52 @@ export class DocumentsComponent implements OnInit {
 
   onFileSelected(event: any) {
     if (event.target.files && event.target.files.length > 0) {
-      this.selectedFile = event.target.files[0];
+      const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.docx'];
+      const filesArr: File[] = Array.from(event.target.files);
+      const validFiles: File[] = [];
+
+      for (const file of filesArr) {
+        const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+        if (!allowedExts.includes(ext)) {
+          customAlert(`Unsupported file format "${file.name}". Only PDF, JPG, PNG, and DOCX files are accepted.`, 'Format Error');
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      this.selectedFiles = validFiles;
     }
   }
 
   onSubmitUpload(event: Event) {
     event.preventDefault();
-    if (this.uploadData.leadId === 0 || !this.selectedFile) return;
+    if (this.uploadData.leadId === 0 || this.selectedFiles.length === 0) return;
 
     const formData = new FormData();
-    formData.append('file', this.selectedFile);
+    this.selectedFiles.forEach(file => formData.append('files', file));
     formData.append('category', this.uploadData.category);
     if (this.uploadData.expiryDate) {
       formData.append('expiryDate', this.uploadData.expiryDate);
     }
     formData.append('accessRole', this.uploadData.accessRole);
 
-    this.crmService.uploadCustomerDocument(this.uploadData.leadId, formData).subscribe({
+    this.crmService.uploadMultipleCustomerDocuments(this.uploadData.leadId, formData).subscribe({
       next: () => {
         this.closeUploadModal();
         this.loadDocuments();
         this.loadDropdownLeads();
       },
-      error: (err) => console.error('Failed to upload document:', err)
+      error: (err) => {
+        console.error('Failed to upload document:', err);
+        customAlert(err.error?.message || 'Document upload failed.', 'Upload Error');
+      }
     });
   }
 
   // Replace / New Version actions
   openReplaceModal(doc: any) {
     this.selectedDoc = doc;
-    this.selectedFile = null;
+    this.selectedFiles = [];
     this.showReplaceModal = true;
   }
 
@@ -706,17 +837,35 @@ export class DocumentsComponent implements OnInit {
 
   onSubmitReplace(event: Event) {
     event.preventDefault();
-    if (!this.selectedDoc || !this.selectedFile) return;
+    if (!this.selectedDoc || this.selectedFiles.length === 0) return;
 
     const formData = new FormData();
-    formData.append('file', this.selectedFile);
+    formData.append('file', this.selectedFiles[0]);
 
     this.crmService.uploadNewDocumentVersion(this.selectedDoc.id, formData).subscribe({
       next: () => {
         this.closeReplaceModal();
         this.loadDocuments();
       },
-      error: (err) => console.error('Failed to upload replacement version:', err)
+      error: (err) => {
+        console.error('Failed to upload replacement version:', err);
+        customAlert(err.error?.message || 'Version update failed.', 'Error');
+      }
+    });
+  }
+
+  onRestoreVersion(versionId: number) {
+    if (!this.selectedDocDetails) return;
+    this.crmService.restoreDocumentVersion(this.selectedDocDetails.id, versionId).subscribe({
+      next: (res) => {
+        this.selectedDocDetails = res;
+        this.loadDrawerSubData(res.id);
+        this.loadDocuments();
+      },
+      error: (err) => {
+        console.error('Failed to restore version:', err);
+        customAlert(err.error?.message || 'Failed to restore document version.', 'Error');
+      }
     });
   }
 

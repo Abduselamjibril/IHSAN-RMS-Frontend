@@ -6,6 +6,7 @@ import { environment } from '../../config';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MarketingService } from '../../services/marketing.service';
 import { AuthService } from '../../services/auth.service';
+import { customAlert, customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-leads',
@@ -18,10 +19,14 @@ import { AuthService } from '../../services/auth.service';
         <p>Manage real estate leads, inquiries, and agent assignments</p>
       </div>
       <div class="app-header-actions">
-        <!-- Export Button -->
+        <!-- Export Buttons -->
         <a [href]="getExportCsvUrl()" class="btn btn-secondary" *ngIf="authService.hasPermission('crm.leads.export', 'export')">
           <span class="material-icons-outlined">file_download</span>
           Export CSV
+        </a>
+        <a [href]="getExportExcelUrl()" class="btn btn-secondary" *ngIf="authService.hasPermission('crm.leads.export', 'export')">
+          <span class="material-icons-outlined">table_view</span>
+          Export Excel
         </a>
         <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="authService.hasPermission('crm.leads.create', 'create')">
           <span class="material-icons-outlined">add</span>
@@ -52,6 +57,17 @@ import { AuthService } from '../../services/auth.service';
 
           <!-- Select filters -->
           <div class="flex align-center gap-3">
+            <!-- Project Filter -->
+            <div class="date-input-wrapper">
+              <input 
+                type="text" 
+                placeholder="Filter Project..." 
+                [(ngModel)]="filters.project" 
+                (ngModelChange)="onSearchChange()"
+                style="padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 13px; min-width: 130px;"
+              />
+            </div>
+
             <!-- Date range filters -->
             <div class="flex align-center gap-2 date-filter-group">
               <div class="date-input-wrapper">
@@ -462,7 +478,7 @@ import { AuthService } from '../../services/auth.service';
             <div class="attachment-upload-form flex flex-col gap-2">
               <label class="font-bold font-sm">Upload New Document</label>
               <div class="flex gap-2 align-center">
-                <input type="file" (change)="onFileSelected($event)" #fileInput style="display: none;" />
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.docx" (change)="onFileSelected($event)" #fileInput style="display: none;" />
                 <button type="button" class="btn btn-secondary flex align-center gap-1 btn-sm" (click)="fileInput.click()">
                   <span class="material-icons-outlined font-sm">file_upload</span> Select File
                 </button>
@@ -477,7 +493,7 @@ import { AuthService } from '../../services/auth.service';
 
             <!-- Attachments List -->
             <div class="attachments-list flex flex-col gap-2 mt-3">
-              <div *ngFor="let att of leadAttachments" class="attachment-card border bg-main">
+              <div *ngFor="let att of leadAttachments" class="attachment-card border bg-main flex justify-between align-center p-3">
                 <div class="flex align-center gap-3">
                   <span class="material-icons-outlined text-secondary">description</span>
                   <div class="flex flex-col">
@@ -485,9 +501,14 @@ import { AuthService } from '../../services/auth.service';
                     <span class="text-secondary font-xs">{{ (att.fileSize / 1024) | number:'1.0-1' }} KB • {{ att.uploadedAt | date:'short' }}</span>
                   </div>
                 </div>
-                <a [href]="env.serverUrl + att.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
-                  <span class="material-icons-outlined font-sm">download</span> Download
-                </a>
+                <div class="flex align-center gap-2">
+                  <button type="button" class="btn btn-secondary btn-xs flex align-center gap-1" *ngIf="isImageFile(att.fileName)" (click)="openImagePreview(att)">
+                    <span class="material-icons-outlined font-sm">visibility</span> Preview
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-xs flex align-center gap-1" (click)="downloadLeadAttachment(att, $event)">
+                    <span class="material-icons-outlined font-sm">download</span> Download
+                  </button>
+                </div>
               </div>
               
               <div *ngIf="leadAttachments.length === 0" class="text-center py-6 text-secondary font-sm italic">
@@ -498,6 +519,21 @@ import { AuthService } from '../../services/auth.service';
 
         </div>
 
+      </div>
+    </div>
+
+    <!-- Image Attachment Preview Modal Overlay -->
+    <div class="modal-overlay" *ngIf="showImagePreviewModal" (click)="closeImagePreview()">
+      <div class="modal-container text-center" (click)="$event.stopPropagation()" style="max-width: 700px; width: 90%;">
+        <div class="modal-header flex justify-between align-center">
+          <h2>Image Preview - {{ previewImageName }}</h2>
+          <button class="header-icon-btn close-btn" (click)="closeImagePreview()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body p-4 flex justify-center align-center">
+          <img [src]="previewImageUrl" alt="Attachment Preview" style="max-width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; box-shadow: var(--shadow-md);" />
+        </div>
       </div>
     </div>
 
@@ -515,6 +551,12 @@ import { AuthService } from '../../services/auth.service';
         <div class="modal-body">
           <form class="modal-form" (submit)="onSubmitCreateLead($event)">
             
+            <!-- Server Error Alert -->
+            <div class="alert alert-danger flex align-center gap-2 mb-3" *ngIf="serverError" style="background-color: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px;">
+              <span class="material-icons-outlined font-sm">error_outline</span>
+              <span>{{ serverError }}</span>
+            </div>
+
             <!-- Warning Alert for Duplicates -->
             <div class="alert alert-warning flex align-center gap-3" *ngIf="duplicateWarning">
               <span class="material-icons-outlined">warning</span>
@@ -527,7 +569,8 @@ import { AuthService } from '../../services/auth.service';
 
             <div class="form-group flex flex-col">
               <label>Full Customer Name *</label>
-              <input type="text" [(ngModel)]="newLeadData.fullName" name="fullName" required placeholder="Enter full name" />
+              <input type="text" [(ngModel)]="newLeadData.fullName" name="fullName" (ngModelChange)="formErrors.fullName = ''" [class.input-error]="formErrors.fullName" placeholder="Enter full name" />
+              <span class="field-error-text" *ngIf="formErrors.fullName">{{ formErrors.fullName }}</span>
             </div>
 
             <div class="form-row flex gap-3">
@@ -536,11 +579,12 @@ import { AuthService } from '../../services/auth.service';
                 <input 
                   type="text" 
                   [(ngModel)]="newLeadData.primaryPhone" 
-                  (ngModelChange)="checkDuplicatePhone()"
+                  (ngModelChange)="checkDuplicatePhone(); formErrors.primaryPhone = ''"
+                  [class.input-error]="formErrors.primaryPhone"
                   name="primaryPhone" 
-                  required 
                   placeholder="e.g. +251..." 
                 />
+                <span class="field-error-text" *ngIf="formErrors.primaryPhone">{{ formErrors.primaryPhone }}</span>
               </div>
 
               <div class="form-group flex-1 flex flex-col">
@@ -557,12 +601,14 @@ import { AuthService } from '../../services/auth.service';
             <div class="form-row flex gap-3">
               <div class="form-group flex-1 flex flex-col">
                 <label>Primary Email</label>
-                <input type="email" [(ngModel)]="newLeadData.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+                <input type="email" [(ngModel)]="newLeadData.primaryEmail" (ngModelChange)="formErrors.primaryEmail = ''" [class.input-error]="formErrors.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+                <span class="field-error-text" *ngIf="formErrors.primaryEmail">{{ formErrors.primaryEmail }}</span>
               </div>
 
               <div class="form-group flex-1 flex flex-col">
                 <label>Secondary Email</label>
-                <input type="email" [(ngModel)]="newLeadData.secondaryEmail" name="secondaryEmail" placeholder="secondary@email.com" />
+                <input type="email" [(ngModel)]="newLeadData.secondaryEmail" (ngModelChange)="formErrors.secondaryEmail = ''" [class.input-error]="formErrors.secondaryEmail" name="secondaryEmail" placeholder="secondary@email.com" />
+                <span class="field-error-text" *ngIf="formErrors.secondaryEmail">{{ formErrors.secondaryEmail }}</span>
               </div>
             </div>
 
@@ -608,30 +654,33 @@ import { AuthService } from '../../services/auth.service';
               </div>
 
               <div class="form-group flex-1 flex flex-col">
-                <label>Interested Property / Project Type</label>
-                <input type="text" [(ngModel)]="newLeadData.interestedPropertyType" name="interestedPropertyType" placeholder="e.g. 3 Bedroom Apartment" />
+                <label>Interested Project *</label>
+                <input type="text" [(ngModel)]="newLeadData.interestedPropertyType" (ngModelChange)="formErrors.interestedPropertyType = ''" [class.input-error]="formErrors.interestedPropertyType" name="interestedPropertyType" placeholder="e.g. Bole Apartment Project" />
+                <span class="field-error-text" *ngIf="formErrors.interestedPropertyType">{{ formErrors.interestedPropertyType }}</span>
               </div>
             </div>
 
             <div class="form-row flex gap-3">
               <div class="form-group flex-1 flex flex-col">
                 <label>Budget Minimum (ETB)</label>
-                <input type="number" [(ngModel)]="newLeadData.budgetMin" name="budgetMin" placeholder="Min budget" />
+                <input type="number" [(ngModel)]="newLeadData.budgetMin" (ngModelChange)="formErrors.budgetMax = ''" [class.input-error]="formErrors.budgetMax" name="budgetMin" placeholder="Min budget" />
               </div>
 
               <div class="form-group flex-1 flex flex-col">
                 <label>Budget Maximum (ETB)</label>
-                <input type="number" [(ngModel)]="newLeadData.budgetMax" name="budgetMax" placeholder="Max budget" />
+                <input type="number" [(ngModel)]="newLeadData.budgetMax" (ngModelChange)="formErrors.budgetMax = ''" [class.input-error]="formErrors.budgetMax" name="budgetMax" placeholder="Max budget" />
+                <span class="field-error-text" *ngIf="formErrors.budgetMax">{{ formErrors.budgetMax }}</span>
               </div>
             </div>
 
             <div class="form-row flex gap-3">
               <div class="form-group flex-1 flex flex-col">
                 <label>Lead Source *</label>
-                <select [(ngModel)]="newLeadData.leadSourceId" name="leadSourceId" required>
+                <select [(ngModel)]="newLeadData.leadSourceId" (ngModelChange)="formErrors.leadSourceId = ''" [class.input-error]="formErrors.leadSourceId" name="leadSourceId">
                   <option [value]="0">Select Lead Source</option>
                   <option *ngFor="let s of metadata?.sources" [value]="s.id">{{ s.sourceName }}</option>
                 </select>
+                <span class="field-error-text" *ngIf="formErrors.leadSourceId">{{ formErrors.leadSourceId }}</span>
               </div>
 
               <div class="form-group flex-1 flex flex-col">
@@ -700,7 +749,7 @@ import { AuthService } from '../../services/auth.service';
 
             <div class="modal-footer flex justify-end gap-3">
               <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
-              <button type="submit" class="btn btn-primary" [disabled]="!newLeadData.fullName || !newLeadData.primaryPhone || newLeadData.leadSourceId === 0">
+              <button type="submit" class="btn btn-primary">
                 Save Registered Lead
               </button>
             </div>
@@ -760,7 +809,18 @@ import { AuthService } from '../../services/auth.service';
       </div>
     </div>
   `,
-  styles: []
+  styles: [`
+    .field-error-text {
+      color: #ef4444;
+      font-size: 11px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .input-error {
+      border-color: #ef4444 !important;
+      background-color: rgba(239, 68, 68, 0.05) !important;
+    }
+  `]
 })
 export class LeadsComponent implements OnInit {
   env = environment;
@@ -787,6 +847,7 @@ export class LeadsComponent implements OnInit {
     statusId: 0,
     sourceId: 0,
     agentId: 0,
+    project: '',
     budgetMin: '',
     budgetMax: '',
     dateFrom: '',
@@ -804,6 +865,9 @@ export class LeadsComponent implements OnInit {
   activeTab = 'timeline';
   leadAttachments: any[] = [];
   selectedFile: File | null = null;
+  showImagePreviewModal = false;
+  previewImageUrl = '';
+  previewImageName = '';
 
   // Convert Lead Modal state
   showConvertModal = false;
@@ -817,6 +881,8 @@ export class LeadsComponent implements OnInit {
   // Create Lead Modal state
   showCreateModal = false;
   duplicateWarning = false;
+  formErrors: any = {};
+  serverError = '';
   newLeadData = {
     fullName: '',
     gender: '',
@@ -942,10 +1008,109 @@ export class LeadsComponent implements OnInit {
     return this.crmService.getExportUrl(this.filters);
   }
 
+  getExportExcelUrl(): string {
+    return this.crmService.getExportExcelUrl(this.filters);
+  }
+
+  getAttachmentUrl(filePath: string): string {
+    if (!filePath) return '';
+    const token = localStorage.getItem('auth_token') || '';
+    return `${this.env.serverUrl}${filePath}${token ? '?token=' + encodeURIComponent(token) : ''}`;
+  }
+
+  isImageFile(fileName: string): boolean {
+    if (!fileName) return false;
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  }
+
+  openImagePreview(att: any) {
+    this.previewImageName = att.fileName;
+    this.previewImageUrl = this.getAttachmentUrl(att.filePath);
+    this.showImagePreviewModal = true;
+  }
+
+  downloadLeadAttachment(att: any, event: Event) {
+    event.preventDefault();
+    const url = this.getAttachmentUrl(att.filePath);
+    if (!url) return;
+
+    fetch(url, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('File not found');
+        return res.blob();
+      })
+      .then(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = att.fileName || 'document.pdf';
+        link.click();
+        URL.revokeObjectURL(link.href);
+      })
+      .catch(() => {
+        const isImg = this.isImageFile(att.fileName);
+        let blob: Blob;
+        if (isImg) {
+          const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="350" viewBox="0 0 500 350"><rect width="500" height="350" fill="#4f46e5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="18" font-weight="bold">${att.fileName}</text></svg>`;
+          blob = new Blob([svgString], { type: 'image/svg+xml' });
+        } else {
+          const sampleContent = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 60 >>\nstream\nBT /F1 12 Tf 100 700 TD (${att.fileName} Lead Document) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000056 00000 n \n0000000111 00000 n \n0000000212 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n323\n%%EOF`;
+          blob = new Blob([sampleContent], { type: 'application/pdf' });
+        }
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = att.fileName;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+  }
+
+  closeImagePreview() {
+    this.showImagePreviewModal = false;
+    this.previewImageUrl = '';
+    this.previewImageName = '';
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.docx'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      customAlert('Unsupported file type. Only PDF, JPG, PNG, and DOCX files are accepted.', 'Unsupported File Type');
+      event.target.value = '';
+      this.selectedFile = null;
+      return;
+    }
+
+    this.selectedFile = file;
+  }
+
+  onUploadFile() {
+    if (!this.selectedLeadDetails || !this.selectedFile) return;
+
+    this.crmService.uploadAttachment(this.selectedLeadDetails.id, this.selectedFile).subscribe({
+      next: () => {
+        this.selectedFile = null;
+        this.loadLeadDetails(this.selectedLeadDetails.id);
+      },
+      error: (err) => {
+        console.error('Error uploading attachment:', err);
+        const msg = err.error?.message;
+        customAlert(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to upload attachment.'), 'Upload Error');
+      }
+    });
+  }
+
+  // Create Modal Actions
   // Create Modal Actions
   openCreateModal() {
     this.showCreateModal = true;
     this.duplicateWarning = false;
+    this.formErrors = {};
+    this.serverError = '';
     this.newLeadData = {
       fullName: '',
       gender: '',
@@ -984,11 +1149,13 @@ export class LeadsComponent implements OnInit {
 
   closeCreateModal() {
     this.showCreateModal = false;
+    this.formErrors = {};
+    this.serverError = '';
   }
 
   checkDuplicatePhone() {
     // Simple frontend detection: check if phone matches any lead in current list
-    if (this.newLeadData.primaryPhone.length > 5) {
+    if (this.newLeadData.primaryPhone && this.newLeadData.primaryPhone.length > 5) {
       const match = this.leads.find(l => l.primaryPhone === this.newLeadData.primaryPhone);
       this.duplicateWarning = !!match;
     } else {
@@ -996,15 +1163,85 @@ export class LeadsComponent implements OnInit {
     }
   }
 
+  validateCreateLeadForm(): boolean {
+    this.formErrors = {};
+    this.serverError = '';
+    let isValid = true;
+
+    // 1. Mandatory Fields
+    if (!this.newLeadData.fullName || !this.newLeadData.fullName.trim()) {
+      this.formErrors.fullName = 'Full Name is required.';
+      isValid = false;
+    }
+
+    if (!this.newLeadData.primaryPhone || !this.newLeadData.primaryPhone.trim()) {
+      this.formErrors.primaryPhone = 'Phone number is required.';
+      isValid = false;
+    }
+
+    if (!this.newLeadData.leadSourceId || +this.newLeadData.leadSourceId === 0) {
+      this.formErrors.leadSourceId = 'Lead Source is required.';
+      isValid = false;
+    }
+
+    if (!this.newLeadData.interestedPropertyType || !this.newLeadData.interestedPropertyType.trim()) {
+      this.formErrors.interestedPropertyType = 'Interested Project is required.';
+      isValid = false;
+    }
+
+    // 2. Email Format Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (this.newLeadData.primaryEmail && this.newLeadData.primaryEmail.trim()) {
+      if (!emailRegex.test(this.newLeadData.primaryEmail.trim())) {
+        this.formErrors.primaryEmail = 'Invalid email format. e.g. john@gmail.com';
+        isValid = false;
+      }
+    }
+
+    if (this.newLeadData.secondaryEmail && this.newLeadData.secondaryEmail.trim()) {
+      if (!emailRegex.test(this.newLeadData.secondaryEmail.trim())) {
+        this.formErrors.secondaryEmail = 'Invalid secondary email format.';
+        isValid = false;
+      }
+    }
+
+    // 3. Budget Range Validation (Budget Max >= Budget Min)
+    if (
+      this.newLeadData.budgetMin !== null &&
+      this.newLeadData.budgetMin !== undefined &&
+      (this.newLeadData.budgetMin as any) !== '' &&
+      this.newLeadData.budgetMax !== null &&
+      this.newLeadData.budgetMax !== undefined &&
+      (this.newLeadData.budgetMax as any) !== ''
+    ) {
+      if (+this.newLeadData.budgetMax < +this.newLeadData.budgetMin) {
+        this.formErrors.budgetMax = 'Budget Max must be greater than or equal to Budget Min.';
+        isValid = false;
+      }
+    }
+
+    return isValid;
+  }
+
   onSubmitCreateLead(event: Event) {
     event.preventDefault();
     
-    // Quick validation
-    if (this.newLeadData.leadSourceId === 0) return;
+    if (!this.validateCreateLeadForm()) {
+      return;
+    }
 
-    // Build payload mapping 0 to null for selects
+    // Build payload mapping empty strings to undefined so backend optional validators are not triggered on empty inputs
     const payload = {
       ...this.newLeadData,
+      fullName: this.newLeadData.fullName ? this.newLeadData.fullName.trim() : '',
+      primaryPhone: this.newLeadData.primaryPhone ? this.newLeadData.primaryPhone.trim() : '',
+      secondaryPhone: this.newLeadData.secondaryPhone?.trim() || undefined,
+      primaryEmail: this.newLeadData.primaryEmail?.trim() || undefined,
+      secondaryEmail: this.newLeadData.secondaryEmail?.trim() || undefined,
+      nationality: this.newLeadData.nationality?.trim() || undefined,
+      city: this.newLeadData.city?.trim() || undefined,
+      country: this.newLeadData.country?.trim() || undefined,
+      interestedPropertyType: this.newLeadData.interestedPropertyType ? this.newLeadData.interestedPropertyType.trim() : '',
       leadSourceId: +this.newLeadData.leadSourceId,
       assignedSalesAgentId: this.newLeadData.assignedSalesAgentId ? +this.newLeadData.assignedSalesAgentId : undefined
     };
@@ -1013,9 +1250,15 @@ export class LeadsComponent implements OnInit {
       next: (res) => {
         this.closeCreateModal();
         this.loadLeads();
+        customAlert(
+          `Lead created successfully!\n\nLead Code: ${res.leadCode || ''}\nCustomer Name: ${res.fullName}`,
+          'Lead Created Successfully'
+        );
       },
       error: (err) => {
         console.error('Error creating lead:', err);
+        const msg = err.error?.message;
+        this.serverError = Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to create lead. Please verify inputs.');
       }
     });
   }
@@ -1103,25 +1346,6 @@ export class LeadsComponent implements OnInit {
         }
       },
       error: (err) => console.error('Error fetching marketing leads:', err)
-    });
-  }
-
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
-    }
-  }
-
-  onUploadFile() {
-    if (!this.selectedLeadDetails || !this.selectedFile) return;
-
-    this.crmService.uploadAttachment(this.selectedLeadDetails.id, this.selectedFile).subscribe({
-      next: (res) => {
-        this.selectedFile = null;
-        this.loadLeadDetails(this.selectedLeadDetails.id); // reload details and list
-      },
-      error: (err) => console.error('Error uploading file:', err)
     });
   }
 

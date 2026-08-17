@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ReportsService } from '../../services/reports.service';
 import { environment } from '../../config';
 import { CrmService } from '../../services/crm.service';
+import { MarketingService } from '../../services/marketing.service';
 declare var io: any;
 
 
@@ -16,7 +18,7 @@ interface ChartPoint {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <header class="app-header dashboard-hero">
       <div class="app-title-section hero-copy">
@@ -151,6 +153,150 @@ interface ChartPoint {
           <span class="metric-trend text-purple-dark">
             Referred property sales
           </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MARKETING EXECUTIVE DASHBOARD (TC-7.18, TC-7.19, TC-7.20) ==================== -->
+    <section class="section-heading mt-8">
+      <div>
+        <span class="eyebrow">MARKETING & CAMPAIGNS TELEMETRY</span>
+        <h2>Marketing Executive Dashboard</h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 font-xs">
+          <label style="font-weight: 600; color: var(--text-secondary);">From:</label>
+          <input type="date" [(ngModel)]="marketingDateFrom" (change)="loadMarketingData()" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; background: var(--bg-card); color: var(--text-main);" />
+          <label style="font-weight: 600; color: var(--text-secondary);">To:</label>
+          <input type="date" [(ngModel)]="marketingDateTo" (change)="loadMarketingData()" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; background: var(--bg-card); color: var(--text-main);" />
+        </div>
+        <span class="section-note">Live Campaign Telemetry</span>
+      </div>
+    </section>
+
+    <!-- 7 Executive Marketing KPI Cards (TC-7.18) -->
+    <div class="grid col-4 gap-4 mb-6">
+      <div class="metric-card card border-indigo">
+        <div class="metric-icon bg-indigo"><span class="material-icons-outlined">people</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Total Leads</span>
+          <span class="metric-value">{{ marketingKpis?.totalLeads ?? 0 }}</span>
+          <span class="metric-trend text-indigo font-semibold">Attributed Profiles</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-blue">
+        <div class="metric-icon bg-blue"><span class="material-icons-outlined">verified</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Qualified Leads</span>
+          <span class="metric-value">{{ marketingKpis?.qualifiedLeads ?? 0 }}</span>
+          <span class="metric-trend text-blue font-semibold">Stage Qualified</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-green">
+        <div class="metric-icon bg-green"><span class="material-icons-outlined">task_alt</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Converted Leads</span>
+          <span class="metric-value">{{ marketingKpis?.convertedLeads ?? 0 }}</span>
+          <span class="metric-trend text-green font-semibold">Closed Deals</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-purple">
+        <div class="metric-icon bg-purple"><span class="material-icons-outlined">pie_chart</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Conversion Rate</span>
+          <span class="metric-value">{{ marketingKpis?.conversionRate ?? 0 }}%</span>
+          <span class="metric-trend text-purple-dark font-bold">Funnel Efficiency</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-orange">
+        <div class="metric-icon bg-orange"><span class="material-icons-outlined">payments</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Marketing Cost</span>
+          <span class="metric-value">ETB {{ formatShortNumber(marketingKpis?.marketingCost ?? 0) }}</span>
+          <span class="metric-trend text-yellow">Total Ad Spending</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-teal">
+        <div class="metric-icon bg-teal"><span class="material-icons-outlined">trending_up</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Revenue Generated</span>
+          <span class="metric-value">ETB {{ formatShortNumber(marketingKpis?.revenueGenerated ?? 0) }}</span>
+          <span class="metric-trend text-teal font-bold">Attributed Sales</span>
+        </div>
+      </div>
+
+      <div class="metric-card card border-green col-span-2">
+        <div class="metric-icon bg-green"><span class="material-icons-outlined">analytics</span></div>
+        <div class="metric-info">
+          <span class="metric-label">Marketing ROI</span>
+          <span class="metric-value">{{ marketingKpis?.roi ?? 0 }}%</span>
+          <span class="metric-trend text-green font-bold">((Revenue - Cost) / Cost) × 100</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row: Lead Source Trend & Campaign Comparison (TC-7.19 & TC-7.20) -->
+    <div class="grid col-2 gap-6 mb-6">
+      <!-- Lead Source Trend Chart (TC-7.19) -->
+      <div class="card glass-card p-6">
+        <div class="flex justify-between items-center border-bottom pb-4 mb-4">
+          <div>
+            <h3>Lead Source Volume Trend</h3>
+            <span class="text-secondary font-xs">Historical volume distribution across lead sources over time</span>
+          </div>
+          <span class="badge badge-new">Source Breakdown</span>
+        </div>
+
+        <div style="height: 220px;" class="flex flex-col justify-end gap-3 pt-4">
+          <div *ngFor="let src of leadSourceTrends" class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-main">{{ src.source }}</span>
+              <span class="text-indigo">{{ src.count }} Leads</span>
+            </div>
+            <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
+              <div [style.width.%]="getSourcePercent(src.count)" style="height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div *ngIf="!leadSourceTrends.length" class="text-center text-secondary italic py-8">
+            No source trend telemetry available for selected period.
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign Performance Comparison Chart (TC-7.20) -->
+      <div class="card glass-card p-6">
+        <div class="flex justify-between items-center border-bottom pb-4 mb-4">
+          <div>
+            <h3>Campaign Performance Comparison</h3>
+            <span class="text-secondary font-xs">Cross-campaign metric evaluation</span>
+          </div>
+          <select [(ngModel)]="campaignMetricFilter" class="font-xs" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);">
+            <option value="leadsGenerated">Leads Generated</option>
+            <option value="salesGenerated">Sales Generated</option>
+            <option value="revenueGenerated">Revenue Generated</option>
+            <option value="conversionRate">Conversion Rate (%)</option>
+            <option value="roi">ROI (%)</option>
+          </select>
+        </div>
+
+        <div style="height: 220px;" class="flex flex-col justify-end gap-3 pt-4">
+          <div *ngFor="let c of campaignComparisons" class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-main">{{ c.campaignName }}</span>
+              <span class="text-green">{{ getMetricDisplay(c) }}</span>
+            </div>
+            <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
+              <div [style.width.%]="getMetricPercent(c)" style="height: 100%; background: linear-gradient(90deg, #10b981, #14b8a6); border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div *ngIf="!campaignComparisons.length" class="text-center text-secondary italic py-8">
+            No campaign comparison telemetry available.
+          </div>
         </div>
       </div>
     </div>
@@ -692,6 +838,7 @@ interface ChartPoint {
 export class DashboardComponent implements OnInit, OnDestroy {
   private reportsService = inject(ReportsService);
   private crmService = inject(CrmService);
+  private marketingService = inject(MarketingService);
   private socket: any;
 
   kpis: any = null;
@@ -702,6 +849,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   leadTrends: any = null;
   brokerTrends: any = null;
   reminders: any[] = [];
+
+  // Marketing Executive Dashboard bindings (TC-7.18, TC-7.19, TC-7.20)
+  marketingKpis: any = null;
+  leadSourceTrends: any[] = [];
+  campaignComparisons: any[] = [];
+  marketingDateFrom: string = '';
+  marketingDateTo: string = '';
+  campaignMetricFilter: string = 'leadsGenerated';
 
   // Line Chart coordinate bindings
   revenuePoints: ChartPoint[] = [];
@@ -715,7 +870,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadAllData();
+    this.loadMarketingData();
     this.connectToWebSocket();
+  }
+
+  loadMarketingData() {
+    const filters: any = {};
+    if (this.marketingDateFrom) filters.startDate = this.marketingDateFrom;
+    if (this.marketingDateTo) filters.endDate = this.marketingDateTo;
+
+    this.marketingService.getDashboardKpis(filters).subscribe({
+      next: (res) => this.marketingKpis = res,
+      error: (err) => console.error('Error loading marketing KPIs:', err)
+    });
+
+    this.marketingService.getDashboardCharts(filters).subscribe({
+      next: (res) => {
+        this.leadSourceTrends = res?.sourceTrend || [];
+        this.campaignComparisons = res?.campaigns || [];
+      },
+      error: (err) => console.error('Error loading marketing charts:', err)
+    });
+  }
+
+  getSourcePercent(count: number): number {
+    if (!this.leadSourceTrends || this.leadSourceTrends.length === 0) return 0;
+    const max = Math.max(...this.leadSourceTrends.map(s => Number(s.count) || 1), 1);
+    return Math.round(((Number(count) || 0) / max) * 100);
+  }
+
+  getMetricDisplay(c: any): string {
+    if (!c) return '0';
+    const key = this.campaignMetricFilter;
+    const val = c[key] ?? 0;
+    if (key === 'revenueGenerated') return `ETB ${Number(val).toLocaleString()}`;
+    if (key === 'conversionRate' || key === 'roi') return `${val}%`;
+    return `${val}`;
+  }
+
+  getMetricPercent(c: any): number {
+    if (!this.campaignComparisons || this.campaignComparisons.length === 0) return 0;
+    const key = this.campaignMetricFilter;
+    const max = Math.max(...this.campaignComparisons.map(item => Number(item[key]) || 1), 1);
+    const val = Number(c[key]) || 0;
+    return Math.max(Math.round((val / max) * 100), 5);
   }
 
   ngOnDestroy() {

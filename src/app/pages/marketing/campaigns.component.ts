@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '../../services/marketing.service';
-import { customConfirm } from '../../utils/confirm';
+import { customConfirm, customAlert } from '../../utils/confirm';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -365,6 +365,20 @@ export class CampaignsComponent implements OnInit {
   }
 
   saveCampaign() {
+    if (this.formModel.campaignStatus === 'ACTIVE' && this.formModel.startDate) {
+      const startDate = new Date(this.formModel.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (startDate < today) {
+        customAlert(
+          'Campaign start date has passed. Please update the start date before activating the campaign.',
+          'Campaign Start Date Warning'
+        );
+        return;
+      }
+    }
+
     if (this.editMode) {
       this.marketingService.updateCampaign(this.formModel.id, this.formModel).subscribe({
         next: () => {
@@ -374,7 +388,11 @@ export class CampaignsComponent implements OnInit {
             this.selectCampaign(this.formModel);
           }
         },
-        error: (err) => console.error('Failed to update campaign', err)
+        error: (err) => {
+          console.error('Failed to update campaign', err);
+          const msg = err.error?.message;
+          customAlert(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to update campaign'), 'Campaign Error');
+        }
       });
     } else {
       this.marketingService.createCampaign(this.formModel).subscribe({
@@ -382,7 +400,11 @@ export class CampaignsComponent implements OnInit {
           this.closeFormModal();
           this.loadCampaigns();
         },
-        error: (err) => console.error('Failed to create campaign', err)
+        error: (err) => {
+          console.error('Failed to create campaign', err);
+          const msg = err.error?.message;
+          customAlert(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to create campaign'), 'Campaign Error');
+        }
       });
     }
   }

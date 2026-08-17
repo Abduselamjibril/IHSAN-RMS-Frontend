@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '../../services/marketing.service';
-import { customConfirm } from '../../utils/confirm';
+import { customConfirm, customAlert } from '../../utils/confirm';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -253,6 +253,10 @@ import { AuthService } from '../../services/auth.service';
         </header>
         <form (ngSubmit)="saveExpense()" #expForm="ngForm" class="modal-form">
           <div class="modal-body">
+            <div *ngIf="expenseModel.expenseAmount && targetAdForAction?.campaign?.id" class="p-3 mb-4 rounded border font-semibold text-xs flex items-center gap-2" style="background-color: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); color: #d97706;">
+              <span class="material-icons-outlined text-sm">warning</span>
+              <span>⚠️ Expense validation: Remaining Campaign Budget is <strong>ETB {{ targetAdRemainingBudget | number:'1.2-2' }}</strong>.</span>
+            </div>
             <div class="form-grid">
               <div class="form-group">
                 <label for="expenseDate">Expense Date *</label>
@@ -448,6 +452,7 @@ export class AdvertisementsComponent implements OnInit {
   perfModel: any = {};
 
   targetAdForAction: any = null;
+  targetAdRemainingBudget: number = 0;
 
   ngOnInit() {
     this.loadAds();
@@ -455,8 +460,12 @@ export class AdvertisementsComponent implements OnInit {
   }
 
   getInitials(name: string): string {
-    if (!name) return 'A';
-    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    if (!name) return 'AD';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 
   loadAds() {
@@ -505,6 +514,17 @@ export class AdvertisementsComponent implements OnInit {
 
   openExpenseModal(ad: any) {
     this.targetAdForAction = ad;
+    this.targetAdRemainingBudget = 0;
+
+    if (ad?.campaign?.id) {
+      this.marketingService.getCampaignBudgets().subscribe(budgets => {
+        const b = budgets.find(item => item.campaign?.id === ad.campaign.id);
+        if (b) {
+          this.targetAdRemainingBudget = Number(b.remainingBudget) || 0;
+        }
+      });
+    }
+
     this.expenseModel = {
       expenseDate: new Date().toISOString().slice(0, 10),
       expenseType: 'Media Cost',
@@ -520,8 +540,11 @@ export class AdvertisementsComponent implements OnInit {
 
   saveExpense() {
     this.marketingService.recordAdExpense(this.targetAdForAction.id, this.expenseModel).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.closeExpenseModal();
+        if (res?.warning) {
+          customAlert(res.warning, 'Campaign Budget Overspend Warning');
+        }
         if (this.selectedAd?.id === this.targetAdForAction.id) {
           this.loadAdDetails(this.selectedAd.id);
         }

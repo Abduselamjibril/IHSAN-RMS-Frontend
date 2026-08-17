@@ -282,12 +282,13 @@ import { customConfirm } from '../../utils/confirm';
                 <div *ngFor="let rule of newSegment.rules; let i = index" class="rule-edit-row flex gap-2 align-center">
                   <!-- Select Field -->
                   <select [(ngModel)]="rule.fieldName" [name]="'rule_field_' + i" class="flex-2" (change)="onRuleFieldChange(rule)">
+                    <option value="interestedPropertyType">Interested In (Property)</option>
+                    <option value="statusId">Status</option>
                     <option value="budgetMin">Min Budget (ETB)</option>
                     <option value="budgetMax">Max Budget (ETB)</option>
                     <option value="city">City</option>
                     <option value="nationality">Nationality</option>
                     <option value="gender">Gender</option>
-                    <option value="statusId">Status</option>
                     <option value="sourceId">Lead Source</option>
                   </select>
 
@@ -325,7 +326,7 @@ import { customConfirm } from '../../utils/confirm';
                     <input 
                       *ngIf="rule.fieldName !== 'statusId' && rule.fieldName !== 'sourceId'"
                       type="text" 
-                      [placeholder]="rule.operator === 'IN' ? 'Val1, Val2, Val3' : 'Constraint value'" 
+                      [placeholder]="rule.fieldName === 'interestedPropertyType' ? 'e.g. Luxury Apartment' : (rule.operator === 'IN' ? 'Val1, Val2, Val3' : 'Constraint value')" 
                       [(ngModel)]="rule.value" 
                       [name]="'rule_val_' + i"
                       required

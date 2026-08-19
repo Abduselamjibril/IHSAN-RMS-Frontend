@@ -452,7 +452,7 @@ import { MarketingService } from '../../services/marketing.service';
       <!-- ==================== INVENTORY AVAILABILITY TAB ==================== -->
       <div *ngIf="activeTab === 'inventory'" class="grid gap-6">
         <!-- Stats Cards -->
-        <div class="grid grid-4 gap-6">
+        <div class="grid gap-6" style="display: grid; grid-template-columns: repeat(5, 1fr);">
           <div class="metric-card card border-teal">
             <span class="metric-label">Total Units</span>
             <span class="metric-value">{{ reportData?.metrics?.totalUnits ?? 0 }}</span>
@@ -468,6 +468,10 @@ import { MarketingService } from '../../services/marketing.service';
           <div class="metric-card card border-blue">
             <span class="metric-label">Sold Units</span>
             <span class="metric-value">{{ reportData?.metrics?.soldUnits ?? 0 }}</span>
+          </div>
+          <div class="metric-card card" style="border-left: 4px solid var(--brand-primary);">
+            <span class="metric-label">Total Inventory Value</span>
+            <span class="metric-value">ETB {{ (+(reportData?.metrics?.availableInventoryValue ?? 0) + +(reportData?.metrics?.reservedInventoryValue ?? 0)) | number:'1.0-0' }}</span>
           </div>
         </div>
 

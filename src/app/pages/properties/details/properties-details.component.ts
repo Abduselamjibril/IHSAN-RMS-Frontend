@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PropertiesService } from '../../../services/properties.service';
 import { DynamicDropdownComponent } from '../../../components/dynamic-dropdown/dynamic-dropdown.component';
 import { customConfirm } from '../../../utils/confirm';
+import { AuthService } from '../../../services/auth.service';
 import { environment } from '../../../config';
 
 @Component({
@@ -607,10 +608,15 @@ import { environment } from '../../../config';
                     <span class="text-secondary font-xs" *ngIf="d.remarks" style="font-style: italic;">{{ d.remarks }}</span>
                   </div>
                 </div>
-                <a [href]="env.serverUrl + d.filePath" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
-                  <span class="material-icons-outlined font-xs">file_download</span>
-                  <span>Download</span>
-                </a>
+                <div class="flex align-center gap-2">
+                  <a [href]="authService.getDownloadUrl(d.filePath)" target="_blank" class="btn btn-secondary btn-xs flex align-center gap-1">
+                    <span class="material-icons-outlined font-xs">file_download</span>
+                    <span>Download</span>
+                  </a>
+                  <button type="button" class="btn btn-danger btn-xs flex align-center justify-center" (click)="onDeleteDocument(d.id)" style="padding: 4px; border: none; background-color: rgba(239, 68, 68, 0.1); color: var(--color-lost); border-radius: var(--radius-sm);" title="Delete Document">
+                    <span class="material-icons-outlined font-xs">delete</span>
+                  </button>
+                </div>
               </div>
               <div *ngIf="!property.documents || property.documents.length === 0" class="text-center py-6 text-secondary italic font-sm">
                 No project documents uploaded yet.
@@ -652,16 +658,49 @@ import { environment } from '../../../config';
             </div>
 
             <div class="media-grid-row flex flex-wrap gap-3 mt-4">
-              <div *ngFor="let m of property.media" class="media-box border relative hover-lift" style="width: calc(33.333% - 10px); min-width: 110px;">
-                <img [src]="env.serverUrl + m.filePath" style="width: 100%; height: 95px; object-fit: cover;" />
-                <span class="badge absolute top-2 right-2 badge-xs" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured" style="font-size: 8px; padding: 2px 5px; color: white;">
-                  {{ m.isFeatured ? 'Cover' : (m.mediaType || 'Gallery') }}
-                </span>
+              <div *ngFor="let m of property.media; let idx = index" class="media-box border relative hover-lift flex flex-col" style="width: calc(33.333% - 10px); min-width: 140px; background: var(--bg-card); border-radius: var(--radius-sm); overflow: hidden;">
+                <div class="relative" style="height: 100px; overflow: hidden; cursor: pointer;" (click)="openImagePreview(m)">
+                  <img [src]="authService.getDownloadUrl(m.filePath)" style="width: 100%; height: 100%; object-fit: cover;" />
+                  <span class="badge absolute top-2 right-2 badge-xs" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured" style="font-size: 8px; padding: 2px 5px; color: white;">
+                    {{ m.isFeatured ? '★ Cover' : (m.mediaType || 'Gallery') }}
+                  </span>
+                </div>
+                <div class="p-2 flex justify-between align-center border-top" style="background: var(--bg-main); font-size: 11px;">
+                  <div class="flex gap-1">
+                    <button type="button" class="btn btn-secondary btn-xs" (click)="onMoveMedia(idx, -1)" [disabled]="idx === 0" title="Move Earlier" style="padding: 2px 4px; font-size: 10px;">
+                      <span class="material-icons-outlined" style="font-size: 14px;">arrow_back</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs" (click)="onMoveMedia(idx, 1)" [disabled]="idx === property.media.length - 1" title="Move Later" style="padding: 2px 4px; font-size: 10px;">
+                      <span class="material-icons-outlined" style="font-size: 14px;">arrow_forward</span>
+                    </button>
+                  </div>
+                  <div class="flex gap-1">
+                    <button *ngIf="!m.isFeatured" type="button" class="btn btn-secondary btn-xs" (click)="onSetFeaturedMedia(m.id)" title="Set as Cover Photo" style="padding: 2px 4px; font-size: 10px;">
+                      <span class="material-icons-outlined text-indigo" style="font-size: 14px;">star</span>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-xs" (click)="onDeleteMedia(m.id)" title="Delete Photo" style="padding: 2px 4px; font-size: 10px; background-color: rgba(239, 68, 68, 0.1); color: var(--color-lost); border: none;">
+                      <span class="material-icons-outlined" style="font-size: 14px;">delete</span>
+                    </button>
+                  </div>
+                </div>
               </div>
               <div *ngIf="!property.media || property.media.length === 0" class="text-center py-6 text-secondary italic font-sm" style="width: 100%;">
                 No gallery photos uploaded yet.
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image Lightbox Modal -->
+      <div class="modal-overlay" *ngIf="showImagePreviewModal" (click)="closeImagePreview()">
+        <div class="modal-container" style="max-width: 800px; width: 90vw;" (click)="$event.stopPropagation()">
+          <div class="modal-header flex justify-between align-center">
+            <h2>{{ previewImage?.fileName || 'Media Preview' }}</h2>
+            <button class="header-icon-btn close-btn" (click)="closeImagePreview()"><span class="material-icons-outlined">close</span></button>
+          </div>
+          <div class="modal-body text-center" style="padding: 16px;">
+            <img [src]="authService.getDownloadUrl(previewImage?.filePath)" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: var(--radius-md);" />
           </div>
         </div>
       </div>
@@ -1344,7 +1383,11 @@ export class PropertiesDetailsComponent implements OnInit {
   env = environment;
   private route = inject(ActivatedRoute);
   private propertiesService = inject(PropertiesService);
+  public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
+
+  showImagePreviewModal = false;
+  previewImage: any = null;
 
   property: any = null;
   allAmenities: any[] = [];
@@ -2119,6 +2162,73 @@ export class PropertiesDetailsComponent implements OnInit {
       },
       error: (err) => console.error('Error uploading photo:', err)
     });
+  }
+
+  onDeleteDocument(docId: number) {
+    customConfirm('Are you sure you want to permanently delete this document?', 'Delete Document').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteDocument(docId).subscribe({
+          next: () => {
+            this.loadPropertyDetails();
+          },
+          error: (err) => console.error('Error deleting document:', err)
+        });
+      }
+    });
+  }
+
+  onDeleteMedia(mediaId: number) {
+    customConfirm('Are you sure you want to delete this photo from the gallery?', 'Delete Photo').then(confirmed => {
+      if (confirmed) {
+        this.propertiesService.deleteMedia(mediaId).subscribe({
+          next: () => {
+            this.loadPropertyDetails();
+          },
+          error: (err) => console.error('Error deleting photo:', err)
+        });
+      }
+    });
+  }
+
+  onSetFeaturedMedia(mediaId: number) {
+    this.propertiesService.setFeaturedMedia(this.property.id, mediaId).subscribe({
+      next: () => {
+        this.loadPropertyDetails();
+      },
+      error: (err) => console.error('Error setting featured photo:', err)
+    });
+  }
+
+  onMoveMedia(index: number, direction: number) {
+    const media = [...this.property.media];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= media.length) return;
+
+    // Swap items
+    const temp = media[index];
+    media[index] = media[targetIndex];
+    media[targetIndex] = temp;
+
+    // Build orders list
+    const orders = media.map((m, i) => ({ id: m.id, displayOrder: i }));
+    this.propertiesService.reorderMedia(this.property.id, orders).subscribe({
+      next: () => {
+        this.loadPropertyDetails();
+      },
+      error: (err) => console.error('Error reordering media:', err)
+    });
+  }
+
+  openImagePreview(media: any) {
+    this.previewImage = media;
+    this.showImagePreviewModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeImagePreview() {
+    this.showImagePreviewModal = false;
+    this.previewImage = null;
+    this.cdr.detectChanges();
   }
 
   loadPropertyTypes() {

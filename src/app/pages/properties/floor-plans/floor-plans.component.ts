@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { AuthService } from '../../../services/auth.service';
 import { customConfirm } from '../../../utils/confirm';
 
 @Component({
@@ -112,8 +113,23 @@ import { customConfirm } from '../../../utils/confirm';
           <span class="material-icons-outlined text-muted" style="font-size: 44px; color: var(--brand-primary); text-align: center;">photo</span>
           
           <div *ngIf="activeFloor.floorPlan" class="mb-3 p-2 bg-white border" style="border-radius: var(--radius-sm); font-size: 12px; margin-bottom: 12px; border-style: solid;">
-            <span class="font-bold text-indigo">Active Blueprint:</span> {{ activeFloor.floorPlan.planName }} (v{{ activeFloor.floorPlan.versionNumber || 1 }})
-            <p class="text-secondary font-xs italic mt-1" *ngIf="activeFloor.floorPlan.remarks">{{ activeFloor.floorPlan.remarks }}</p>
+            <div class="flex justify-between align-center">
+              <div>
+                <span class="font-bold text-indigo">Active Blueprint:</span> {{ activeFloor.floorPlan.planName }} (v{{ activeFloor.floorPlan.versionNumber || 1 }})
+                <p class="text-secondary font-xs italic mt-1" *ngIf="activeFloor.floorPlan.remarks">{{ activeFloor.floorPlan.remarks }}</p>
+              </div>
+              <button type="button" class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openPreviewModal(activeFloor.floorPlan)">
+                <span class="material-icons-outlined font-xs">visibility</span> Preview
+              </button>
+            </div>
+            <!-- Embedded Visual Preview Thumbnail -->
+            <div class="mt-2 text-center" style="max-height: 180px; overflow: hidden; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc; cursor: pointer;" (click)="openPreviewModal(activeFloor.floorPlan)">
+              <img *ngIf="isImagePlan(activeFloor.floorPlan)" [src]="authService.getDownloadUrl(activeFloor.floorPlan.filePath)" style="max-width: 100%; max-height: 175px; object-fit: contain;" />
+              <div *ngIf="isPdfPlan(activeFloor.floorPlan)" class="py-4 flex flex-col align-center justify-center text-indigo">
+                <span class="material-icons-outlined" style="font-size: 40px;">picture_as_pdf</span>
+                <span class="font-xs font-bold mt-1">PDF Floor Plan Blueprint — Click to View</span>
+              </div>
+            </div>
           </div>
           
           <p class="font-xs text-secondary text-center" style="line-height: 1.4;">Upload AutoCAD floorplan / map image for visual blueprint lookup reference</p>
@@ -179,10 +195,15 @@ import { customConfirm } from '../../../utils/confirm';
                 <td>{{ f.floorType }}</td>
                 <td>{{ f.units?.length ?? 0 }} / {{ f.totalUnits ?? 0 }} units</td>
                 <td>
-                  <span *ngIf="f.floorPlan" class="badge badge-indigo flex align-center gap-1 font-xs" style="display: inline-flex; align-items: center;" [title]="f.floorPlan.remarks || ''">
-                    <span class="material-icons-outlined font-xs">file_present</span>
-                    <span>{{ f.floorPlan.planName }} (v{{ f.floorPlan.versionNumber || 1 }})</span>
-                  </span>
+                  <div *ngIf="f.floorPlan" class="flex align-center gap-2">
+                    <span class="badge badge-indigo flex align-center gap-1 font-xs" style="display: inline-flex; align-items: center;" [title]="f.floorPlan.remarks || ''">
+                      <span class="material-icons-outlined font-xs">{{ isPdfPlan(f.floorPlan) ? 'picture_as_pdf' : 'image' }}</span>
+                      <span>{{ f.floorPlan.planName }} (v{{ f.floorPlan.versionNumber || 1 }})</span>
+                    </span>
+                    <button class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openPreviewModal(f.floorPlan)" title="Preview Blueprint">
+                      <span class="material-icons-outlined font-xs">visibility</span>
+                    </button>
+                  </div>
                   <span *ngIf="!f.floorPlan" class="text-secondary font-xs italic flex align-center gap-1">
                     <span class="material-icons-outlined font-xs text-muted">broken_image</span>
                     <span>No Blueprint</span>
@@ -450,6 +471,41 @@ import { customConfirm } from '../../../utils/confirm';
         </div>
       </div>
     </div>
+
+    <!-- Blueprint Preview Modal -->
+    <div class="modal-overlay" *ngIf="showPreviewModal" (click)="closePreviewModal()" style="backdrop-filter: blur(6px); background: rgba(15, 23, 42, 0.7);">
+      <div class="modal-container" style="max-width: 980px; width: 92vw; max-height: 92vh; display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl);" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center" style="background: var(--bg-card); padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+          <div class="flex align-center gap-3">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--brand-primary-light); display: flex; align-items: center; justify-content: center;">
+              <span class="material-icons-outlined text-indigo" style="font-size: 20px;">{{ isPdfPlan(previewingPlan) ? 'picture_as_pdf' : 'architecture' }}</span>
+            </div>
+            <div>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 700;">{{ previewingPlan?.planName }}</h2>
+              <span class="text-secondary font-xs">Version {{ previewingPlan?.versionNumber || 1 }} • {{ previewingPlan?.planScope || 'Floor Level' }} Blueprint</span>
+            </div>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closePreviewModal()"><span class="material-icons-outlined">close</span></button>
+        </div>
+        <div class="modal-body" style="padding: 16px; background: #0f172a; flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; min-height: 380px;">
+          <div *ngIf="isImagePlan(previewingPlan)" style="display: flex; justify-content: center; align-items: center; width: 100%;">
+            <img [src]="authService.getDownloadUrl(previewingPlan?.filePath)" style="max-width: 100%; max-height: 68vh; object-fit: contain; border-radius: var(--radius-md); box-shadow: 0 12px 30px rgba(0,0,0,0.6);" />
+          </div>
+          <div *ngIf="isPdfPlan(previewingPlan)" style="width: 100%; height: 68vh;">
+            <iframe [src]="authService.getDownloadUrl(previewingPlan?.filePath)" style="width: 100%; height: 100%; border: none; border-radius: var(--radius-md);"></iframe>
+          </div>
+        </div>
+        <div class="modal-footer flex justify-between align-center" style="background: var(--bg-card); padding: 12px 20px; border-top: 1px solid var(--border-color);">
+          <div class="flex align-center gap-2">
+            <a [href]="authService.getDownloadUrl(previewingPlan?.filePath)" target="_blank" class="btn btn-secondary btn-sm flex align-center gap-1">
+              <span class="material-icons-outlined font-sm">file_download</span> Download Original
+            </a>
+            <span class="text-secondary font-xs italic" *ngIf="previewingPlan?.remarks">{{ previewingPlan.remarks }}</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" (click)="closePreviewModal()">Close Preview</button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .floor-map-grid {
@@ -510,6 +566,7 @@ import { customConfirm } from '../../../utils/confirm';
 })
 export class FloorPlansComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
+  public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
 
   propertiesList: any[] = [];
@@ -542,6 +599,8 @@ export class FloorPlansComponent implements OnInit {
   showFloorModal = false;
   showEditFloorModal = false;
   showCreateFloorPlanModal = false;
+  showPreviewModal = false;
+  previewingPlan: any = null;
   editFloor: any = null;
 
   selectedPropertyIdForFloor: number | null = null;
@@ -721,6 +780,32 @@ export class FloorPlansComponent implements OnInit {
 
   closeStatusModal() {
     this.showStatusModal = false;
+  }
+
+  openPreviewModal(plan: any) {
+    this.previewingPlan = plan;
+    this.showPreviewModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closePreviewModal() {
+    this.showPreviewModal = false;
+    this.previewingPlan = null;
+    this.cdr.detectChanges();
+  }
+
+  isImagePlan(plan: any): boolean {
+    if (!plan) return false;
+    const type = (plan.fileType || plan.mimeType || '').toLowerCase();
+    const path = (plan.filePath || '').toLowerCase();
+    return type.startsWith('image/') || path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif') || path.endsWith('.webp');
+  }
+
+  isPdfPlan(plan: any): boolean {
+    if (!plan) return false;
+    const type = (plan.fileType || plan.mimeType || '').toLowerCase();
+    const path = (plan.filePath || '').toLowerCase();
+    return type.includes('pdf') || path.endsWith('.pdf');
   }
 
   onSubmitStatus(event: Event) {

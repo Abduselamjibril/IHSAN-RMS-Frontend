@@ -41,46 +41,83 @@ import { AuthService } from '../../../services/auth.service';
     </div>
 
     <!-- Filters Panel -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div class="flex justify-between align-center gap-3 flex-wrap">
+    <div class="card" style="margin-bottom: 24px; padding: 18px;">
+      <!-- Row 1: Search & Hierarchy Location Filters -->
+      <div class="flex gap-3 align-center flex-wrap mb-3">
         <!-- Search box -->
-        <div class="search-box">
+        <div class="search-box" style="flex: 1; min-width: 240px;">
           <span class="material-icons-outlined">search</span>
           <input 
             type="text" 
-            placeholder="Search by code or number..." 
+            placeholder="Search by unit code, number, or title..." 
             [(ngModel)]="filters.search"
             (ngModelChange)="onSearchChange()" 
+            style="width: 100%;"
           />
         </div>
 
-        <!-- Filter Selects -->
-        <div class="flex align-center gap-2 flex-wrap">
-          <select [(ngModel)]="filters.propertyId" (change)="onPropertyFilterChange()">
-            <option [value]="0">All Properties</option>
-            <option *ngFor="let p of propertiesList" [value]="p.id">{{ p.propertyName }}</option>
-          </select>
+        <select [(ngModel)]="filters.propertyId" (change)="onPropertyFilterChange()" style="min-width: 160px;">
+          <option [value]="0">All Properties</option>
+          <option *ngFor="let p of propertiesList" [value]="p.id">{{ p.propertyName }}</option>
+        </select>
 
-          <select [(ngModel)]="filters.buildingId" (change)="onBuildingFilterChange()" [disabled]="!filters.propertyId">
-            <option [value]="0">All Buildings</option>
-            <option *ngFor="let b of filterBuildings" [value]="b.id">{{ b.buildingName }}</option>
-          </select>
+        <select [(ngModel)]="filters.buildingId" (change)="onBuildingFilterChange()" [disabled]="!filters.propertyId" style="min-width: 150px;">
+          <option [value]="0">All Buildings</option>
+          <option *ngFor="let b of filterBuildings" [value]="b.id">{{ b.buildingName }}</option>
+        </select>
 
-          <select [(ngModel)]="filters.floorId" (change)="loadUnits()" [disabled]="!filters.buildingId">
-            <option [value]="0">All Floors</option>
-            <option *ngFor="let f of filterFloors" [value]="f.id">Floor {{ f.floorNumber }}</option>
-          </select>
+        <select [(ngModel)]="filters.floorId" (change)="loadUnits()" [disabled]="!filters.buildingId" style="min-width: 130px;">
+          <option [value]="0">All Floors</option>
+          <option *ngFor="let f of filterFloors" [value]="f.id">Floor {{ f.floorNumber }}</option>
+        </select>
+      </div>
 
-          <select [(ngModel)]="filters.unitTypeId" (change)="loadUnits()">
-            <option [value]="0">All Unit Types</option>
-            <option *ngFor="let t of unitTypes" [value]="t.id">{{ t.typeName }}</option>
-          </select>
+      <!-- Row 2: Property Specifications & Price Filters -->
+      <div class="flex gap-3 align-center flex-wrap pt-2" style="border-top: 1px solid var(--border-color);">
+        <select [(ngModel)]="filters.unitTypeId" (change)="loadUnits()" style="min-width: 140px;">
+          <option [value]="0">All Unit Types</option>
+          <option *ngFor="let t of unitTypes" [value]="t.id">{{ t.typeName }}</option>
+        </select>
 
-          <select [(ngModel)]="filters.unitStatusId" (change)="loadUnits()">
-            <option [value]="0">All Statuses</option>
-            <option *ngFor="let s of unitStatuses" [value]="s.id">{{ s.statusName }}</option>
-          </select>
+        <select [(ngModel)]="filters.unitStatusId" (change)="loadUnits()" style="min-width: 130px;">
+          <option [value]="0">All Statuses</option>
+          <option *ngFor="let s of unitStatuses" [value]="s.id">{{ s.statusName }}</option>
+        </select>
+
+        <select [(ngModel)]="filters.bedrooms" (change)="loadUnits()" style="min-width: 130px;">
+          <option value="">All Bedrooms</option>
+          <option value="1">1 BHK</option>
+          <option value="2">2 BHK</option>
+          <option value="3">3 BHK</option>
+          <option value="4">4+ BHK</option>
+        </select>
+
+        <div class="flex align-center gap-1">
+          <input 
+            type="number" 
+            [(ngModel)]="filters.minPrice" 
+            (change)="loadUnits()" 
+            placeholder="Min Price (ETB)" 
+            style="width: 140px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px;" 
+          />
+          <span class="text-secondary font-xs">-</span>
+          <input 
+            type="number" 
+            [(ngModel)]="filters.maxPrice" 
+            (change)="loadUnits()" 
+            placeholder="Max Price (ETB)" 
+            style="width: 140px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px;" 
+          />
         </div>
+
+        <button 
+          *ngIf="filters.search || filters.propertyId || filters.buildingId || filters.floorId || filters.unitTypeId || filters.unitStatusId || filters.bedrooms || filters.minPrice || filters.maxPrice"
+          class="btn btn-secondary btn-sm flex align-center gap-1"
+          (click)="clearAllFilters()"
+          style="margin-left: auto;"
+        >
+          <span class="material-icons-outlined font-xs">clear_all</span> Reset Filters
+        </button>
       </div>
     </div>
 
@@ -99,14 +136,17 @@ import { AuthService } from '../../../services/auth.service';
             <th>View</th>
             <th>Price</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th style="text-align: right;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let u of units">
             <td class="font-mono font-bold">
-              {{ u.unitCode }}
-              <span class="material-icons-outlined text-indigo font-xs" *ngIf="u.isFeatured" title="Featured" style="vertical-align: middle;">star</span>
+              <a [routerLink]="['/properties/units/details', u.id]" class="text-indigo flex align-center gap-1" style="text-decoration: none; cursor: pointer;" title="View Unit Details">
+                <span>{{ u.unitCode }}</span>
+                <span class="material-icons-outlined font-xs" style="font-size: 14px;">open_in_new</span>
+              </a>
+              <span class="material-icons-outlined text-indigo font-xs" *ngIf="u.isFeatured" title="Featured Unit" style="vertical-align: middle;">star</span>
             </td>
             <td>{{ u.unitNumber }}</td>
             <td>
@@ -120,16 +160,26 @@ import { AuthService } from '../../../services/auth.service';
             <td>{{ u.grossArea || u.areaSuperBuiltup || '-' }} m²</td>
             <td>{{ u.bedroomCount ?? '-' }} / {{ u.bathroomCount ?? '-' }}</td>
             <td>{{ u.viewType || '-' }}</td>
-            <td>{{ u.currentPrice ? ('ETB ' + (u.currentPrice | number)) : 'Not Priced' }}</td>
+            <td class="font-bold">
+              <div>{{ u.currentPrice ? ('ETB ' + (u.currentPrice | number)) : 'Not Priced' }}</div>
+              <span class="badge badge-new" *ngIf="u.isNegotiable" style="font-size: 10px; padding: 1px 6px; margin-top: 2px; display: inline-block;">Negotiable</span>
+            </td>
             <td>
-              <span class="badge" [ngStyle]="{'background-color': getStatusColor(u.unitStatus?.colorCode)}">
+              <span class="badge" [ngStyle]="{'background-color': getStatusColor(u.unitStatus?.colorCode), 'color': '#fff', 'font-weight': '600'}">
                 {{ u.unitStatus?.statusName }}
               </span>
             </td>
             <td>
-              <div class="flex gap-2">
-                <button class="btn btn-secondary btn-xs" (click)="openStatusDrawer(u)">Manage Status</button>
-                <button class="btn btn-danger btn-xs" (click)="onDelete(u.id)"><span class="material-icons-outlined font-xs">delete</span></button>
+              <div class="flex gap-2 justify-end align-center">
+                <a [routerLink]="['/properties/units/details', u.id]" class="btn btn-secondary btn-xs flex align-center gap-1" title="View Unit Details">
+                  <span class="material-icons-outlined font-xs">visibility</span> Details
+                </a>
+                <button class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openStatusDrawer(u)" title="Update Status">
+                  <span class="material-icons-outlined font-xs">tune</span> Status
+                </button>
+                <button class="btn btn-danger btn-xs flex align-center justify-center" style="width: 28px; height: 28px; padding: 0; min-width: 28px;" (click)="onDelete(u.id)" title="Delete Unit">
+                  <span class="material-icons-outlined font-xs">delete</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -277,29 +327,37 @@ import { AuthService } from '../../../services/auth.service';
               </div>
             </div>
 
-            <div class="form-row flex gap-3 mt-3" style="display: flex; gap: 16px;">
+            <div class="form-row flex gap-3 mt-3" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
               <div class="form-group flex-1 flex align-center gap-2">
                 <input type="checkbox" [(ngModel)]="newUnit.isFurnished" name="isFurnished" id="chkFurnished" />
-                <label for="chkFurnished">Is Furnished</label>
+                <label for="chkFurnished" class="cursor-pointer font-xs font-bold">Is Furnished</label>
               </div>
               <div class="form-group flex-1 flex align-center gap-2">
                 <input type="checkbox" [(ngModel)]="newUnit.isCornerUnit" name="isCornerUnit" id="chkCorner" />
-                <label for="chkCorner">Is Corner Unit</label>
+                <label for="chkCorner" class="cursor-pointer font-xs font-bold">Is Corner Unit</label>
               </div>
               <div class="form-group flex-1 flex align-center gap-2">
                 <input type="checkbox" [(ngModel)]="newUnit.isFeatured" name="isFeatured" id="chkFeatured" />
-                <label for="chkFeatured">Is Featured</label>
+                <label for="chkFeatured" class="cursor-pointer font-xs font-bold">Is Featured</label>
               </div>
             </div>
 
-            <div class="form-row flex gap-3 mt-3">
-              <div class="form-group flex-1 flex flex-col">
-                <label>Inventory Tags (comma separated)</label>
-                <input type="text" [(ngModel)]="newUnit.inventoryTags" name="tags" placeholder="e.g. Premium, Corner" />
-              </div>
-              <div class="form-group flex-1 flex flex-col">
-                <label>Base Price (ETB)</label>
-                <input type="number" [(ngModel)]="basePrice" name="bPrice" placeholder="Base valuation price" />
+            <!-- Pricing Section -->
+            <div class="card p-3 mt-3" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255, 255, 255, 0.02);">
+              <div class="form-row flex gap-3">
+                <div class="form-group flex-1 flex flex-col">
+                  <label class="font-xs font-bold text-secondary mb-1">Base Price (ETB)</label>
+                  <input type="number" [(ngModel)]="basePrice" name="bPrice" placeholder="Base valuation price" style="padding: 9px 12px; font-weight: 600;" />
+                  <!-- Left-aligned checkbox under price input -->
+                  <div class="flex align-center justify-start gap-2 mt-2" style="text-align: left;">
+                    <input type="checkbox" [(ngModel)]="newUnit.isNegotiable" name="isNegotiable" id="chkNegotiable" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--brand-primary); margin: 0;" />
+                    <label for="chkNegotiable" class="cursor-pointer font-xs font-bold text-indigo" style="user-select: none; margin: 0; display: inline;">Negotiable Price Option</label>
+                  </div>
+                </div>
+                <div class="form-group flex-1 flex flex-col">
+                  <label class="font-xs font-bold text-secondary mb-1">Inventory Tags (comma separated)</label>
+                  <input type="text" [(ngModel)]="newUnit.inventoryTags" name="tags" placeholder="e.g. Premium, Corner" style="padding: 9px 12px;" />
+                </div>
               </div>
             </div>
 
@@ -462,6 +520,12 @@ import { AuthService } from '../../../services/auth.service';
               <option *ngFor="let s of unitStatuses" [value]="s.id">{{ s.statusName }}</option>
             </select>
             <textarea placeholder="Reason for status update..." [(ngModel)]="transitionReason" rows="2" style="margin-top: 8px; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); outline: none;"></textarea>
+
+            <div *ngIf="statusError" class="flex align-center gap-2" style="margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; font-size: 13px;">
+              <span class="material-icons-outlined" style="font-size: 18px;">error_outline</span>
+              <span>{{ statusError }}</span>
+            </div>
+
             <button class="btn btn-primary btn-sm mt-2" (click)="onTransitionStatus()">Update Status</button>
           </div>
 
@@ -478,6 +542,7 @@ import { AuthService } from '../../../services/auth.service';
                     <span class="timeline-date font-xs text-secondary">{{ h.changedAt | date:'short' }}</span>
                   </div>
                   <p class="timeline-text mt-1 text-main">{{ h.reason || 'No details provided.' }}</p>
+                  <span class="font-xs text-secondary" *ngIf="h.changedByName" style="display: block; margin-top: 2px;">By: {{ h.changedByName }}</span>
                 </div>
               </div>
             </div>
@@ -547,6 +612,7 @@ export class UnitsComponent implements OnInit {
     isFurnished: false,
     isCornerUnit: false,
     isFeatured: false,
+    isNegotiable: false,
     inventoryTags: '',
     remarks: ''
   };
@@ -567,6 +633,7 @@ export class UnitsComponent implements OnInit {
   transitionStatusId = 0;
   transitionReason = '';
   statusHistory: any[] = [];
+  statusError = '';
 
   toggleColorPickerModal() {
     this.showColorPickerModal = !this.showColorPickerModal;
@@ -638,6 +705,9 @@ export class UnitsComponent implements OnInit {
     if (this.filters.floorId) activeFilters.floorId = +this.filters.floorId;
     if (this.filters.unitTypeId) activeFilters.unitTypeId = +this.filters.unitTypeId;
     if (this.filters.unitStatusId) activeFilters.unitStatusId = +this.filters.unitStatusId;
+    if (this.filters.bedrooms) activeFilters.bedrooms = this.filters.bedrooms;
+    if (this.filters.minPrice) activeFilters.minPrice = this.filters.minPrice;
+    if (this.filters.maxPrice) activeFilters.maxPrice = this.filters.maxPrice;
     activeFilters.page = this.filters.page;
     activeFilters.limit = this.filters.limit;
 
@@ -649,6 +719,25 @@ export class UnitsComponent implements OnInit {
       },
       error: (err) => console.error('Error loading units:', err)
     });
+  }
+
+  clearAllFilters() {
+    this.filters = {
+      search: '',
+      propertyId: 0,
+      buildingId: 0,
+      floorId: 0,
+      unitStatusId: 0,
+      unitTypeId: 0,
+      bedrooms: '',
+      minPrice: '',
+      maxPrice: '',
+      page: 1,
+      limit: 8
+    };
+    this.filterBuildings = [];
+    this.filterFloors = [];
+    this.loadUnits();
   }
 
   onSearchChange() {
@@ -749,6 +838,7 @@ export class UnitsComponent implements OnInit {
       isFurnished: false,
       isCornerUnit: false,
       isFeatured: false,
+      isNegotiable: false,
       inventoryTags: '',
       remarks: ''
     };
@@ -812,6 +902,7 @@ export class UnitsComponent implements OnInit {
       isFurnished: this.newUnit.isFurnished,
       isCornerUnit: this.newUnit.isCornerUnit,
       isFeatured: this.newUnit.isFeatured,
+      isNegotiable: !!this.newUnit.isNegotiable,
       inventoryTags: this.newUnit.inventoryTags ? this.newUnit.inventoryTags.split(',').map(s => s.trim()).filter(s => s) : undefined,
       remarks: this.newUnit.remarks || undefined
     };
@@ -825,6 +916,7 @@ export class UnitsComponent implements OnInit {
             unitId: createdUnit.id,
             basePrice: +this.basePrice,
             currencyCode: 'ETB',
+            isNegotiable: !!this.newUnit.isNegotiable,
             isActive: true
           }).subscribe();
         }
@@ -914,6 +1006,7 @@ export class UnitsComponent implements OnInit {
   closeStatusDrawer() { this.showStatusDrawer = false; }
   onTransitionStatus() {
     if (!this.selectedUnit) return;
+    this.statusError = '';
     this.propertiesService.transitionUnitStatus(this.selectedUnit.id, {
       statusId: +this.transitionStatusId,
       reason: this.transitionReason
@@ -922,7 +1015,10 @@ export class UnitsComponent implements OnInit {
         this.closeStatusDrawer();
         this.loadUnits();
       },
-      error: (err) => console.error('Status transition failed:', err)
+      error: (err) => {
+        this.statusError = err.error?.message || 'An error occurred during the status transition.';
+        this.cdr.detectChanges();
+      }
     });
   }
 }

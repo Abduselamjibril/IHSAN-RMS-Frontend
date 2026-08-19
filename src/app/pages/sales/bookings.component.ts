@@ -60,10 +60,10 @@ import { AuthService } from '../../services/auth.service';
               <th>Customer</th>
               <th>Property / Unit</th>
               <th>Booking Date</th>
-              <th>Deposit Paid (ETB)</th>
-              <th>Linked Reservation/Quote</th>
-              <th>Status</th>
-              <th>Approver / Date</th>
+              <th>Deposit (ETB)</th>
+              <th>Linked Ref</th>
+              <th>Approval Stage / Status</th>
+              <th>Review Details</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -74,7 +74,7 @@ import { AuthService } from '../../services/auth.service';
               <td>
                 <div class="flex flex-col">
                   <span class="font-bold text-main">{{ b.property?.propertyName }}</span>
-                  <span class="text-secondary font-xs">Unit: {{ b.unit?.unitNumber }}</span>
+                  <span class="text-secondary font-xs">Unit: {{ b.unit?.unitCode || b.unit?.unitNumber }}</span>
                 </div>
               </td>
               <td>{{ b.bookingDate | date:'mediumDate' }}</td>
@@ -88,38 +88,80 @@ import { AuthService } from '../../services/auth.service';
               </td>
               <td>
                 <span class="badge" [ngClass]="getBookingStatusBadge(b.status)">
-                  {{ b.status }}
+                  {{ getBookingStatusLabel(b.status) }}
                 </span>
               </td>
               <td>
                 <div *ngIf="b.status === 'APPROVED'" class="text-secondary font-xs">
-                  Approved by User #{{ b.approvedBy || 1 }}<br>
-                  on {{ b.approvedAt | date:'shortDate' }}
+                  <strong>Final Approved</strong><br>
+                  <span *ngIf="b.financeComment" class="text-success font-xs">{{ b.financeComment }}</span>
                 </div>
-                <div *ngIf="b.status === 'PENDING'" class="text-secondary italic font-xs">
-                  Awaiting Approval
+                <div *ngIf="b.status === 'PENDING_SALES' || b.status === 'PENDING'" class="text-secondary italic font-xs">
+                  Stage 1: Awaiting Sales Manager Review
                 </div>
-                <div *ngIf="b.status === 'CANCELLED'" class="text-secondary italic font-xs">
-                  Cancelled Booking
+                <div *ngIf="b.status === 'PENDING_FINANCE'" class="text-secondary italic font-xs">
+                  Stage 2: Sales Approved &bull; Awaiting Finance Review
+                </div>
+                <div *ngIf="b.status === 'REJECTED'" class="text-danger font-xs">
+                  <strong>Rejected:</strong> {{ b.rejectionReason || 'Review declined' }}
+                </div>
+                <div *ngIf="b.status === 'CANCELLED'" class="text-secondary font-xs">
+                  <strong>Cancelled:</strong> {{ b.cancellationReason || 'Client cancellation' }}
                 </div>
                 <div *ngIf="b.status === 'CONTRACT_CREATED'" class="text-secondary font-xs">
                   Contract Executed
                 </div>
               </td>
               <td>
-                <div class="flex gap-2" *ngIf="b.status === 'PENDING'">
+                <div class="flex gap-1 flex-wrap">
+                  <!-- Stage 1: Sales Manager Review -->
+                  <ng-container *ngIf="b.status === 'PENDING_SALES' || b.status === 'PENDING'">
+                    <button 
+                      class="btn btn-primary btn-xs flex align-center gap-1"
+                      (click)="onSalesApprove(b.id)"
+                      title="Sales Manager: Approve & Forward to Finance"
+                    >
+                      <span class="material-icons-outlined font-xs">forward</span>
+                      <span>Approve to Finance</span>
+                    </button>
+                    <button 
+                      class="btn btn-danger btn-xs flex align-center gap-1"
+                      (click)="openRejectModal(b)"
+                      title="Sales Manager: Reject Booking with Reason"
+                    >
+                      <span class="material-icons-outlined font-xs">close</span>
+                      <span>Reject</span>
+                    </button>
+                  </ng-container>
+
+                  <!-- Stage 2: Finance Review -->
+                  <ng-container *ngIf="b.status === 'PENDING_FINANCE'">
+                    <button 
+                      class="btn btn-success btn-xs flex align-center gap-1"
+                      (click)="openFinanceReviewModal(b, 'APPROVE')"
+                      title="Finance Officer: Confirm Payment & Final Approve"
+                    >
+                      <span class="material-icons-outlined font-xs">verified</span>
+                      <span>Finance Approve</span>
+                    </button>
+                    <button 
+                      class="btn btn-danger btn-xs flex align-center gap-1"
+                      (click)="openFinanceReviewModal(b, 'REJECT')"
+                      title="Finance Officer: Reject Payment Proof"
+                    >
+                      <span class="material-icons-outlined font-xs">close</span>
+                      <span>Finance Reject</span>
+                    </button>
+                  </ng-container>
+
+                  <!-- Cancel Button (Available on Active/Approved Bookings with Reason) -->
                   <button 
-                    class="btn btn-primary btn-sm flex align-center gap-1"
-                    (click)="onApprove(b.id)"
+                    *ngIf="b.status === 'APPROVED' || b.status === 'PENDING_SALES' || b.status === 'PENDING_FINANCE' || b.status === 'PENDING'"
+                    class="btn btn-secondary btn-xs flex align-center gap-1"
+                    (click)="openCancelModal(b)"
+                    title="Cancel Booking & Revert Unit"
                   >
-                    <span class="material-icons-outlined font-sm">check_circle</span>
-                    <span>Approve</span>
-                  </button>
-                  <button 
-                    class="btn btn-danger btn-sm flex align-center gap-1"
-                    (click)="onCancel(b.id)"
-                  >
-                    <span class="material-icons-outlined font-sm">cancel</span>
+                    <span class="material-icons-outlined font-xs">block</span>
                     <span>Cancel</span>
                   </button>
                 </div>
@@ -238,11 +280,156 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
     </div>
+
+    <!-- TC-5.14: Reject Booking Modal -->
+    <div class="modal-overlay" *ngIf="showRejectModal" (click)="closeRejectModal()">
+      <div class="modal-container" style="max-width: 540px; width: 90vw;" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined text-danger">cancel</span>
+            <h2>Reject Booking Request</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeRejectModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px;">
+          <form (submit)="onSubmitReject($event)">
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Booking Number</label>
+              <input type="text" [value]="selectedBooking?.bookingNo + ' (' + selectedBooking?.customer?.fullName + ')'" readonly style="background-color: var(--bg-main);" />
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Mandatory Rejection Reason <span class="text-danger">*</span></label>
+              <textarea [(ngModel)]="rejectReason" name="rejReason" required rows="3" placeholder="State reason for rejecting this booking (e.g. Unverified down-payment slip, customer withdrawal)..." style="padding: 9px 12px;"></textarea>
+            </div>
+
+            <div class="alert alert-danger font-xs mb-3" style="background: rgba(239, 68, 68, 0.08); border-color: #ef4444; color: #b91c1c;">
+              <strong>Effect:</strong> The booking status will transition to <code>REJECTED</code>, the reason will be recorded in audit history, and Unit {{ selectedBooking?.unit?.unitCode || selectedBooking?.unit?.unitNumber }} will be released back to <code>AVAILABLE</code>.
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <button type="button" class="btn btn-secondary" (click)="closeRejectModal()">Dismiss</button>
+              <button type="submit" class="btn btn-danger flex align-center gap-1" [disabled]="!rejectReason.trim() || isSubmittingAction">
+                <span class="material-icons-outlined font-sm">close</span>
+                <span>{{ isSubmittingAction ? 'Rejecting...' : 'Confirm Rejection' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TC-5.15: Finance Review Modal -->
+    <div class="modal-overlay" *ngIf="showFinanceModal" (click)="closeFinanceModal()">
+      <div class="modal-container" style="max-width: 580px; width: 90vw;" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" [class.text-success]="financeAction === 'APPROVE'" [class.text-danger]="financeAction === 'REJECT'">
+              {{ financeAction === 'APPROVE' ? 'verified' : 'gavel' }}
+            </span>
+            <h2>Finance Review: {{ financeAction === 'APPROVE' ? 'Final Payment Approval' : 'Finance Rejection' }}</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeFinanceModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px;">
+          <form (submit)="onSubmitFinanceReview($event)">
+            
+            <div class="form-row flex gap-3 mb-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Booking Number</label>
+                <input type="text" [value]="selectedBooking?.bookingNo" readonly style="background-color: var(--bg-main); font-weight: bold; font-family: monospace;" />
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Deposit Amount</label>
+                <input type="text" [value]="'ETB ' + (selectedBooking?.bookingAmount | number)" readonly style="background-color: var(--bg-main); font-weight: bold; color: var(--brand-primary);" />
+              </div>
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Finance Verification Comments / Slip Reference</label>
+              <textarea [(ngModel)]="financeComment" name="finComment" rows="3" [required]="financeAction === 'REJECT'" placeholder="e.g. Deposit slip #ETB-883921 verified with Bank of Abyssinia account..." style="padding: 9px 12px;"></textarea>
+            </div>
+
+            <div class="alert font-xs mb-3" [style.background]="financeAction === 'APPROVE' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'" [style.color]="financeAction === 'APPROVE' ? '#047857' : '#b91c1c'">
+              <span *ngIf="financeAction === 'APPROVE'">
+                <strong>Final Approval:</strong> This will mark the booking as fully <code>APPROVED</code>, link the quotation as <code>ACCEPTED</code>, and lock the unit status as <code>SOLD</code>.
+              </span>
+              <span *ngIf="financeAction === 'REJECT'">
+                <strong>Finance Rejection:</strong> The booking will be <code>REJECTED</code> and the unit reverted back to <code>AVAILABLE</code>.
+              </span>
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <button type="button" class="btn btn-secondary" (click)="closeFinanceModal()">Cancel</button>
+              <button 
+                type="submit" 
+                class="btn flex align-center gap-1"
+                [class.btn-success]="financeAction === 'APPROVE'"
+                [class.btn-danger]="financeAction === 'REJECT'"
+                [disabled]="(financeAction === 'REJECT' && !financeComment.trim()) || isSubmittingAction"
+              >
+                <span class="material-icons-outlined font-sm">{{ financeAction === 'APPROVE' ? 'check_circle' : 'close' }}</span>
+                <span>{{ isSubmittingAction ? 'Processing...' : (financeAction === 'APPROVE' ? 'Authorize & Final Approve' : 'Reject Booking') }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TC-5.16: Cancellation Reason Modal -->
+    <div class="modal-overlay" *ngIf="showCancelModal" (click)="closeCancelModal()">
+      <div class="modal-container" style="max-width: 540px; width: 90vw;" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined text-danger">block</span>
+            <h2>Cancel Booking</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeCancelModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px;">
+          <form (submit)="onSubmitCancel($event)">
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Booking Reference</label>
+              <input type="text" [value]="selectedBooking?.bookingNo + ' - ' + selectedBooking?.customer?.fullName" readonly style="background-color: var(--bg-main);" />
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Mandatory Cancellation Reason <span class="text-danger">*</span></label>
+              <textarea [(ngModel)]="cancelReason" name="cReason" required rows="3" placeholder="Provide mandatory reason why this booking is being cancelled..." style="padding: 9px 12px;"></textarea>
+            </div>
+
+            <div class="alert alert-danger font-xs mb-3" style="background: rgba(239, 68, 68, 0.08); border-color: #ef4444; color: #b91c1c;">
+              <strong>Important:</strong> Cancelling this booking will permanently record the reason in the audit log and revert the unit status back to <code>AVAILABLE</code> for resale.
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <button type="button" class="btn btn-secondary" (click)="closeCancelModal()">Dismiss</button>
+              <button type="submit" class="btn btn-danger flex align-center gap-1" [disabled]="!cancelReason.trim() || isSubmittingAction">
+                <span class="material-icons-outlined font-sm">block</span>
+                <span>{{ isSubmittingAction ? 'Cancelling...' : 'Confirm Cancellation' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .badge-pending { background-color: rgba(234, 179, 8, 0.15); color: var(--color-contacted); }
+    .badge-finance { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; }
     .badge-approved { background-color: rgba(16, 185, 129, 0.15); color: var(--color-qualified); }
-    .badge-cancelled { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
+    .badge-rejected { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
+    .badge-cancelled { background-color: rgba(100, 116, 139, 0.15); color: var(--text-secondary); }
     .badge-contract { background-color: rgba(76, 58, 147, 0.15); color: var(--brand-primary); }
   `]
 })
@@ -261,6 +448,17 @@ export class BookingsComponent implements OnInit {
 
   searchQuery = '';
   showCreateModal = false;
+  showRejectModal = false;
+  showFinanceModal = false;
+  showCancelModal = false;
+  isSubmittingAction = false;
+
+  selectedBooking: any = null;
+  rejectReason = '';
+  financeAction: 'APPROVE' | 'REJECT' = 'APPROVE';
+  financeComment = '';
+  cancelReason = '';
+
   successMessage = '';
   errorMessage = '';
 
@@ -379,11 +577,27 @@ export class BookingsComponent implements OnInit {
 
   getBookingStatusBadge(status: string): string {
     switch (status) {
-      case 'PENDING': return 'badge-pending';
+      case 'PENDING':
+      case 'PENDING_SALES': return 'badge-pending';
+      case 'PENDING_FINANCE': return 'badge-finance';
       case 'APPROVED': return 'badge-approved';
+      case 'REJECTED': return 'badge-rejected';
       case 'CANCELLED': return 'badge-cancelled';
       case 'CONTRACT_CREATED': return 'badge-contract';
-      default: return '';
+      default: return 'badge-pending';
+    }
+  }
+
+  getBookingStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDING':
+      case 'PENDING_SALES': return 'Pending Sales Mgr';
+      case 'PENDING_FINANCE': return 'Pending Finance';
+      case 'APPROVED': return 'Approved';
+      case 'REJECTED': return 'Rejected';
+      case 'CANCELLED': return 'Cancelled';
+      case 'CONTRACT_CREATED': return 'Contract Executed';
+      default: return status || 'Pending';
     }
   }
 
@@ -423,7 +637,7 @@ export class BookingsComponent implements OnInit {
 
     this.salesService.createBooking(payload).subscribe({
       next: (res) => {
-        this.successMessage = `Booking ${res.bookingNo} created with deposit ETB ${res.bookingAmount.toLocaleString()}! Awaiting manager approval.`;
+        this.successMessage = `Booking ${res.bookingNo} logged with deposit ETB ${Number(res.bookingAmount).toLocaleString()}! It is now pending Sales Manager approval.`;
         this.loadBookings();
         this.closeCreateModal();
       },
@@ -434,32 +648,128 @@ export class BookingsComponent implements OnInit {
     });
   }
 
-  onApprove(id: number) {
+  // --- TC-5.15 Stage 1: Sales Manager Approval ---
+  onSalesApprove(id: number) {
     this.salesService.approveBooking(id, 1).subscribe({
       next: (res) => {
-        this.successMessage = `Booking ${res.bookingNo} is approved successfully! Inventory status updated.`;
+        this.successMessage = `Booking #${res.bookingNo} approved by Sales! It is now forwarded to Finance Department for down payment verification.`;
         this.loadBookings();
       },
       error: (err) => {
-        console.error('Error approving booking', err);
+        console.error('Error approving booking at sales stage', err);
         this.errorMessage = err.error?.message || 'Failed to approve booking.';
       }
     });
   }
 
-  onCancel(id: number) {
-    customConfirm('Are you sure you want to cancel this booking?').then(confirmed => {
-      if (confirmed) {
-        this.salesService.cancelBooking(id).subscribe({
-          next: (res) => {
-            this.successMessage = `Booking cancelled successfully. Unit returned to inventory.`;
-            this.loadBookings();
-          },
-          error: (err) => {
-            console.error('Error cancelling booking', err);
-            this.errorMessage = err.error?.message || 'Failed to cancel booking.';
-          }
-        });
+  // --- TC-5.14: Rejection Workflow ---
+  openRejectModal(b: any) {
+    this.selectedBooking = b;
+    this.rejectReason = '';
+    this.showRejectModal = true;
+    this.isSubmittingAction = false;
+  }
+
+  closeRejectModal() {
+    this.showRejectModal = false;
+    this.selectedBooking = null;
+    this.isSubmittingAction = false;
+  }
+
+  onSubmitReject(event: Event) {
+    event.preventDefault();
+    if (!this.selectedBooking || !this.rejectReason.trim()) return;
+
+    this.isSubmittingAction = true;
+    this.salesService.rejectBooking(this.selectedBooking.id, this.rejectReason.trim()).subscribe({
+      next: (res) => {
+        this.isSubmittingAction = false;
+        this.closeRejectModal();
+        this.successMessage = `Booking #${res.bookingNo} has been rejected. Unit has been returned to Available inventory.`;
+        this.loadBookings();
+      },
+      error: (err) => {
+        this.isSubmittingAction = false;
+        console.error('Error rejecting booking:', err);
+        this.errorMessage = err.error?.message || 'Failed to reject booking.';
+      }
+    });
+  }
+
+  // --- TC-5.15 Stage 2: Finance Review ---
+  openFinanceReviewModal(b: any, action: 'APPROVE' | 'REJECT') {
+    this.selectedBooking = b;
+    this.financeAction = action;
+    this.financeComment = action === 'APPROVE' ? 'Down payment bank transfer slip verified' : '';
+    this.showFinanceModal = true;
+    this.isSubmittingAction = false;
+  }
+
+  closeFinanceModal() {
+    this.showFinanceModal = false;
+    this.selectedBooking = null;
+    this.isSubmittingAction = false;
+  }
+
+  closeFinanceReviewModal() {
+    this.closeFinanceModal();
+  }
+
+  onSubmitFinanceReview(event: Event) {
+    event.preventDefault();
+    if (!this.selectedBooking) return;
+    if (this.financeAction === 'REJECT' && !this.financeComment.trim()) return;
+
+    this.isSubmittingAction = true;
+    this.salesService.financeReviewBooking(this.selectedBooking.id, this.financeAction, this.financeComment.trim()).subscribe({
+      next: (res) => {
+        this.isSubmittingAction = false;
+        this.closeFinanceReviewModal();
+        if (this.financeAction === 'APPROVE') {
+          this.successMessage = `Booking #${res.bookingNo} has received Final Finance Approval! Unit is now locked as SOLD.`;
+        } else {
+          this.successMessage = `Booking #${res.bookingNo} was rejected by Finance. Unit returned to Available inventory.`;
+        }
+        this.loadBookings();
+      },
+      error: (err) => {
+        this.isSubmittingAction = false;
+        console.error('Error reviewing finance booking:', err);
+        this.errorMessage = err.error?.message || 'Failed to process finance review.';
+      }
+    });
+  }
+
+  // --- TC-5.16: Cancellation with Mandatory Reason ---
+  openCancelModal(b: any) {
+    this.selectedBooking = b;
+    this.cancelReason = '';
+    this.showCancelModal = true;
+    this.isSubmittingAction = false;
+  }
+
+  closeCancelModal() {
+    this.showCancelModal = false;
+    this.selectedBooking = null;
+    this.isSubmittingAction = false;
+  }
+
+  onSubmitCancel(event: Event) {
+    event.preventDefault();
+    if (!this.selectedBooking || !this.cancelReason.trim()) return;
+
+    this.isSubmittingAction = true;
+    this.salesService.cancelBooking(this.selectedBooking.id, this.cancelReason.trim()).subscribe({
+      next: (res) => {
+        this.isSubmittingAction = false;
+        this.closeCancelModal();
+        this.successMessage = `Booking #${res.bookingNo} cancelled with reason recorded. Unit released back to Available inventory.`;
+        this.loadBookings();
+      },
+      error: (err) => {
+        this.isSubmittingAction = false;
+        console.error('Error cancelling booking:', err);
+        this.errorMessage = err.error?.message || 'Failed to cancel booking.';
       }
     });
   }

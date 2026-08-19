@@ -88,6 +88,15 @@ import { AuthService } from '../../services/auth.service';
                 <div class="flex gap-2">
                   <button 
                     *ngIf="r.status === 'RESERVED'"
+                    class="btn btn-primary btn-sm flex align-center gap-1"
+                    (click)="openConvertModal(r)"
+                    title="Convert this reservation into a formal booking"
+                  >
+                    <span class="material-icons-outlined font-sm">shopping_cart_checkout</span>
+                    <span>Convert to Booking</span>
+                  </button>
+                  <button 
+                    *ngIf="r.status === 'RESERVED'"
                     class="btn btn-secondary btn-sm flex align-center gap-1"
                     (click)="openExtendModal(r)"
                   >
@@ -248,6 +257,65 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
     </div>
+
+    <!-- TC-5.12: Reservation to Booking Conversion Modal -->
+    <div class="modal-overlay" *ngIf="showConvertModal" (click)="closeConvertModal()">
+      <div class="modal-container" style="max-width: 600px; width: 90vw;" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined text-primary">shopping_cart_checkout</span>
+            <h2>Convert Reservation to Booking</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeConvertModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px;">
+          <form (submit)="onSubmitConvert($event)">
+            
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Reservation Number</label>
+              <input type="text" [value]="selectedRes?.reservationNo" readonly style="background-color: var(--bg-main); font-weight: bold; font-family: monospace;" />
+            </div>
+
+            <div class="form-row flex gap-3 mb-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Customer</label>
+                <input type="text" [value]="selectedRes?.customer?.fullName" readonly style="background-color: var(--bg-main);" />
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Property & Unit</label>
+                <input type="text" [value]="selectedRes?.property?.propertyName + ' - Unit ' + (selectedRes?.unit?.unitNumber || selectedRes?.unit?.unitCode)" readonly style="background-color: var(--bg-main);" />
+              </div>
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Booking Deposit Amount (ETB) <span class="text-danger">*</span></label>
+              <input type="number" [(ngModel)]="convertData.bookingAmount" name="bookingAmount" required min="1" style="padding: 9px 12px; font-size: 15px; font-weight: bold;" />
+              <span class="text-secondary font-xs mt-1">Pre-filled with reservation fee or standard down payment amount.</span>
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Conversion Remarks / Notes</label>
+              <textarea [(ngModel)]="convertData.remarks" name="convRemarks" rows="2" placeholder="e.g. Down payment confirmed via CBE transfer slip..." style="padding: 9px 12px;"></textarea>
+            </div>
+
+            <div class="alert alert-success font-xs mb-3" style="background: rgba(16, 185, 129, 0.08); border-color: #10b981; color: #047857;">
+              <strong>Workflow Impact:</strong> Converting this reservation will create a formal Sales Booking in <code>PENDING_SALES_APPROVAL</code> stage, link the reservation ID, and forward it to the Sales Manager for review.
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <button type="button" class="btn btn-secondary" (click)="closeConvertModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary flex align-center gap-1" [disabled]="!convertData.bookingAmount || isConverting">
+                <span class="material-icons-outlined font-sm">check_circle</span>
+                <span>{{ isConverting ? 'Converting...' : 'Confirm Conversion' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .badge-reserved { background-color: var(--brand-primary-fade); color: var(--brand-primary); }
@@ -270,6 +338,8 @@ export class ReservationsComponent implements OnInit {
   searchQuery = '';
   showCreateModal = false;
   showExtendModal = false;
+  showConvertModal = false;
+  isConverting = false;
   selectedRes: any = null;
   successMessage = '';
   errorMessage = '';
@@ -288,6 +358,11 @@ export class ReservationsComponent implements OnInit {
     reservationId: 0,
     newExpiryDate: '',
     reason: ''
+  };
+
+  convertData = {
+    bookingAmount: 100000,
+    remarks: ''
   };
 
   ngOnInit() {
@@ -473,6 +548,48 @@ export class ReservationsComponent implements OnInit {
             this.errorMessage = err.error?.message || 'Failed to cancel reservation.';
           }
         });
+      }
+    });
+  }
+
+  openConvertModal(res: any) {
+    this.selectedRes = res;
+    this.showConvertModal = true;
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.convertData = {
+      bookingAmount: res.reservationFee ? Number(res.reservationFee) : 100000,
+      remarks: `Converted from Reservation #${res.reservationNo}`
+    };
+  }
+
+  closeConvertModal() {
+    this.showConvertModal = false;
+    this.selectedRes = null;
+    this.isConverting = false;
+  }
+
+  onSubmitConvert(event: Event) {
+    event.preventDefault();
+    if (!this.selectedRes || !this.convertData.bookingAmount) return;
+
+    this.isConverting = true;
+    const payload = {
+      bookingAmount: +this.convertData.bookingAmount,
+      remarks: this.convertData.remarks || undefined
+    };
+
+    this.salesService.convertReservationToBooking(this.selectedRes.id, payload).subscribe({
+      next: (res) => {
+        this.isConverting = false;
+        this.closeConvertModal();
+        this.successMessage = `Reservation #${this.selectedRes?.reservationNo || ''} successfully converted to Booking #${res.bookingNo}! It is now pending Sales Manager approval.`;
+        this.loadReservations();
+      },
+      error: (err) => {
+        this.isConverting = false;
+        console.error('Error converting reservation to booking:', err);
+        this.errorMessage = err.error?.message || 'Failed to convert reservation to booking.';
       }
     });
   }

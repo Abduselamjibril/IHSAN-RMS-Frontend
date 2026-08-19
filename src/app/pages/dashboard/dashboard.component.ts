@@ -122,8 +122,8 @@ interface ChartPoint {
         <div class="metric-info">
           <span class="metric-label">Available Inventory</span>
           <span class="metric-value">{{ kpis?.availableInventory ?? 0 }} Units</span>
-          <span class="metric-trend text-blue">
-            {{ kpis?.unitsSold ?? 0 }} units sold
+          <span class="metric-trend text-teal font-bold">
+            Value: ETB {{ formatShortNumber(kpis?.totalInventoryValue ?? 0) }}
           </span>
         </div>
       </div>

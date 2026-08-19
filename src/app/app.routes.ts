@@ -8,6 +8,7 @@ import { PropertiesListComponent } from './pages/properties/list/properties-list
 import { PropertiesDetailsComponent } from './pages/properties/details/properties-details.component';
 import { BuildingsComponent } from './pages/properties/buildings/buildings.component';
 import { UnitsComponent } from './pages/properties/units/units.component';
+import { UnitDetailsComponent } from './pages/properties/units/details/unit-details.component';
 import { UnitStatusComponent } from './pages/properties/unit-status/unit-status.component';
 import { PricingComponent } from './pages/properties/pricing/pricing.component';
 import { FloorPlansComponent } from './pages/properties/floor-plans/floor-plans.component';
@@ -69,6 +70,7 @@ export const routes: Routes = [
   { path: 'properties/details/:id', component: PropertiesDetailsComponent, canActivate: [authGuard] },
   { path: 'properties/buildings', component: BuildingsComponent, canActivate: [authGuard] },
   { path: 'properties/units', component: UnitsComponent, canActivate: [authGuard] },
+  { path: 'properties/units/details/:id', component: UnitDetailsComponent, canActivate: [authGuard] },
   { path: 'properties/unit-status', component: UnitStatusComponent, canActivate: [authGuard] },
   { path: 'properties/pricing', component: PricingComponent, canActivate: [authGuard] },
   { path: 'properties/floor-plans', component: FloorPlansComponent, canActivate: [authGuard] },

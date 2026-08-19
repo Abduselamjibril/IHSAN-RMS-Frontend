@@ -124,12 +124,29 @@ interface QuotationItemRow {
               <td>
                 <div class="flex gap-2">
                   <button 
-                    *ngIf="q.status === 'DRAFT' || q.status === 'SENT'"
-                    class="btn btn-secondary btn-sm flex align-center gap-1"
-                    (click)="openDiscountRequestModal(q)"
+                    class="btn btn-secondary btn-xs flex align-center gap-1"
+                    (click)="openPdfModal(q)"
+                    title="Generate PDF / Print Preview"
                   >
-                    <span class="material-icons-outlined font-sm">discount</span>
-                    <span>Request Discount</span>
+                    <span class="material-icons-outlined font-xs">picture_as_pdf</span>
+                    <span>PDF</span>
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1"
+                    (click)="openEmailModal(q)"
+                    title="Email Quotation to Client"
+                  >
+                    <span class="material-icons-outlined font-xs">email</span>
+                    <span>Email</span>
+                  </button>
+                  <button 
+                    *ngIf="q.status === 'DRAFT' || q.status === 'SENT'"
+                    class="btn btn-secondary btn-xs flex align-center gap-1"
+                    (click)="openDiscountRequestModal(q)"
+                    title="Request Special Discount"
+                  >
+                    <span class="material-icons-outlined font-xs">discount</span>
+                    <span>Discount</span>
                   </button>
                 </div>
               </td>
@@ -266,19 +283,6 @@ interface QuotationItemRow {
               </div>
             </div>
 
-            <!-- Precedence notification block if pricing calculation returned active promotion/discount -->
-            <div class="alert alert-success flex flex-col gap-1" *ngIf="pricingDetails" style="margin-bottom: 16px; background-color: rgba(76, 58, 147, 0.08); border-color: var(--brand-primary); color: var(--brand-primary);">
-              <div class="flex align-center gap-2">
-                <span class="material-icons-outlined font-sm">info</span>
-                <strong>Pricing Rules Output:</strong>
-              </div>
-              <div class="font-xs">
-                Base: ETB {{ pricingDetails.basePrice | number }} | 
-                Rule Applied: {{ pricingDetails.appliedRuleDescription || 'Base Price (No discounts active)' }} |
-                Calculated Discount: ETB {{ pricingDetails.discountAmount | number }}
-              </div>
-            </div>
-
             <div class="form-row flex gap-3">
               <!-- Quotation Date * -->
               <div class="form-group flex-1 flex flex-col">
@@ -300,20 +304,11 @@ interface QuotationItemRow {
                 <input type="number" [(ngModel)]="newQuotation.basePrice" name="basePrice" required (ngModelChange)="recalculateTotals()" />
               </div>
 
-              <!-- Discount Amount (Optional) -->
+              <!-- Discount Amount -->
               <div class="form-group flex-1 flex flex-col">
-                <label>Applied Discount Amount (ETB) [OPTIONAL]</label>
+                <label>Discount Amount (ETB)</label>
                 <input type="number" [(ngModel)]="newQuotation.discountAmount" name="discountAmount" (ngModelChange)="recalculateTotals()" />
               </div>
-            </div>
-
-            <div class="form-row flex gap-3">
-              <!-- VAT Amount (Optional) -->
-              <div class="form-group flex-1 flex flex-col">
-                <label>VAT Tax (15% ETB) [OPTIONAL]</label>
-                <input type="number" [(ngModel)]="newQuotation.vatAmount" name="vatAmount" (ngModelChange)="recalculateTotals()" />
-              </div>
-
               <!-- Total Amount (Required, Read-Only) -->
               <div class="form-group flex-1 flex flex-col">
                 <label>Total Valuation Amount (ETB) * [REQUIRED] [READ-ONLY]</label>
@@ -441,6 +436,272 @@ interface QuotationItemRow {
         </div>
       </div>
     </div>
+
+    <!-- TC-5.09: Quotation PDF / Print Preview Modal -->
+    <div class="modal-overlay" *ngIf="showPdfModal" (click)="closePdfModal()" style="backdrop-filter: blur(8px); background: rgba(15, 23, 42, 0.85); z-index: 9999;">
+      <div class="modal-container" style="max-width: 850px; width: 95vw; max-height: 90vh; overflow-y: auto; background: #ffffff; color: #1e293b; padding: 0; border-radius: 12px;" (click)="$event.stopPropagation()">
+        
+        <!-- Action Toolbar (Hidden during Print) -->
+        <div class="flex justify-between align-center no-print" style="padding: 16px 24px; background: #0f172a; color: #fff; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: #60a5fa;">picture_as_pdf</span>
+            <strong style="font-size: 16px;">Official Quotation Document Preview</strong>
+          </div>
+          <div class="flex gap-3 align-center">
+            <button class="btn btn-primary btn-sm flex align-center gap-1" (click)="printQuotationPdf()">
+              <span class="material-icons-outlined font-sm">print</span> Print / Download PDF
+            </button>
+            <button 
+              type="button"
+              (click)="closePdfModal()" 
+              style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); color: #ffffff; width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+              title="Close Preview"
+            >
+              <span class="material-icons-outlined" style="font-size: 20px; color: #ffffff;">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Printable Document Body -->
+        <div id="printableQuote" style="padding: 36px 40px; background: #ffffff; color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif;">
+          
+          <!-- Company Branding Header -->
+          <div class="flex justify-between align-center pb-4" style="border-bottom: 2px solid #1e3a8a; margin-bottom: 24px;">
+            <div class="flex align-center gap-3">
+              <div style="width: 48px; height: 48px; background: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 24px;">
+                I
+              </div>
+              <div>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px;">IHSAN REAL ESTATE</h1>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Luxury Developments & Property Solutions • Addis Ababa, Ethiopia</p>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge" style="background: #1e3a8a; color: #fff; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 4px;">OFFICIAL QUOTATION</span>
+              <div style="margin-top: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">#{{ selectedPdfQuote?.quotationNo }}</div>
+            </div>
+          </div>
+
+          <!-- Metadata Info Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; background: #f8fafc; padding: 18px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div>
+              <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Client Information</h4>
+              <div style="font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">{{ selectedPdfQuote?.customer?.fullName }}</div>
+              <div style="font-size: 13px; color: #334155;">📞 Phone: {{ selectedPdfQuote?.customer?.primaryPhone || 'N/A' }}</div>
+              <div style="font-size: 13px; color: #334155;">✉️ Email: {{ selectedPdfQuote?.customer?.primaryEmail || 'N/A' }}</div>
+              <div style="font-size: 13px; color: #334155;">🌍 Nationality: {{ selectedPdfQuote?.customer?.nationality || 'Ethiopian' }}</div>
+            </div>
+            <div>
+              <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Quotation Schedule</h4>
+              <div style="font-size: 13px; color: #334155; margin-bottom: 4px;">📅 <strong>Issue Date:</strong> {{ selectedPdfQuote?.quotationDate | date:'mediumDate' }}</div>
+              <div style="font-size: 13px; color: #dc2626; font-weight: bold; margin-bottom: 4px;">⏳ <strong>Validity Date:</strong> {{ selectedPdfQuote?.validityDate | date:'mediumDate' }}</div>
+              <div style="font-size: 13px; color: #334155;">🏢 <strong>Project:</strong> {{ selectedPdfQuote?.property?.propertyName || '-' }}</div>
+              <div style="font-size: 13px; color: #334155;">🏠 <strong>Unit Code / No:</strong> Unit {{ selectedPdfQuote?.unit?.unitCode }} (Unit #{{ selectedPdfQuote?.unit?.unitNumber }})</div>
+            </div>
+          </div>
+
+          <!-- Unit Specifications Section -->
+          <div style="margin-bottom: 28px;">
+            <h3 style="font-size: 15px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px;">Property & Unit Technical Specifications</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 13px;">
+              <div style="background: #f1f5f9; padding: 10px; border-radius: 6px;">
+                <div style="color: #64748b; font-size: 11px;">Unit Type</div>
+                <strong style="color: #0f172a;">{{ selectedPdfQuote?.unit?.unitType?.typeName || 'Apartment' }}</strong>
+              </div>
+              <div style="background: #f1f5f9; padding: 10px; border-radius: 6px;">
+                <div style="color: #64748b; font-size: 11px;">Gross Area</div>
+                <strong style="color: #0f172a;">{{ selectedPdfQuote?.unit?.grossArea || selectedPdfQuote?.unit?.areaSuperBuiltup || '-' }} m²</strong>
+              </div>
+              <div style="background: #f1f5f9; padding: 10px; border-radius: 6px;">
+                <div style="color: #64748b; font-size: 11px;">Bedrooms / Bathrooms</div>
+                <strong style="color: #0f172a;">{{ selectedPdfQuote?.unit?.bedroomCount ?? '-' }} Bed / {{ selectedPdfQuote?.unit?.bathroomCount ?? '-' }} Bath</strong>
+              </div>
+              <div style="background: #f1f5f9; padding: 10px; border-radius: 6px;">
+                <div style="color: #64748b; font-size: 11px;">View / Orientation</div>
+                <strong style="color: #0f172a;">{{ selectedPdfQuote?.unit?.viewType || 'Standard View' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Itemized Financial Breakdown Table -->
+          <div style="margin-bottom: 28px;">
+            <h3 style="font-size: 15px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px;">Financial Pricing Matrix</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #1e3a8a; color: #ffffff;">
+                  <th style="padding: 10px 12px; text-align: left; border-top-left-radius: 6px;">Description</th>
+                  <th style="padding: 10px 12px; text-align: center; width: 70px;">Quantity</th>
+                  <th style="padding: 10px 12px; text-align: right; width: 140px;">Unit Rate (ETB)</th>
+                  <th style="padding: 10px 12px; text-align: right; width: 160px; border-top-right-radius: 6px;">Total (ETB)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of selectedPdfQuote?.items" style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 10px 12px; font-weight: 500;">{{ item.description }}</td>
+                  <td style="padding: 10px 12px; text-align: center;">{{ item.quantity }}</td>
+                  <td style="padding: 10px 12px; text-align: right; font-family: monospace;">ETB {{ item.unitPrice | number }}</td>
+                  <td style="padding: 10px 12px; text-align: right; font-family: monospace; font-weight: bold;">ETB {{ item.amount | number }}</td>
+                </tr>
+                <tr *ngIf="!selectedPdfQuote?.items || selectedPdfQuote?.items?.length === 0" style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 10px 12px; font-weight: 500;">Unit Base Valuation Price</td>
+                  <td style="padding: 10px 12px; text-align: center;">1</td>
+                  <td style="padding: 10px 12px; text-align: right; font-family: monospace;">ETB {{ selectedPdfQuote?.basePrice | number }}</td>
+                  <td style="padding: 10px 12px; text-align: right; font-family: monospace; font-weight: bold;">ETB {{ selectedPdfQuote?.basePrice | number }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Total Calculation Ledger -->
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+            <div style="width: 350px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; font-size: 14px;">
+              <div class="flex justify-between mb-2">
+                <span style="color: #64748b;">Base Valuation Price:</span>
+                <strong style="font-family: monospace;">ETB {{ selectedPdfQuote?.basePrice | number }}</strong>
+              </div>
+              <div class="flex justify-between mb-2" *ngIf="selectedPdfQuote?.discountAmount > 0" style="color: #dc2626;">
+                <span>Discounts / Concessions:</span>
+                <strong style="font-family: monospace;">- ETB {{ selectedPdfQuote?.discountAmount | number }}</strong>
+              </div>
+              <div class="flex justify-between mb-3" style="color: #64748b; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">
+                <span>Value Added Tax (15% VAT):</span>
+                <strong style="font-family: monospace;">+ ETB {{ selectedPdfQuote?.vatAmount | number }}</strong>
+              </div>
+              <div class="flex justify-between align-center" style="font-size: 18px; font-weight: 800; color: #1e3a8a;">
+                <span>Final Quotation Value:</span>
+                <span style="font-family: monospace;">ETB {{ selectedPdfQuote?.totalAmount | number }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remarks / Terms -->
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 14px; margin-bottom: 32px; font-size: 12px; color: #92400e;">
+            <strong>Special Terms & Conditions:</strong>
+            <p style="margin: 4px 0 0 0;">{{ selectedPdfQuote?.remarks || 'This quotation is issued for budgeting purposes and represents a binding reservation offer until the validity date specified above. Final contract execution remains subject to standard sales agreement terms and down payment confirmation.' }}</p>
+          </div>
+
+          <!-- Signatures Section -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; border-top: 1px dashed #cbd5e1; padding-top: 24px;">
+            <div>
+              <div style="border-bottom: 1px solid #94a3b8; height: 50px; margin-bottom: 6px;"></div>
+              <div style="font-weight: bold; font-size: 13px;">Prepared By: Sales Representative</div>
+              <div style="font-size: 11px; color: #64748b;">IHSAN Real Estate Management System</div>
+            </div>
+            <div>
+              <div style="border-bottom: 1px solid #94a3b8; height: 50px; margin-bottom: 6px;"></div>
+              <div style="font-weight: bold; font-size: 13px;">Client Acknowledgement Signature</div>
+              <div style="font-size: 11px; color: #64748b;">Date: ________________________</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer flex justify-between align-center no-print" style="padding: 16px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+          <span class="text-secondary font-xs">Tip: Click "Print / Download PDF" to save an official vector PDF or print a hard copy.</span>
+          <div class="flex gap-2">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="closePdfModal()">Close</button>
+            <button type="button" class="btn btn-primary btn-sm flex align-center gap-1" (click)="printQuotationPdf()">
+              <span class="material-icons-outlined font-sm">print</span> Print / Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TC-5.10: Email Quotation Modal -->
+    <div class="modal-overlay" *ngIf="showEmailModal" (click)="closeEmailModal()" style="backdrop-filter: blur(6px); background: rgba(15, 23, 42, 0.8);">
+      <div class="modal-container" style="max-width: 820px; width: 95vw; max-height: 90vh; overflow-y: auto;" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #fff; padding: 18px 24px;">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: #93c5fd; font-size: 24px;">email</span>
+            <h2 style="margin: 0; font-size: 18px; color: #fff;">Email Quotation to Customer</h2>
+          </div>
+          <button 
+            type="button"
+            (click)="closeEmailModal()" 
+            style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); color: #ffffff; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+            title="Close"
+          >
+            <span class="material-icons-outlined" style="font-size: 20px; color: #ffffff;">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 24px;">
+          <!-- Quotation Quick Summary Banner -->
+          <div style="background: var(--bg-main, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+            <div class="flex justify-between align-center mb-2 pb-2" style="border-bottom: 1px dashed var(--border-color, #cbd5e1);">
+              <span class="font-bold text-main flex align-center gap-1">
+                <span class="material-icons-outlined font-sm text-primary">description</span>
+                <span>Quotation #{{ selectedEmailQuote?.quotationNo }}</span>
+              </span>
+              <span class="badge" [ngClass]="getQuoteStatusBadge(selectedEmailQuote?.status)">
+                {{ selectedEmailQuote?.status }}
+              </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; font-size: 13px;">
+              <div>
+                <span class="text-secondary font-xs block">Customer Name</span>
+                <strong>{{ selectedEmailQuote?.customer?.fullName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary font-xs block">Property / Project</span>
+                <strong>{{ selectedEmailQuote?.property?.propertyName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary font-xs block">Unit Details</span>
+                <strong>Unit {{ selectedEmailQuote?.unit?.unitCode || selectedEmailQuote?.unit?.unitNumber }} ({{ selectedEmailQuote?.unit?.unitType?.typeName || 'Unit' }})</strong>
+              </div>
+              <div>
+                <span class="text-secondary font-xs block">Total Valuation (with VAT)</span>
+                <strong style="color: var(--brand-primary, #1e3a8a); font-family: monospace; font-size: 14px;">ETB {{ selectedEmailQuote?.totalAmount | number }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary font-xs block">Offer Validity Until</span>
+                <strong class="text-danger">📅 {{ selectedEmailQuote?.validityDate | date:'mediumDate' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <form (submit)="onSubmitSendEmail($event)">
+            <div class="form-row flex gap-3 mb-3">
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Recipient Customer Email <span class="text-danger">*</span></label>
+                <input type="email" [(ngModel)]="emailData.recipientEmail" name="recEmail" required placeholder="client@example.com" style="padding: 10px 14px; font-weight: 500; font-size: 14px;" />
+              </div>
+              <div class="form-group flex-1 flex flex-col">
+                <label class="font-xs font-bold text-secondary">Customer Phone Number</label>
+                <input type="text" [(ngModel)]="emailData.recipientPhone" name="recPhone" placeholder="+251911223344" style="padding: 10px 14px; font-weight: 500; font-size: 14px;" />
+              </div>
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Email Subject Line <span class="text-danger">*</span></label>
+              <input type="text" [(ngModel)]="emailData.subject" name="eSubj" required style="padding: 10px 14px; font-size: 14px; font-weight: 500;" />
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Personalized Message / Cover Note</label>
+              <textarea [(ngModel)]="emailData.message" name="eMsg" rows="5" placeholder="Enter personalized message and quotation highlights..." style="padding: 12px 14px; font-size: 13.5px; line-height: 1.5;"></textarea>
+            </div>
+
+            <div class="alert font-xs mb-3" style="background: rgba(59, 130, 246, 0.08); border: 1px solid #3b82f6; color: #1e3a8a; padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+              <span class="material-icons-outlined" style="font-size: 20px; color: #2563eb;">attach_email</span>
+              <span><strong>Branded Attachment:</strong> The client will receive an official HTML email with full company letterhead, unit specifications, itemized pricing matrix, 15% VAT, and terms of validity.</span>
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4" style="border-top: 1px solid var(--border-color); padding-top: 18px;">
+              <button type="button" class="btn btn-secondary" (click)="closeEmailModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary flex align-center gap-1" [disabled]="!emailData.recipientEmail || isSendingEmail" style="padding: 10px 20px;">
+                <span class="material-icons-outlined font-sm">send</span>
+                <span>{{ isSendingEmail ? 'Sending Email...' : 'Send Quotation Email' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .badge-draft { background-color: rgba(59, 130, 246, 0.15); color: var(--color-new); }
@@ -451,6 +712,26 @@ interface QuotationItemRow {
 
     .badge-pending { background-color: rgba(234, 179, 8, 0.15); color: var(--color-contacted); }
     .badge-approved { background-color: rgba(16, 185, 129, 0.15); color: var(--color-qualified); }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #printableQuote, #printableQuote * {
+        visibility: visible !important;
+      }
+      #printableQuote {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
   `]
 })
 export class QuotationsComponent implements OnInit {
@@ -471,6 +752,22 @@ export class QuotationsComponent implements OnInit {
   showCreateModal = false;
   showDiscountModal = false;
   selectedQuote: any = null;
+
+  // PDF Preview State (TC-5.09)
+  showPdfModal = false;
+  selectedPdfQuote: any = null;
+
+  // Email Modal State (TC-5.10)
+  showEmailModal = false;
+  selectedEmailQuote: any = null;
+  emailData = {
+    recipientEmail: '',
+    recipientPhone: '',
+    subject: '',
+    message: ''
+  };
+  isSendingEmail = false;
+
   successMessage = '';
   errorMessage = '';
 
@@ -811,6 +1108,61 @@ export class QuotationsComponent implements OnInit {
       error: (err) => {
         console.error('Error rejecting discount request', err);
         this.errorMessage = err.error?.message || 'Failed to reject discount request.';
+      }
+    });
+  }
+
+  // --- TC-5.09: PDF Print Modal ---
+  openPdfModal(q: any) {
+    this.selectedPdfQuote = q;
+    this.showPdfModal = true;
+  }
+
+  closePdfModal() {
+    this.showPdfModal = false;
+    this.selectedPdfQuote = null;
+  }
+
+  printQuotationPdf() {
+    window.print();
+  }
+
+  // --- TC-5.10: Email Quotation Modal ---
+  openEmailModal(q: any) {
+    this.selectedEmailQuote = q;
+    this.emailData = {
+      recipientEmail: q.customer?.primaryEmail || '',
+      recipientPhone: q.customer?.primaryPhone || '',
+      subject: `Official Quotation #${q.quotationNo} - IHSAN Real Estate`,
+      message: `Dear ${q.customer?.fullName || 'Valued Client'},\n\nPlease find attached the official price quotation for Unit ${q.unit?.unitCode || q.unit?.unitNumber || ''} at ${q.property?.propertyName || ''}.`
+    };
+    this.showEmailModal = true;
+    this.isSendingEmail = false;
+  }
+
+  closeEmailModal() {
+    this.showEmailModal = false;
+    this.selectedEmailQuote = null;
+    this.isSendingEmail = false;
+  }
+
+  onSubmitSendEmail(event: Event) {
+    event.preventDefault();
+    if (!this.selectedEmailQuote || !this.emailData.recipientEmail) return;
+
+    this.isSendingEmail = true;
+    this.salesService.sendQuotationEmail(this.selectedEmailQuote.id, this.emailData).subscribe({
+      next: (res) => {
+        this.isSendingEmail = false;
+        this.closeEmailModal();
+        this.successMessage = res.message || `Quotation successfully emailed to ${this.emailData.recipientEmail}!`;
+        setTimeout(() => this.successMessage = '', 6000);
+      },
+      error: (err) => {
+        this.isSendingEmail = false;
+        console.error('Error sending quotation email:', err);
+        this.errorMessage = err.error?.message || 'Failed to email quotation.';
+        setTimeout(() => this.errorMessage = '', 6000);
       }
     });
   }

@@ -65,6 +65,10 @@ export class SalesService {
     return this.http.post<any>(`${this.apiBase}/quotations`, data);
   }
 
+  sendQuotationEmail(id: number, data: { recipientEmail: string; recipientPhone?: string; subject?: string; message?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/quotations/${id}/email`, data);
+  }
+
   // --- Bookings ---
   getBookings(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiBase}/bookings`);
@@ -74,12 +78,24 @@ export class SalesService {
     return this.http.post<any>(`${this.apiBase}/bookings`, data);
   }
 
+  convertReservationToBooking(reservationId: number, data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/reservations/${reservationId}/convert-to-booking`, data);
+  }
+
   approveBooking(id: number, approverId: number): Observable<any> {
     return this.http.put<any>(`${this.apiBase}/bookings/${id}/approve`, { approverId });
   }
 
-  cancelBooking(id: number): Observable<any> {
-    return this.http.put<any>(`${this.apiBase}/bookings/${id}/cancel`, {});
+  rejectBooking(id: number, rejectionReason: string, reviewerId?: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/bookings/${id}/reject`, { rejectionReason, reviewerId });
+  }
+
+  financeReviewBooking(id: number, action: 'APPROVE' | 'REJECT', comment?: string, financeOfficerId?: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/bookings/${id}/finance-review`, { action, comment, financeOfficerId });
+  }
+
+  cancelBooking(id: number, cancellationReason?: string, cancelledById?: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/bookings/${id}/cancel`, { cancellationReason, cancelledById });
   }
 
   // --- Agreements ---
@@ -91,6 +107,14 @@ export class SalesService {
     return this.http.post<any>(`${this.apiBase}/agreements`, data);
   }
 
+  updateAgreementVersion(id: number, data: { changeRemarks?: string; agreementDocument?: string }): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/agreements/${id}/version`, data);
+  }
+
+  getAgreementHistory(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBase}/agreements/${id}/history`);
+  }
+
   // --- Contracts ---
   getContracts(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiBase}/contracts`);
@@ -98,6 +122,18 @@ export class SalesService {
 
   createContract(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/contracts`, data);
+  }
+
+  updateContractStatus(id: number, data: { status: string; remarks?: string }): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/contracts/${id}/status`, data);
+  }
+
+  createContractAmendment(id: number, data: { amendmentType: string; amendmentDescription: string; adjustedAmount?: number; effectiveDate?: string; remarks?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/contracts/${id}/amendments`, data);
+  }
+
+  getContractAmendments(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBase}/contracts/${id}/amendments`);
   }
 
   uploadContractDocument(id: number, data: any): Observable<any> {
@@ -122,6 +158,10 @@ export class SalesService {
 
   generateInstallmentPlan(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/installments/plan`, data);
+  }
+
+  sendInstallmentReminder(installmentId: number, data: { channelCode?: string; customNote?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/installments/${installmentId}/remind`, data);
   }
 
   payInstallment(scheduleId: number, paidAmount: number): Observable<any> {

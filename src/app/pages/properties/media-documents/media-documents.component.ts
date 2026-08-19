@@ -2,6 +2,8 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
+import { AuthService } from '../../../services/auth.service';
+import { customConfirm } from '../../../utils/confirm';
 import { environment } from '../../../config';
 
 @Component({
@@ -33,14 +35,29 @@ import { environment } from '../../../config';
 
     <!-- Photos Grid view -->
     <div class="media-deck-grid" *ngIf="viewMode === 'photos'">
-      <div class="card media-card-item flex flex-col border" *ngFor="let m of filteredMedia">
-        <img [src]="env.serverUrl + m.filePath" class="grid-img" />
-        <div class="p-3">
-          <span class="badge" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured">
-            {{ m.isFeatured ? 'Featured' : 'Gallery' }}
+      <div class="card media-card-item flex flex-col border hover-lift" *ngFor="let m of filteredMedia; let idx = index" style="background: var(--bg-card); overflow: hidden; border-radius: var(--radius-md);">
+        <div class="relative" style="height: 150px; overflow: hidden; cursor: pointer; background: #0f172a; display: flex; align-items: center; justify-content: center;" (click)="openImagePreview(m)">
+          <img [src]="authService.getDownloadUrl(m.filePath)" style="max-width: 100%; max-height: 100%; object-fit: cover; width: 100%; height: 100%;" />
+          <span class="badge absolute top-2 right-2 badge-xs" [class.badge-qualified]="m.isFeatured" [class.badge-low]="!m.isFeatured" style="font-size: 10px; padding: 2px 6px; color: white;">
+            {{ m.isFeatured ? '★ Featured Cover' : (m.mediaType || 'Gallery') }}
           </span>
-          <p class="font-mono font-xs text-secondary mt-2">File: {{ m.fileName }}</p>
-          <p class="font-xs text-secondary">Project: <strong>{{ m.property?.propertyName }}</strong></p>
+        </div>
+        <div class="p-3 flex-1 flex flex-col justify-between">
+          <div>
+            <p class="font-mono font-xs text-secondary">File: {{ m.fileName }}</p>
+            <p class="font-xs text-secondary mt-1">Project: <strong class="text-main">{{ m.property?.propertyName }}</strong></p>
+          </div>
+          <div class="flex justify-between align-center pt-2 mt-2 border-top">
+            <button *ngIf="!m.isFeatured" type="button" class="btn btn-secondary btn-xs flex align-center gap-1" (click)="onSetFeaturedMedia(m)" title="Set as Project Cover Photo">
+              <span class="material-icons-outlined text-indigo font-xs">star</span> Set Cover
+            </button>
+            <span *ngIf="m.isFeatured" class="font-xs font-bold text-green flex align-center gap-1">
+              <span class="material-icons-outlined font-xs">check_circle</span> Cover Photo
+            </span>
+            <button type="button" class="btn btn-danger btn-xs flex align-center justify-center" (click)="onDeleteMedia(m.id)" title="Delete Photo" style="padding: 4px 8px; background-color: rgba(239, 68, 68, 0.1); color: var(--color-lost); border: none;">
+              <span class="material-icons-outlined font-xs">delete</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -62,7 +79,12 @@ import { environment } from '../../../config';
         </div>
         <div class="flex align-center gap-3">
           <span class="text-secondary font-xs">{{ (d.fileSize / 1024) | number:'1.0-0' }} KB</span>
-          <a [href]="env.serverUrl + d.filePath" target="_blank" class="btn btn-secondary btn-sm">Download File</a>
+          <a [href]="authService.getDownloadUrl(d.filePath)" target="_blank" class="btn btn-secondary btn-sm flex align-center gap-1">
+            <span class="material-icons-outlined font-sm">file_download</span> Download
+          </a>
+          <button type="button" class="btn btn-danger btn-sm flex align-center justify-center" (click)="onDeleteDocument(d.id)" style="padding: 6px; background-color: rgba(239, 68, 68, 0.1); color: var(--color-lost); border: none;">
+            <span class="material-icons-outlined font-sm">delete</span>
+          </button>
         </div>
       </div>
 
@@ -70,11 +92,30 @@ import { environment } from '../../../config';
         No documents found matching configuration.
       </div>
     </div>
+
+    <!-- Image Lightbox Modal -->
+    <div class="modal-overlay" *ngIf="showImagePreviewModal" (click)="closeImagePreview()" style="backdrop-filter: blur(6px); background: rgba(15, 23, 42, 0.75);">
+      <div class="modal-container" style="max-width: 900px; width: 90vw; background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl);" (click)="$event.stopPropagation()">
+        <div class="modal-header flex justify-between align-center" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+          <h2 style="font-size: 16px; margin: 0;">{{ previewImage?.fileName || 'Media Preview' }}</h2>
+          <button class="header-icon-btn close-btn" (click)="closeImagePreview()"><span class="material-icons-outlined">close</span></button>
+        </div>
+        <div class="modal-body text-center" style="padding: 16px; background: #0f172a; min-height: 350px; display: flex; align-items: center; justify-content: center;">
+          <img [src]="authService.getDownloadUrl(previewImage?.filePath)" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: var(--radius-md);" />
+        </div>
+        <div class="modal-footer flex justify-between align-center" style="padding: 12px 20px; border-top: 1px solid var(--border-color);">
+          <a [href]="authService.getDownloadUrl(previewImage?.filePath)" target="_blank" class="btn btn-secondary btn-sm flex align-center gap-1">
+            <span class="material-icons-outlined font-sm">file_download</span> Download Original
+          </a>
+          <button type="button" class="btn btn-primary btn-sm" (click)="closeImagePreview()">Close</button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .media-deck-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 20px;
     }
     .media-card-item {
@@ -84,7 +125,7 @@ import { environment } from '../../../config';
     }
     .grid-img {
       width: 100%;
-      height: 140px;
+      height: 150px;
       object-fit: cover;
     }
     .flex-wrap { flex-wrap: wrap; }
@@ -94,6 +135,7 @@ import { environment } from '../../../config';
 export class MediaDocumentsComponent implements OnInit {
   env = environment;
   private propertiesService = inject(PropertiesService);
+  public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
 
   propertiesList: any[] = [];
@@ -105,6 +147,9 @@ export class MediaDocumentsComponent implements OnInit {
 
   filteredMedia: any[] = [];
   filteredDocuments: any[] = [];
+
+  showImagePreviewModal = false;
+  previewImage: any = null;
 
   ngOnInit() {
     this.loadProperties();
@@ -151,6 +196,54 @@ export class MediaDocumentsComponent implements OnInit {
       this.filteredMedia = this.allMedia.filter((m) => m.property && +m.property.id === propId);
       this.filteredDocuments = this.allDocuments.filter((d) => d.property && +d.property.id === propId);
     }
+    this.cdr.detectChanges();
+  }
+
+  onSetFeaturedMedia(media: any) {
+    if (!media.property) return;
+    this.propertiesService.setFeaturedMedia(media.property.id, media.id).subscribe({
+      next: () => {
+        this.loadProperties();
+      },
+      error: (err) => console.error('Error setting cover photo:', err)
+    });
+  }
+
+  onDeleteMedia(mediaId: number) {
+    customConfirm('Are you sure you want to permanently delete this photo from the media gallery?', 'Delete Photo').then((confirmed) => {
+      if (confirmed) {
+        this.propertiesService.deleteMedia(mediaId).subscribe({
+          next: () => {
+            this.loadProperties();
+          },
+          error: (err) => console.error('Error deleting photo:', err)
+        });
+      }
+    });
+  }
+
+  onDeleteDocument(docId: number) {
+    customConfirm('Are you sure you want to permanently delete this document?', 'Delete Document').then((confirmed) => {
+      if (confirmed) {
+        this.propertiesService.deleteDocument(docId).subscribe({
+          next: () => {
+            this.loadProperties();
+          },
+          error: (err) => console.error('Error deleting document:', err)
+        });
+      }
+    });
+  }
+
+  openImagePreview(media: any) {
+    this.previewImage = media;
+    this.showImagePreviewModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeImagePreview() {
+    this.showImagePreviewModal = false;
+    this.previewImage = null;
     this.cdr.detectChanges();
   }
 }

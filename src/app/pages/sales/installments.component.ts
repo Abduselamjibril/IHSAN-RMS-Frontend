@@ -48,7 +48,7 @@ import { FinanceService } from '../../services/finance.service';
           <div class="flex justify-between align-center border-bottom pb-2" style="border-bottom: 1px solid var(--border-color); margin-bottom: 12px;">
             <div class="flex flex-col">
               <span class="font-bold text-main" style="font-size: 15px;">Contract: {{ plan.contract?.contractNo }}</span>
-              <span class="text-secondary font-xs">Customer: {{ plan.contract?.customer?.fullName }}</span>
+              <span class="text-secondary font-xs">Customer: {{ plan.contract?.customer?.fullName }} ({{ plan.contract?.customer?.primaryPhone }})</span>
             </div>
             <div class="flex align-center gap-3">
               <span class="badge badge-qualified font-xs">Freq: {{ plan.installmentFrequency }}</span>
@@ -58,28 +58,34 @@ import { FinanceService } from '../../services/finance.service';
           </div>
 
           <div class="flex justify-between gap-4 font-xs text-secondary margin-b-3" style="margin-bottom: 12px;">
-            <span>Down Payment Paid: <strong>ETB {{ plan.downPayment | number }}</strong></span>
-            <span>Accrued Installments Remaining: <strong>ETB {{ (plan.totalContractAmount - plan.downPayment) | number }}</strong></span>
+            <span>Initial Down Payment: <strong>ETB {{ plan.downPayment | number }}</strong></span>
+            <span>Created: <strong>{{ plan.createdAt | date:'mediumDate' }}</strong></span>
           </div>
 
-          <!-- Schedules Grid/Table inside the Plan -->
-          <div class="table-container shadow-none" style="border: 1px solid var(--border-color);">
-            <table class="nested-table" style="font-size: 12px;">
+          <!-- Schedule lines table -->
+          <div class="table-container">
+            <table class="leads-table" style="font-size: 13px;">
               <thead>
                 <tr>
-                  <th>No</th>
+                  <th>Seq #</th>
                   <th>Due Date</th>
-                  <th>Installment Amount</th>
-                  <th>Paid Amount</th>
-                  <th>Outstanding Balance</th>
+                  <th>Amount</th>
+                  <th>Paid</th>
+                  <th>Outstanding</th>
                   <th>Status</th>
                   <th>Payment Date</th>
+                  <th style="text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let sch of plan.schedules">
                   <td class="font-mono">#{{ sch.installmentNo }}</td>
-                  <td>{{ sch.dueDate | date:'mediumDate' }}</td>
+                  <td>
+                    <span [style.color]="isOverdue(sch) ? 'var(--color-lost)' : 'inherit'" [style.font-weight]="isOverdue(sch) ? 'bold' : 'normal'">
+                      {{ sch.dueDate | date:'mediumDate' }}
+                      <span *ngIf="isOverdue(sch)" class="badge badge-overdue" style="font-size: 10px; margin-left: 4px;">OVERDUE</span>
+                    </span>
+                  </td>
                   <td class="font-mono">ETB {{ sch.installmentAmount | number }}</td>
                   <td class="font-mono text-success">ETB {{ sch.paidAmount | number }}</td>
                   <td class="font-mono text-danger">ETB {{ sch.outstandingAmount | number }}</td>
@@ -89,10 +95,98 @@ import { FinanceService } from '../../services/finance.service';
                     </span>
                   </td>
                   <td>{{ sch.paymentDate ? (sch.paymentDate | date:'mediumDate') : '-' }}</td>
+                  <td style="text-align: right;">
+                    <!-- TC-5.27 & TC-5.28: Send Reminder Action -->
+                    <button 
+                      class="btn btn-primary btn-sm flex align-center gap-1"
+                      (click)="openReminderModal(plan, sch)"
+                      *ngIf="sch.status !== 'PAID'"
+                      style="padding: 4px 10px; font-size: 11px; display: inline-flex;"
+                      title="Send Multi-Channel Payment Reminder"
+                    >
+                      <span class="material-icons-outlined" style="font-size: 14px;">notifications_active</span>
+                      <span>Remind</span>
+                    </button>
+                    <span *ngIf="sch.status === 'PAID'" class="text-success font-xs flex align-center justify-end gap-1">
+                      <span class="material-icons-outlined" style="font-size: 16px;">check_circle</span> Settled
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TC-5.27 & TC-5.28: SEND REMINDER MODAL     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" *ngIf="showReminderModal" (click)="closeReminderModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()" style="max-width: 580px;">
+        <div class="modal-header flex justify-between align-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 16px 20px; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: #38bdf8;">notifications_active</span>
+            <h2 style="color: white; margin: 0; font-size: 17px;">Dispatch Payment Reminder Notice</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeReminderModal()" style="color: white; background: rgba(255,255,255,0.15); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none;">
+            <span class="material-icons-outlined" style="font-size: 20px;">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 24px;">
+          <div class="p-3 mb-3 bg-card border rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div class="grid grid-cols-2 gap-3 font-xs">
+              <div>
+                <span class="text-secondary block">Customer</span>
+                <strong>{{ selectedReminderPlan?.contract?.customer?.fullName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Contract Number</span>
+                <strong class="font-mono">{{ selectedReminderPlan?.contract?.contractNo }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Installment Sequence</span>
+                <strong>Installment #{{ selectedReminderSchedule?.installmentNo }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Amount Due</span>
+                <strong class="font-mono text-danger" style="font-size: 14px;">ETB {{ selectedReminderSchedule?.installmentAmount | number }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Due Date</span>
+                <strong>📅 {{ selectedReminderSchedule?.dueDate | date:'mediumDate' }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Customer Phone</span>
+                <span>{{ selectedReminderPlan?.contract?.customer?.primaryPhone || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <form (submit)="onSubmitSendReminder($event)">
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Dispatch Notification Channel *</label>
+              <select [(ngModel)]="reminderData.channelCode" name="rChannel" required style="padding: 10px 14px; font-size: 14px;">
+                <option value="EMAIL_TELEGRAM">Multi-Channel: Email (HTML Notice) + Telegram (Instant DM)</option>
+                <option value="EMAIL">Email Channel Only (Official Letterhead Notice)</option>
+                <option value="TELEGRAM">Telegram Channel Only (Instant DM)</option>
+              </select>
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Personalized Note / Payment Instructions (Optional)</label>
+              <textarea [(ngModel)]="reminderData.customNote" name="rNote" placeholder="e.g. Please use CBE Account #100028918239 and send bank receipt to your agent..." rows="3" style="padding: 10px 14px; font-size: 13px;"></textarea>
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4">
+              <button type="button" class="btn btn-secondary" (click)="closeReminderModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary flex align-center gap-1" [disabled]="isSendingReminder">
+                <span class="material-icons-outlined" style="font-size: 16px;">send</span>
+                <span>{{ isSendingReminder ? 'Dispatching...' : 'Send Reminder Notice' }}</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -203,14 +297,13 @@ import { FinanceService } from '../../services/finance.service';
                 <!-- Cheque Number -->
                 <div class="form-group flex-1 flex flex-col" *ngIf="showChequeFields()">
                   <label>Cheque Number * [REQUIRED]</label>
-                  <input type="text" [(ngModel)]="newPlan.chequeNumber" name="chequeNumber" placeholder="e.g. CHQ-8192083" [required]="newPlan.recordPayment && showChequeFields()" />
+                  <input type="text" [(ngModel)]="newPlan.chequeNumber" name="chequeNumber" placeholder="e.g. CHQ-00129" [required]="newPlan.recordPayment && showChequeFields()" />
                 </div>
               </div>
 
-              <!-- Remarks -->
               <div class="form-group flex flex-col" style="margin-top: 8px;">
-                <label>Remarks</label>
-                <textarea [(ngModel)]="newPlan.remarks" name="remarks" placeholder="Add custom payment notes..." rows="2"></textarea>
+                <label>Payment Remarks</label>
+                <input type="text" [(ngModel)]="newPlan.remarks" name="remarks" placeholder="Optional payment remarks" />
               </div>
             </div>
 
@@ -220,7 +313,7 @@ import { FinanceService } from '../../services/finance.service';
               <button 
                 type="submit" 
                 class="btn btn-primary" 
-                [disabled]="newPlan.contractId === 0 || !newPlan.downPayment || !newPlan.installmentFrequency || !newPlan.numberOfInstallments || (newPlan.recordPayment && (newPlan.paymentMethodId === 0 || !newPlan.paymentDate))"
+                [disabled]="newPlan.contractId === 0 || !newPlan.downPayment || !newPlan.installmentFrequency || !newPlan.numberOfInstallments"
               >
                 Generate Plan
               </button>
@@ -229,29 +322,12 @@ import { FinanceService } from '../../services/finance.service';
         </div>
       </div>
     </div>
-
   `,
   styles: [`
-    .nested-table {
-      width: 100%;
-      margin: 0;
-      border-collapse: collapse;
-    }
-    .nested-table th {
-      background-color: var(--bg-main) !important;
-      font-size: 11px;
-      padding: 8px 10px;
-      text-align: left;
-    }
-    .nested-table td {
-      padding: 8px 10px;
-    }
     .badge-pending { background-color: rgba(234, 179, 8, 0.15); color: var(--color-contacted); }
     .badge-partial { background-color: rgba(59, 130, 246, 0.15); color: var(--color-new); }
     .badge-paid { background-color: rgba(16, 185, 129, 0.15); color: var(--color-qualified); }
     .badge-overdue { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
-    .badge-indigo { background-color: var(--brand-primary-fade); color: var(--brand-primary); }
-    .badge-qualified { background-color: rgba(16, 185, 129, 0.1); color: var(--color-qualified); }
   `]
 })
 export class InstallmentsComponent implements OnInit {
@@ -266,6 +342,16 @@ export class InstallmentsComponent implements OnInit {
   errorMessage = '';
 
   showCreateModal = false;
+
+  // Phase 4 Reminder State
+  showReminderModal = false;
+  selectedReminderPlan: any = null;
+  selectedReminderSchedule: any = null;
+  isSendingReminder = false;
+  reminderData = {
+    channelCode: 'EMAIL_TELEGRAM',
+    customNote: ''
+  };
 
   newPlan = {
     contractId: 0,
@@ -285,16 +371,15 @@ export class InstallmentsComponent implements OnInit {
 
   ngOnInit() {
     this.loadPlans();
+    this.loadContracts();
     this.loadPaymentMethods();
+    this.newPlan.paymentDate = new Date().toISOString().split('T')[0];
   }
 
   loadPlans() {
     this.salesService.getInstallmentPlans().subscribe({
-      next: (res) => {
-        this.plans = res;
-        this.loadContracts();
-      },
-      error: (err) => console.error('Error fetching plans', err)
+      next: (res) => this.plans = res,
+      error: (err) => console.error('Error fetching installment plans', err)
     });
   }
 
@@ -322,7 +407,6 @@ export class InstallmentsComponent implements OnInit {
     const contract = this.contracts.find(c => c.id == this.newPlan.contractId);
     if (contract) {
       this.newPlan.totalContractAmount = Number(contract.contractAmount);
-      // Auto-set down payment as 10%
       this.newPlan.downPayment = Math.round(this.newPlan.totalContractAmount * 0.1);
     }
   }
@@ -362,6 +446,53 @@ export class InstallmentsComponent implements OnInit {
       case 'OVERDUE': return 'badge-overdue';
       default: return '';
     }
+  }
+
+  isOverdue(schedule: any): boolean {
+    if (schedule.status === 'PAID') return false;
+    const due = new Date(schedule.dueDate).getTime();
+    const now = new Date().getTime();
+    return due < now;
+  }
+
+  // --- Phase 4 Reminder Handlers ---
+  openReminderModal(plan: any, schedule: any) {
+    this.selectedReminderPlan = plan;
+    this.selectedReminderSchedule = schedule;
+    this.reminderData = {
+      channelCode: plan.contract?.customer?.primaryPhone ? 'EMAIL_TELEGRAM' : 'EMAIL',
+      customNote: `Reminder: Installment #${schedule.installmentNo} of ETB ${Number(schedule.installmentAmount).toLocaleString()} is scheduled for payment on ${new Date(schedule.dueDate).toLocaleDateString()}.`
+    };
+    this.showReminderModal = true;
+    this.isSendingReminder = false;
+  }
+
+  closeReminderModal() {
+    this.showReminderModal = false;
+    this.selectedReminderPlan = null;
+    this.selectedReminderSchedule = null;
+    this.isSendingReminder = false;
+  }
+
+  onSubmitSendReminder(event: Event) {
+    event.preventDefault();
+    if (!this.selectedReminderSchedule) return;
+
+    this.isSendingReminder = true;
+    this.salesService.sendInstallmentReminder(this.selectedReminderSchedule.id, this.reminderData).subscribe({
+      next: (res) => {
+        this.isSendingReminder = false;
+        this.closeReminderModal();
+        this.successMessage = res.message || `Installment reminder dispatched successfully!`;
+        setTimeout(() => this.successMessage = '', 6000);
+      },
+      error: (err) => {
+        this.isSendingReminder = false;
+        console.error('Error sending installment reminder', err);
+        this.errorMessage = err.error?.message || 'Failed to dispatch installment reminder.';
+        setTimeout(() => this.errorMessage = '', 6000);
+      }
+    });
   }
 
   openCreateModal() {
@@ -425,5 +556,4 @@ export class InstallmentsComponent implements OnInit {
       }
     });
   }
-
 }

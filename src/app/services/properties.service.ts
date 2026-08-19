@@ -120,6 +120,28 @@ export class PropertiesService {
     return this.http.post<any>(`${this.apiBase}/unit-prices`, data);
   }
 
+  getUnitPriceHistory(unitId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBase}/unit-prices/unit/${unitId}/history`);
+  }
+
+  createPriceChangeRequest(data: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/unit-prices/change-requests`, data);
+  }
+
+  getPriceChangeRequests(status?: string): Observable<any[]> {
+    const params: any = {};
+    if (status) params.status = status;
+    return this.http.get<any[]>(`${this.apiBase}/unit-prices/change-requests`, { params });
+  }
+
+  approvePriceChangeRequest(id: number, comment?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/unit-prices/change-requests/${id}/approve`, { comment });
+  }
+
+  rejectPriceChangeRequest(id: number, comment?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/unit-prices/change-requests/${id}/reject`, { comment });
+  }
+
   createPromotion(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/unit-prices/promotions`, data);
   }
@@ -240,5 +262,27 @@ export class PropertiesService {
   }
   deleteSite(id: number): Observable<any> {
     return this.http.delete<any>(`${this.apiBase}/properties/sites/${id}`);
+  }
+
+  // --- Media Management ---
+  deleteMedia(mediaId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/property-media/media/${mediaId}`);
+  }
+
+  deleteDocument(docId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBase}/property-media/documents/${docId}`);
+  }
+
+  setFeaturedMedia(propertyId: number, mediaId: number): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/property-media/properties/${propertyId}/media/${mediaId}/featured`, {});
+  }
+
+  reorderMedia(propertyId: number, orders: { id: number; displayOrder: number }[]): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/property-media/properties/${propertyId}/media/reorder`, { orders });
+  }
+
+  // --- Unit Audit Log ---
+  getUnitAuditLog(unitId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBase}/units/${unitId}/audit-log`);
   }
 }

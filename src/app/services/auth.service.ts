@@ -39,8 +39,9 @@ export class AuthService {
     if (!filePath) return '#';
     if (filePath.startsWith('http')) return filePath;
     const base = this.apiBase.replace('/api', '');
-    // Authentication is sent as an HttpOnly cookie; never expose a token in URLs.
-    return `${base}${filePath}`;
+    const token = this.getToken();
+    const separator = filePath.includes('?') ? '&' : '?';
+    return token ? `${base}${filePath}${separator}token=${token}` : `${base}${filePath}`;
   }
 
   currentUser = signal<AuthenticatedUser | null>(null);
@@ -67,6 +68,9 @@ export class AuthService {
         if (res?.user) {
           sessionStorage.setItem('auth_user', JSON.stringify({ user: res.user }));
           this.currentUser.set(res.user);
+        }
+        if (res?.token) {
+          sessionStorage.setItem('auth_token', res.token);
         }
       })
     );
@@ -96,6 +100,7 @@ export class AuthService {
   private clearSession(redirect = true) {
     localStorage.removeItem('auth_session'); // Remove legacy persisted JWTs.
     sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('auth_token');
     this.currentUser.set(null);
     if (redirect) this.router.navigate(['/login']);
   }
@@ -105,7 +110,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return null; // Tokens are intentionally held only in the HttpOnly auth cookie.
+    return sessionStorage.getItem('auth_token') || null;
   }
 
   isAuthenticated(): boolean {

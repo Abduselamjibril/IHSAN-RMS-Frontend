@@ -41,6 +41,10 @@ export class FinanceService {
     return this.http.get<any>(`${this.apiBase}/payments/${id}`);
   }
 
+  getPaymentHistory(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/payments/${id}/history`);
+  }
+
   approvePayment(id: number, data: any): Observable<any> {
     return this.http.put<any>(`${this.apiBase}/payments/${id}/approve`, data);
   }
@@ -51,6 +55,10 @@ export class FinanceService {
 
   reversePayment(id: number, comment: string): Observable<any> {
     return this.http.put<any>(`${this.apiBase}/payments/${id}/reverse`, { comment });
+  }
+
+  adjustPayment(id: number, data: { adjustedAmount: number; adjustmentReason: string }): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/payments/${id}/adjust`, data);
   }
 
   // --- Reschedule Installments ---
@@ -98,6 +106,14 @@ export class FinanceService {
 
   reprintReceipt(id: number): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/receipts/${id}/reprint`, {});
+  }
+
+  emailReceipt(id: number, email?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/receipts/${id}/email`, { email });
+  }
+
+  verifyReceipt(receiptNumber: string): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/receipts/verify/${receiptNumber}`);
   }
 
   // --- Outstanding Balances & Analytical Reports ---

@@ -51,6 +51,10 @@ import { SalesService } from '../../services/sales.service';
         <span class="text-secondary font-xs font-bold uppercase">Approved Cashflow</span>
         <span class="font-bold text-main font-mono text-success" style="font-size: 24px; margin-top: 8px;">ETB {{ approvedCollectionsAmount | number }}</span>
       </div>
+      <div class="card glass-card p-4 flex flex-col justify-between" style="min-height: 100px;">
+        <span class="text-secondary font-xs font-bold uppercase">Advance Credit Balance</span>
+        <span class="font-bold text-main font-mono" style="font-size: 24px; margin-top: 8px; color: var(--brand-primary);">ETB {{ totalAdvanceCredit | number }}</span>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -172,6 +176,26 @@ import { SalesService } from '../../services/sales.service';
                     Print
                   </button>
                   <button 
+                    *ngIf="p.status === 'APPROVED' && receiptsMap[p.id]"
+                    class="btn btn-xs btn-secondary flex align-center gap-1"
+                    (click)="emailReceipt(receiptsMap[p.id])"
+                    style="padding: 4px 8px; font-size: 11px; color: #0284c7; border-color: rgba(2, 132, 199, 0.3);"
+                    title="Email Official Receipt to Customer (TC-6.14)"
+                  >
+                    <span class="material-icons-outlined" style="font-size: 14px;">mail</span>
+                    Email
+                  </button>
+                  <button 
+                    *ngIf="p.status === 'APPROVED'"
+                    class="btn btn-xs btn-secondary flex align-center gap-1"
+                    (click)="openAdjustModal(p)"
+                    style="padding: 4px 8px; font-size: 11px; color: var(--color-contacted); border-color: rgba(234, 179, 8, 0.3);"
+                    title="Adjust Payment Amount (TC-6.06)"
+                  >
+                    <span class="material-icons-outlined" style="font-size: 14px;">edit_note</span>
+                    Adjust
+                  </button>
+                  <button 
                     *ngIf="p.status === 'APPROVED'"
                     class="btn btn-xs btn-secondary flex align-center gap-1"
                     (click)="openReverseModal(p)"
@@ -180,7 +204,15 @@ import { SalesService } from '../../services/sales.service';
                     <span class="material-icons-outlined" style="font-size: 14px;">history</span>
                     Reverse
                   </button>
-                  <span *ngIf="p.status === 'REJECTED' || p.status === 'REVERSED'" class="text-secondary font-xs italic">No actions available</span>
+                  <button 
+                    class="btn btn-xs btn-secondary flex align-center gap-1"
+                    (click)="openHistoryModal(p)"
+                    style="padding: 4px 8px; font-size: 11px;"
+                    title="View Audit Trail & History"
+                  >
+                    <span class="material-icons-outlined" style="font-size: 14px;">manage_history</span>
+                    Audit
+                  </button>
                 </div>
               </td>
             </tr>
@@ -441,6 +473,158 @@ import { SalesService } from '../../services/sales.service';
         </div>
       </div>
     </div>
+
+    <!-- TC-6.06: Payment Adjustment Modal -->
+    <div class="modal-overlay" *ngIf="showAdjustModal" (click)="closeAdjustModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()" style="max-width: 520px;">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: var(--brand-primary);">edit_note</span>
+            <h2>Adjust Approved Payment</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeAdjustModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="p-3 mb-3 bg-card border rounded">
+            <div class="grid grid-cols-2 gap-2 font-xs">
+              <div>
+                <span class="text-secondary block">Payment Reference</span>
+                <strong class="font-mono">{{ selectedPayment?.paymentReference }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Contract No</span>
+                <strong class="font-mono">{{ selectedPayment?.contract?.contractNo }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Customer</span>
+                <strong>{{ selectedPayment?.customer?.fullName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Original Amount</span>
+                <strong class="font-mono text-main">ETB {{ selectedPayment?.paymentAmount | number }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <form class="modal-form" (submit)="onSubmitAdjustment($event)">
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Adjusted Payment Amount (ETB) * [REQUIRED]</label>
+              <input type="number" [(ngModel)]="adjustedAmount" name="adjAmt" required placeholder="e.g. 480000" min="1" />
+            </div>
+
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Mandatory Adjustment Reason * [REQUIRED]</label>
+              <textarea [(ngModel)]="adjustmentReason" name="adjReason" required placeholder="Provide reason for payment adjustment (e.g. currency conversion fee adjustment, deposit reconciliation)..." rows="3"></textarea>
+            </div>
+
+            <div class="p-2 text-secondary font-xs border rounded bg-card mb-3">
+              🔒 <em>Adjustment preserves the original amount in the audit history and automatically recalculates linked installment allocations and customer balances.</em>
+            </div>
+
+            <div class="modal-footer flex justify-end gap-3 mt-4">
+              <button type="button" class="btn btn-secondary" (click)="closeAdjustModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!adjustedAmount || !adjustmentReason">
+                Save Adjustment
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TC-5.32 & TC-6.06: Payment Audit Trail & History Modal -->
+    <div class="modal-overlay" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()" style="max-width: 650px;">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: var(--brand-primary);">manage_history</span>
+            <h2>Payment Audit Trail & History</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeHistoryModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Summary Card -->
+          <div class="p-3 mb-4 bg-card border rounded" style="border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+            <div class="grid grid-cols-2 gap-3 font-xs">
+              <div>
+                <span class="text-secondary block">Payment Reference</span>
+                <strong class="font-mono">{{ selectedPaymentHistory?.payment?.paymentReference }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Contract No</span>
+                <strong class="font-mono">{{ selectedPaymentHistory?.payment?.contract?.contractNo }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Customer</span>
+                <strong>{{ selectedPaymentHistory?.payment?.customer?.fullName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Current Amount / Status</span>
+                <strong class="font-mono text-main">ETB {{ selectedPaymentHistory?.payment?.paymentAmount | number }}</strong>
+                <span class="badge ml-2" [ngClass]="getStatusBadgeClass(selectedPaymentHistory?.payment?.status)" style="margin-left: 8px;">
+                  {{ selectedPaymentHistory?.payment?.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Timeline -->
+          <h4 class="font-xs font-bold text-secondary uppercase mb-3" style="letter-spacing: 0.5px;">Lifecycle & Approval Audit Events</h4>
+          <div class="audit-timeline flex flex-col gap-3 mb-4" style="border-left: 2px solid var(--border-color); padding-left: 16px; margin-left: 8px;">
+            <!-- Registration Event -->
+            <div class="timeline-step pb-2">
+              <div class="flex justify-between font-xs">
+                <strong class="text-main">📌 Payment Registered & Submitted</strong>
+                <span class="text-secondary font-mono">{{ selectedPaymentHistory?.payment?.createdAt | date:'medium' }}</span>
+              </div>
+              <p class="font-xs text-secondary mt-1">
+                Initially registered with amount <strong>ETB {{ selectedPaymentHistory?.payment?.paymentAmount | number }}</strong> (Method: {{ selectedPaymentHistory?.payment?.paymentMethod?.paymentMethodName }}).
+              </p>
+            </div>
+
+            <!-- Approval / Rejection / Adjustment Events -->
+            <div *ngFor="let item of selectedPaymentHistory?.history" class="timeline-step pb-2">
+              <div class="flex justify-between font-xs">
+                <strong [style.color]="item.approvalComment?.includes('adjusted') ? 'var(--color-contacted)' : (item.approvalStatus === 'APPROVED' ? 'var(--color-qualified)' : 'var(--color-lost)')">
+                  {{ item.approvalComment?.includes('adjusted') ? '✏️ Payment Amount Adjustment' : (item.approvalStatus === 'APPROVED' ? '✅ Payment Approved & Verified' : '❌ Payment Rejected / Reversed') }}
+                </strong>
+                <span class="text-secondary font-mono">{{ item.approvalDate | date:'medium' }}</span>
+              </div>
+              <p class="font-xs text-main mt-1" style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-style: italic;">
+                "{{ item.approvalComment }}"
+              </p>
+              <span class="font-xs text-secondary">Authorized by User #{{ item.approvedBy }}</span>
+            </div>
+          </div>
+
+          <!-- Remarks Notes History -->
+          <div *ngIf="selectedPaymentHistory?.remarksNotes?.length > 0" class="mb-4">
+            <h4 class="font-xs font-bold text-secondary uppercase mb-2" style="letter-spacing: 0.5px;">Transaction Notes & Adjustment Log</h4>
+            <div class="font-xs p-3 border rounded bg-card flex flex-col gap-1" style="background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div *ngFor="let note of selectedPaymentHistory?.remarksNotes" class="font-mono text-secondary" style="line-height: 1.5;">
+                {{ note }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Immutability Notice Badge -->
+          <div class="p-3 text-secondary font-xs border rounded bg-card flex align-center gap-2" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); color: var(--color-qualified);">
+            <span class="material-icons-outlined font-xs">verified_user</span>
+            <span><em>All payment adjustments and decision records are timestamped and immutable. Historical logs cannot be deleted or tampered with.</em></span>
+          </div>
+
+          <div class="modal-footer flex justify-end mt-4">
+            <button type="button" class="btn btn-secondary" (click)="closeHistoryModal()">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .text-warning { color: var(--color-contacted) !important; }
@@ -517,11 +701,17 @@ export class CollectionsComponent implements OnInit {
   showCreateModal = false;
   showApproveModal = false;
   showReverseModal = false;
+  showAdjustModal = false;
+  showHistoryModal = false;
 
   selectedPayment: any = null;
+  selectedPaymentHistory: any = null;
   workflowAction: 'APPROVE' | 'REJECT' = 'APPROVE';
   workflowComment = '';
   reversalComment = '';
+  adjustedAmount = 0;
+  adjustmentReason = '';
+  totalAdvanceCredit = 0;
 
   newPayment = {
     paymentReference: '',
@@ -570,7 +760,7 @@ export class CollectionsComponent implements OnInit {
   loadContracts() {
     this.salesService.getContracts().subscribe({
       next: (res) => {
-        this.contracts = res.filter((c: any) => c.status === 'ACTIVE');
+        this.contracts = res.filter((c: any) => !['CANCELLED', 'TERMINATED'].includes(c.status));
       },
       error: (err) => console.error('Error fetching contracts', err)
     });
@@ -591,6 +781,12 @@ export class CollectionsComponent implements OnInit {
         this.stats.totalCollections = res.totalCollections;
       },
       error: (err) => console.error('Error fetching revenue summary', err)
+    });
+    this.financeService.getCustomerBalances().subscribe({
+      next: (res) => {
+        this.totalAdvanceCredit = res.reduce((sum: number, b: any) => sum + Number(b.advanceCreditBalance || 0), 0);
+      },
+      error: (err) => console.error('Error fetching customer balances', err)
     });
   }
 
@@ -688,6 +884,68 @@ export class CollectionsComponent implements OnInit {
 
   closeReverseModal() {
     this.showReverseModal = false;
+  }
+
+  // --- Payment Adjustment (TC-6.06) ---
+  openAdjustModal(p: any) {
+    this.selectedPayment = p;
+    this.adjustedAmount = Number(p.paymentAmount);
+    this.adjustmentReason = '';
+    this.showAdjustModal = true;
+    this.successMessage = '';
+    this.errorMessage = '';
+  }
+
+  closeAdjustModal() {
+    this.showAdjustModal = false;
+    this.selectedPayment = null;
+    this.adjustedAmount = 0;
+    this.adjustmentReason = '';
+  }
+
+  // --- Payment Audit Trail & History Modal ---
+  openHistoryModal(p: any) {
+    this.financeService.getPaymentHistory(p.id).subscribe({
+      next: (res) => {
+        this.selectedPaymentHistory = res;
+        this.showHistoryModal = true;
+      },
+      error: (err) => {
+        console.error('Error loading payment history', err);
+        this.selectedPaymentHistory = { payment: p, history: [], remarksNotes: p.remarks ? p.remarks.split('\n') : [] };
+        this.showHistoryModal = true;
+      }
+    });
+  }
+
+  closeHistoryModal() {
+    this.showHistoryModal = false;
+    this.selectedPaymentHistory = null;
+  }
+
+  onSubmitAdjustment(event: Event) {
+    event.preventDefault();
+    if (!this.selectedPayment || !this.adjustedAmount || !this.adjustmentReason) {
+      this.errorMessage = 'Both adjusted amount and adjustment reason are mandatory.';
+      return;
+    }
+
+    this.financeService.adjustPayment(this.selectedPayment.id, {
+      adjustedAmount: Number(this.adjustedAmount),
+      adjustmentReason: this.adjustmentReason.trim(),
+    }).subscribe({
+      next: (res) => {
+        this.successMessage = `Payment #${this.selectedPayment.id} successfully adjusted to ETB ${Number(this.adjustedAmount).toLocaleString()}!`;
+        this.loadPayments();
+        this.loadPlans();
+        this.loadSummaryStats();
+        this.closeAdjustModal();
+      },
+      error: (err) => {
+        console.error('Error adjusting payment', err);
+        this.errorMessage = err.error?.message || 'Failed to adjust payment amount.';
+      }
+    });
   }
 
   onSubmitPayment(event: Event) {
@@ -808,7 +1066,7 @@ export class CollectionsComponent implements OnInit {
     } else {
       this.salesService.getContracts().subscribe({
         next: (res) => {
-          this.contracts = res.filter((c: any) => c.status === 'ACTIVE');
+          this.contracts = res.filter((c: any) => !['CANCELLED', 'TERMINATED'].includes(c.status));
           resolveContract();
         }
       });
@@ -967,6 +1225,20 @@ export class CollectionsComponent implements OnInit {
       result = result.replace(new RegExp(`{{${key}}}`, 'g'), tokens[key]);
     });
     return result;
+  }
+
+  // --- Email Receipt (TC-6.14) ---
+  emailReceipt(r: any) {
+    if (!r || !r.id) return;
+    this.financeService.emailReceipt(r.id).subscribe({
+      next: (res) => {
+        this.successMessage = `Official Receipt #${r.receiptNumber} successfully emailed to customer (${res.recipient || 'on record'}) and dispatched to Telegram!`;
+      },
+      error: (err) => {
+        console.error('Error emailing receipt', err);
+        this.errorMessage = err.error?.message || 'Failed to email receipt.';
+      }
+    });
   }
 
   downloadReceiptPdf(r: any, autoPrint = true) {
@@ -1151,7 +1423,25 @@ export class CollectionsComponent implements OnInit {
       `;
     });
 
-    const qrCodeHtml = '';
+    const verifyUrl = `${window.location.origin}/verify-receipt?receiptNo=${r.receiptNumber}`;
+    const qrCodeHtml = template.qrEnabled !== false ? `
+      <div style="padding: var(--sheet-padding); padding-top: 10px; margin-top: auto; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(verifyUrl)}" style="width: 70px; height: 70px; border-radius: 4px; border: 1px solid #e2e8f0; padding: 2px; background: white;" alt="Verification QR" />
+          <div style="font-size: 9px; color: #64748b; line-height: 1.4;">
+            <strong style="color: #0f172a; font-size: 10px;">Scan QR Code to Verify Authenticity</strong><br>
+            Digital Verification: <span style="font-family: monospace; color: #4F46E5; font-weight: bold;">${r.receiptNumber}</span><br>
+            Direct Verification URL: <a href="${verifyUrl}" target="_blank" style="color: #4F46E5; text-decoration: none;">${verifyUrl}</a>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 9px; font-weight: bold; color: #10b981; border: 1px solid #10b981; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+            ✓ OFFICIAL VERIFIED RECEIPT
+          </div>
+          <div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">IHSAN REMS Ledger Authenticated</div>
+        </div>
+      </div>
+    ` : '';
 
     const htmlContent = `
       <html>

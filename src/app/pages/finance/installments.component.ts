@@ -62,6 +62,16 @@ import { SalesService } from '../../services/sales.service';
       >
         Accrued Penalties & Waivers Log
       </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'reminders'" 
+        (click)="activeTab = 'reminders'; loadRemindersData()"
+        style="padding: 10px 16px; font-weight: 600; font-size: 14px; border-bottom: 2px solid transparent;"
+        [style.border-bottom-color]="activeTab === 'reminders' ? 'var(--brand-primary)' : 'transparent'"
+        [style.color]="activeTab === 'reminders' ? 'var(--brand-primary)' : 'var(--text-secondary)'"
+      >
+        Payment Reminders Engine (TC-6.30)
+      </button>
     </div>
 
     <!-- Tab 1: Schedules & Rescheduling -->
@@ -319,6 +329,108 @@ import { SalesService } from '../../services/sales.service';
               <tr *ngIf="penaltyTransactions.length === 0">
                 <td colspan="8" class="text-center py-6 text-secondary">
                   No penalty transactions generated.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Automated Payment Due-Date Reminders Engine (TC-6.30) -->
+    <div *ngIf="activeTab === 'reminders'">
+      <!-- Configuration Box -->
+      <div class="card glass-card" style="margin-bottom: 24px;">
+        <div class="flex justify-between align-center" style="margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0;">Automated Payment Reminder Policy</h3>
+            <p class="text-secondary font-xs" style="margin: 4px 0 0 0;">Configure timeline intervals and multi-channel delivery rules for upcoming & overdue installments</p>
+          </div>
+          <button class="btn btn-primary flex align-center gap-1" (click)="triggerReminders()">
+            <span class="material-icons-outlined">send</span>
+            Trigger Reminder Engine Now
+          </button>
+        </div>
+
+        <form class="grid grid-cols-3 gap-4" (submit)="saveReminderConfig($event)">
+          <div class="form-group flex flex-col">
+            <label style="font-size: 12px; font-weight: 600;">Upcoming Notice Window (Days Before Due) *</label>
+            <input type="number" min="1" max="60" [(ngModel)]="reminderConfig.reminderDaysBeforeDue" name="daysBefore" class="form-control" required />
+            <span class="font-xs text-secondary mt-1">Triggers prior to installment due date</span>
+          </div>
+
+          <div class="form-group flex flex-col">
+            <label style="font-size: 12px; font-weight: 600;">Overdue Escalation (Days After Due) *</label>
+            <input type="number" min="1" max="90" [(ngModel)]="reminderConfig.reminderDaysAfterDue" name="daysAfter" class="form-control" required />
+            <span class="font-xs text-secondary mt-1">Triggers when payment is overdue</span>
+          </div>
+
+          <div class="form-group flex flex-col">
+            <label style="font-size: 12px; font-weight: 600;">Active Delivery Channels</label>
+            <div class="flex gap-3 align-center mt-2">
+              <label class="flex align-center gap-1 font-xs">
+                <input type="checkbox" [(ngModel)]="reminderConfig.emailEnabled" name="emailEnabled" /> Email (SMTP)
+              </label>
+              <label class="flex align-center gap-1 font-xs">
+                <input type="checkbox" [(ngModel)]="reminderConfig.telegramEnabled" name="telegramEnabled" /> Telegram DM
+              </label>
+              <label class="flex align-center gap-1 font-xs">
+                <input type="checkbox" [(ngModel)]="reminderConfig.smsEnabled" name="smsEnabled" /> SMS
+              </label>
+            </div>
+          </div>
+
+          <div class="col-span-3 flex justify-end">
+            <button type="submit" class="btn btn-secondary">Save Reminder Settings</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Dispatched Reminders Audit Trail Log -->
+      <div class="card glass-card">
+        <h3 style="margin-bottom: 16px;">Payment Reminders Audit Trail</h3>
+        
+        <div class="table-container">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>Customer & Phone</th>
+                <th>Contract Reference</th>
+                <th>Installment Seq #</th>
+                <th>Channel</th>
+                <th>Date Dispatched</th>
+                <th>Delivery Status</th>
+                <th>Message Content</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let rem of reminderLogs">
+                <td>
+                  <div class="flex flex-col">
+                    <span class="font-bold text-main">{{ rem.customer?.fullName }}</span>
+                    <span class="text-secondary font-xs">{{ rem.customer?.primaryPhone }}</span>
+                  </div>
+                </td>
+                <td class="font-mono">{{ rem.contract?.contractNo }}</td>
+                <td class="font-mono font-bold">Installment #{{ rem.installment?.installmentNo }}</td>
+                <td>
+                  <span class="badge" [ngClass]="rem.notificationType === 'EMAIL' ? 'badge-indigo' : (rem.notificationType === 'TELEGRAM' ? 'badge-success' : 'badge-pending')">
+                    {{ rem.notificationType }}
+                  </span>
+                </td>
+                <td class="font-mono">{{ rem.reminderDate | date:'medium' }}</td>
+                <td>
+                  <span class="badge badge-success font-bold">
+                    ✓ {{ rem.deliveryStatus }}
+                  </span>
+                </td>
+                <td class="text-secondary font-xs" style="max-width: 280px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" [title]="rem.messageContent">
+                  {{ rem.messageContent }}
+                </td>
+              </tr>
+              <tr *ngIf="reminderLogs.length === 0">
+                <td colspan="7" class="text-center py-6 text-secondary">
+                  No payment reminders dispatched yet. Click "Trigger Reminder Engine Now" to scan and send due-date notifications.
                 </td>
               </tr>
             </tbody>
@@ -624,6 +736,65 @@ export class FinanceInstallmentsComponent implements OnInit {
         console.error('Error waiving penalty', err);
         this.errorMessage = err.error?.message || 'Waiver authorization failed.';
         this.closeWaiveModal();
+      }
+    });
+  }
+
+  // --- Payment Reminders Automation (TC-6.30) ---
+  reminderConfig = {
+    reminderDaysBeforeDue: 5,
+    reminderDaysAfterDue: 3,
+    emailEnabled: true,
+    telegramEnabled: true,
+    smsEnabled: true,
+    isActive: true
+  };
+  reminderLogs: any[] = [];
+
+  loadRemindersData() {
+    this.financeService.getReminderConfigs().subscribe({
+      next: (res) => {
+        if (res && res.length > 0) {
+          const active = res.find((c: any) => c.isActive) || res[0];
+          this.reminderConfig = { ...this.reminderConfig, ...active };
+        }
+      },
+      error: (err) => console.error('Error fetching reminder configs', err)
+    });
+
+    this.financeService.getReminderLogs().subscribe({
+      next: (res) => this.reminderLogs = res,
+      error: (err) => console.error('Error fetching reminder logs', err)
+    });
+  }
+
+  saveReminderConfig(event: Event) {
+    event.preventDefault();
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.financeService.updateReminderConfig(this.reminderConfig).subscribe({
+      next: () => {
+        this.successMessage = 'Payment reminder configuration and intervals saved successfully!';
+        this.loadRemindersData();
+      },
+      error: (err) => {
+        console.error('Error saving reminder config', err);
+        this.errorMessage = err.error?.message || 'Failed to save reminder config.';
+      }
+    });
+  }
+
+  triggerReminders() {
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.financeService.triggerReminderEngine().subscribe({
+      next: (res) => {
+        this.successMessage = res.remarks || `Reminder engine executed. Processed ${res.reminderCount} customer notifications!`;
+        this.loadRemindersData();
+      },
+      error: (err) => {
+        console.error('Error triggering reminders', err);
+        this.errorMessage = err.error?.message || 'Failed to trigger reminder engine.';
       }
     });
   }

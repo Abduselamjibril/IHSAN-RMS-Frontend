@@ -173,16 +173,20 @@ export class SalesService {
     return this.http.get<any[]>(`${this.apiBase}/discounts`);
   }
 
+  getDiscountHistory(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBase}/discounts/${id}/history`);
+  }
+
   createDiscountRequest(data: any): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/discounts`, data);
   }
 
-  approveDiscountRequest(id: number, approverId: number, comment: string): Observable<any> {
-    return this.http.put<any>(`${this.apiBase}/discounts/${id}/approve`, { approverId, comment });
+  approveDiscountRequest(id: number, approverId?: number, comment?: string): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/discounts/${id}/approve`, { approverId: approverId || 1, comment: comment || 'Approved' });
   }
 
-  rejectDiscountRequest(id: number, approverId: number, comment: string): Observable<any> {
-    return this.http.put<any>(`${this.apiBase}/discounts/${id}/reject`, { approverId, comment });
+  rejectDiscountRequest(id: number, approverId?: number, comment?: string): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/discounts/${id}/reject`, { approverId: approverId || 1, comment: comment || 'Rejected' });
   }
 
   // --- Commissions ---
@@ -196,6 +200,23 @@ export class SalesService {
 
   getCommissions(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiBase}/commissions`);
+  }
+
+  reviewCommission(id: number, data: { action: 'APPROVE' | 'REJECT'; remarks?: string; reviewerId?: number }): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/commissions/${id}/review`, data);
+  }
+
+  getCommissionsReport(filters: { agentId?: number; startDate?: string; endDate?: string; status?: string }): Observable<any> {
+    const params: any = {};
+    if (filters.agentId) params.agentId = filters.agentId;
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+    if (filters.status && filters.status !== 'ALL') params.status = filters.status;
+    return this.http.get<any>(`${this.apiBase}/commissions/report`, { params });
+  }
+
+  calculateCommission(contractId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/commissions/calculate/${contractId}`, {});
   }
 
   updateCommissionStatus(id: number, status: string): Observable<any> {

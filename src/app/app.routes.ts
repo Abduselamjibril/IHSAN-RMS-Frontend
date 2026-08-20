@@ -39,6 +39,7 @@ import { CommissionsComponent } from './pages/sales/commissions.component';
 import { CollectionsComponent } from './pages/finance/collections.component';
 import { FinanceInstallmentsComponent } from './pages/finance/installments.component';
 import { ReceiptsComponent } from './pages/finance/receipts.component';
+import { VerifyReceiptComponent } from './pages/finance/verify-receipt.component';
 
 // Marketing module imports
 import { CampaignsComponent } from './pages/marketing/campaigns.component';
@@ -107,6 +108,8 @@ export const routes: Routes = [
   { path: 'finance/collections', component: CollectionsComponent, canActivate: [authGuard] },
   { path: 'finance/installments', component: FinanceInstallmentsComponent, canActivate: [authGuard] },
   { path: 'finance/receipts', component: ReceiptsComponent, canActivate: [authGuard] },
+  { path: 'finance/receipts/verify', component: VerifyReceiptComponent },
+  { path: 'verify-receipt', component: VerifyReceiptComponent },
 
   // Marketing module routes
   { path: 'marketing/campaigns', component: CampaignsComponent, canActivate: [authGuard] },

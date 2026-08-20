@@ -107,6 +107,15 @@ import { environment } from '../../config';
                   </button>
                   <button 
                     class="btn btn-secondary btn-xs flex align-center gap-1"
+                    (click)="emailReceipt(r)"
+                    style="padding: 4px 8px; font-size: 11px; color: #0284c7; border-color: rgba(2, 132, 199, 0.3);"
+                    title="Email Receipt to Customer (TC-6.14)"
+                  >
+                    <span class="material-icons-outlined" style="font-size: 14px;">mail</span>
+                    Email
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-xs flex align-center gap-1"
                     (click)="reprint(r.id)"
                     style="padding: 4px 8px; font-size: 11px;"
                   >
@@ -1065,6 +1074,19 @@ export class ReceiptsComponent implements OnInit, AfterViewInit {
     });
   }
 
+  emailReceipt(r: any) {
+    if (!r || !r.id) return;
+    this.financeService.emailReceipt(r.id).subscribe({
+      next: (res) => {
+        this.successMessage = `Official Receipt #${r.receiptNumber} successfully emailed to customer (${res.recipient || 'on record'}) and dispatched to Telegram!`;
+      },
+      error: (err) => {
+        console.error('Error emailing receipt', err);
+        this.errorMessage = err.error?.message || 'Failed to email receipt.';
+      }
+    });
+  }
+
   // --- HTML5 Canvas Signature Pad ---
   initSignaturePad() {
     if (!this.sigCanvas) return;
@@ -1614,7 +1636,25 @@ export class ReceiptsComponent implements OnInit, AfterViewInit {
       `;
     });
 
-    const qrCodeHtml = '';
+    const verifyUrl = `${window.location.origin}/verify-receipt?receiptNo=${r.receiptNumber}`;
+    const qrCodeHtml = template.qrEnabled !== false ? `
+      <div style="padding: var(--sheet-padding); padding-top: 10px; margin-top: auto; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(verifyUrl)}" style="width: 70px; height: 70px; border-radius: 4px; border: 1px solid #e2e8f0; padding: 2px; background: white;" alt="Verification QR" />
+          <div style="font-size: 9px; color: #64748b; line-height: 1.4;">
+            <strong style="color: #0f172a; font-size: 10px;">Scan QR Code to Verify Authenticity</strong><br>
+            Digital Verification: <span style="font-family: monospace; color: #4F46E5; font-weight: bold;">${r.receiptNumber}</span><br>
+            Direct Verification URL: <a href="${verifyUrl}" target="_blank" style="color: #4F46E5; text-decoration: none;">${verifyUrl}</a>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 9px; font-weight: bold; color: #10b981; border: 1px solid #10b981; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+            ✓ OFFICIAL VERIFIED RECEIPT
+          </div>
+          <div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">IHSAN REMS Ledger Authenticated</div>
+        </div>
+      </div>
+    ` : '';
 
     const htmlContent = `
       <html>

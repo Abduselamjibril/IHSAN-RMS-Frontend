@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService } from '../../services/sales.service';
 import { PropertiesService } from '../../services/properties.service';
+import { FinanceService } from '../../services/finance.service';
+import { environment } from '../../config';
 
 interface QuotationItemRow {
   description: string;
@@ -200,20 +202,30 @@ interface QuotationItemRow {
                 </div>
               </td>
               <td>
-                <div class="flex gap-2" *ngIf="dr.status === 'PENDING'">
+                <div class="flex gap-2 align-center">
                   <button 
+                    *ngIf="dr.status === 'PENDING'"
                     class="btn btn-primary btn-sm flex align-center gap-1"
-                    (click)="onApproveDiscount(dr.id)"
+                    (click)="openReviewDiscountModal(dr, 'APPROVE')"
                   >
                     <span class="material-icons-outlined font-sm">check</span>
                     <span>Approve</span>
                   </button>
                   <button 
+                    *ngIf="dr.status === 'PENDING'"
                     class="btn btn-danger btn-sm flex align-center gap-1"
-                    (click)="onRejectDiscount(dr.id)"
+                    (click)="openReviewDiscountModal(dr, 'REJECT')"
                   >
                     <span class="material-icons-outlined font-sm">close</span>
                     <span>Reject</span>
+                  </button>
+                  <button 
+                    class="btn btn-secondary btn-sm flex align-center gap-1"
+                    (click)="openDiscountAuditHistory(dr)"
+                    title="View Full Approval Audit Trail"
+                  >
+                    <span class="material-icons-outlined font-sm">history</span>
+                    <span>Audit Trail</span>
                   </button>
                 </div>
               </td>
@@ -225,6 +237,119 @@ interface QuotationItemRow {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TC-5.32: Discount Approval Audit Trail Modal -->
+    <div class="modal-overlay" *ngIf="showDiscountAuditModal" (click)="closeDiscountAuditModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()" style="max-width: 650px;">
+        <div class="modal-header flex justify-between align-center">
+          <div class="flex align-center gap-2">
+            <span class="material-icons-outlined" style="color: var(--brand-primary);">history</span>
+            <h2>Discount Request Audit Trail</h2>
+          </div>
+          <button class="header-icon-btn close-btn" (click)="closeDiscountAuditModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="p-3 mb-3 bg-card border rounded">
+            <div class="grid grid-cols-2 gap-2 font-xs">
+              <div>
+                <span class="text-secondary block">Request Ref</span>
+                <strong class="font-mono">#DR-0{{ selectedAuditDiscount?.id }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Quotation No</span>
+                <strong class="font-mono">{{ selectedAuditDiscount?.quotation?.quotationNo }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Customer</span>
+                <strong>{{ selectedAuditDiscount?.quotation?.customer?.fullName }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Requester</span>
+                <strong>Sales Representative #{{ selectedAuditDiscount?.requestedBy || 1 }}</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Requested Amount</span>
+                <strong class="font-mono text-danger">ETB {{ selectedAuditDiscount?.requestedDiscount | number }} ({{ selectedAuditDiscount?.discountPercentage }}%)</strong>
+              </div>
+              <div>
+                <span class="text-secondary block">Submission Time</span>
+                <span>{{ selectedAuditDiscount?.requestedAt | date:'medium' }}</span>
+              </div>
+            </div>
+            <div class="mt-2 pt-2 border-top font-xs text-secondary">
+              <strong>Original Justification:</strong> {{ selectedAuditDiscount?.reason }}
+            </div>
+          </div>
+
+          <h4 class="font-xs font-bold text-secondary uppercase mb-2">Approval Lifecycle & Decision Log</h4>
+          <div class="flex flex-col gap-3" *ngIf="discountAuditData?.approvals?.length > 0">
+            <div *ngFor="let app of discountAuditData.approvals" class="p-3 border rounded bg-card flex flex-col gap-1">
+              <div class="flex justify-between align-center">
+                <span class="badge" [ngClass]="app.action === 'APPROVED' ? 'badge-qualified' : 'badge-lost'">
+                  {{ app.action }} by Approver #{{ app.approverId }}
+                </span>
+                <span class="text-secondary font-xs">{{ app.actionDate | date:'medium' }}</span>
+              </div>
+              <p class="font-sm text-main my-1">{{ app.comments || 'No comment provided' }}</p>
+              <span class="text-secondary font-xs">Approval Level: Stage {{ app.approvalLevel || 1 }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="!discountAuditData?.approvals || discountAuditData?.approvals?.length === 0" class="text-center py-6 text-secondary italic">
+            No approval decisions logged yet. Request is currently awaiting review.
+          </div>
+
+          <div class="p-2 mt-3 text-secondary font-xs text-center border-top">
+            🔒 <em>Immutable Audit Record — Protected against modification by standard users.</em>
+          </div>
+
+          <div class="modal-footer flex justify-end mt-4">
+            <button class="btn btn-secondary" (click)="closeDiscountAuditModal()">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discount Review Modal (Approve / Reject) -->
+    <div class="modal-overlay" *ngIf="showReviewDiscountModal" (click)="closeReviewDiscountModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()" style="max-width: 500px;">
+        <div class="modal-header flex justify-between align-center">
+          <h2>{{ discountReviewAction === 'APPROVE' ? 'Approve Discount Request' : 'Reject Discount Request' }}</h2>
+          <button class="header-icon-btn close-btn" (click)="closeReviewDiscountModal()">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="p-3 mb-3 bg-card border rounded">
+            <div class="flex justify-between">
+              <span class="text-secondary font-xs">Quotation</span>
+              <strong class="font-mono">{{ selectedReviewDiscount?.quotation?.quotationNo }}</strong>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-secondary font-xs">Requested Discount</span>
+              <strong class="text-danger font-mono">ETB {{ selectedReviewDiscount?.requestedDiscount | number }} ({{ selectedReviewDiscount?.discountPercentage }}%)</strong>
+            </div>
+            <div class="mt-2 text-secondary font-xs">
+              Reason: {{ selectedReviewDiscount?.reason }}
+            </div>
+          </div>
+          <form (submit)="onSubmitReviewDiscount($event)">
+            <div class="form-group flex flex-col mb-3">
+              <label class="font-xs font-bold text-secondary">Approver Review Comments {{ discountReviewAction === 'REJECT' ? '*' : '' }}</label>
+              <textarea [(ngModel)]="discountReviewComment" name="dComment" [required]="discountReviewAction === 'REJECT'" placeholder="Enter review remarks / authorization basis..." rows="3"></textarea>
+            </div>
+            <div class="modal-footer flex justify-end gap-3 mt-4">
+              <button type="button" class="btn btn-secondary" (click)="closeReviewDiscountModal()">Cancel</button>
+              <button type="submit" class="btn" [ngClass]="discountReviewAction === 'APPROVE' ? 'btn-primary' : 'btn-danger'">
+                {{ discountReviewAction === 'APPROVE' ? 'Confirm Approval' : 'Confirm Rejection' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -468,12 +593,20 @@ interface QuotationItemRow {
           <!-- Company Branding Header -->
           <div class="flex justify-between align-center pb-4" style="border-bottom: 2px solid #1e3a8a; margin-bottom: 24px;">
             <div class="flex align-center gap-3">
-              <div style="width: 48px; height: 48px; background: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 24px;">
-                I
+              <div *ngIf="orgSettings.headerImagePath" style="max-height: 65px; overflow: hidden;">
+                <img [src]="resolveUrl(orgSettings.headerImagePath)" style="max-height: 65px; width: auto; object-fit: contain;" alt="Header" />
               </div>
-              <div>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px;">IHSAN REAL ESTATE</h1>
-                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Luxury Developments & Property Solutions • Addis Ababa, Ethiopia</p>
+              <div *ngIf="!orgSettings.headerImagePath" class="flex align-center gap-3">
+                <img *ngIf="orgSettings.logoPath" [src]="resolveUrl(orgSettings.logoPath)" style="height: 52px; width: 52px; object-fit: contain; border-radius: 6px;" alt="Logo" />
+                <div *ngIf="!orgSettings.logoPath" style="width: 48px; height: 48px; background: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 24px;">
+                  I
+                </div>
+                <div>
+                  <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px; text-transform: uppercase;">{{ orgSettings.companyName || 'IHSAN BRAND PROPERTIES' }}</h1>
+                  <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">
+                    TIN: {{ orgSettings.tinNumber || 'TIN-77665544' }} | VAT: {{ orgSettings.vatNumber || 'VAT-332211' }} • {{ orgSettings.companyAddress || 'Bole, Addis Ababa, Ethiopia' }}
+                  </p>
+                </div>
               </div>
             </div>
             <div style="text-align: right;">
@@ -737,6 +870,18 @@ interface QuotationItemRow {
 export class QuotationsComponent implements OnInit {
   private salesService = inject(SalesService);
   private propertiesService = inject(PropertiesService);
+  private financeService = inject(FinanceService);
+
+  orgSettings: any = {
+    companyName: 'IHSAN BRAND PROPERTIES',
+    tinNumber: 'TIN-77665544',
+    vatNumber: 'VAT-332211',
+    companyAddress: 'Bole, Addis Ababa, Ethiopia',
+    companyPhone: '+251-11-1234567',
+    companyEmail: 'info@ihsanproperties.com',
+    logoPath: '',
+    headerImagePath: ''
+  };
 
   activeTab = 'quotations';
   quotations: any[] = [];
@@ -802,12 +947,30 @@ export class QuotationsComponent implements OnInit {
     this.loadCustomers();
     this.loadProperties();
     this.loadActiveReservations();
+    this.loadOrgSettings();
 
     const today = new Date();
     const validity = new Date(today);
     validity.setDate(today.getDate() + 30); // Valid for 30 days
     this.newQuotation.quotationDate = this.formatDate(today);
     this.newQuotation.validityDate = this.formatDate(validity);
+  }
+
+  loadOrgSettings() {
+    this.financeService.getSettings().subscribe({
+      next: (res) => {
+        if (res) {
+          this.orgSettings = { ...this.orgSettings, ...res };
+        }
+      },
+      error: (err) => console.error('Error loading org settings', err)
+    });
+  }
+
+  resolveUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+    return environment.serverUrl + (url.startsWith('/') ? '' : '/') + url;
   }
 
   loadQuotations() {
@@ -1079,37 +1242,79 @@ export class QuotationsComponent implements OnInit {
     });
   }
 
-  onApproveDiscount(id: number) {
-    const comment = prompt('Enter approval comments (optional):');
-    this.salesService.approveDiscountRequest(id, 1, comment || 'Approved').subscribe({
+  // TC-5.32: Discount Review & Audit Trail State
+  showDiscountAuditModal = false;
+  selectedAuditDiscount: any = null;
+  discountAuditData: any = null;
+
+  showReviewDiscountModal = false;
+  selectedReviewDiscount: any = null;
+  discountReviewAction: 'APPROVE' | 'REJECT' = 'APPROVE';
+  discountReviewComment = '';
+
+  openReviewDiscountModal(dr: any, action: 'APPROVE' | 'REJECT') {
+    this.selectedReviewDiscount = dr;
+    this.discountReviewAction = action;
+    this.discountReviewComment = action === 'APPROVE' ? 'Approved by management' : '';
+    this.showReviewDiscountModal = true;
+  }
+
+  closeReviewDiscountModal() {
+    this.showReviewDiscountModal = false;
+    this.selectedReviewDiscount = null;
+    this.discountReviewComment = '';
+  }
+
+  onSubmitReviewDiscount(event: Event) {
+    event.preventDefault();
+    if (!this.selectedReviewDiscount) return;
+
+    if (this.discountReviewAction === 'APPROVE') {
+      this.salesService.approveDiscountRequest(this.selectedReviewDiscount.id, 1, this.discountReviewComment || 'Approved').subscribe({
+        next: (res) => {
+          this.successMessage = `Discount request #${this.selectedReviewDiscount.id} approved! Quotation values updated.`;
+          this.loadDiscountRequests();
+          this.loadQuotations();
+          this.closeReviewDiscountModal();
+        },
+        error: (err) => {
+          console.error('Error approving discount request', err);
+          this.errorMessage = err.error?.message || 'Failed to approve discount request.';
+        }
+      });
+    } else {
+      this.salesService.rejectDiscountRequest(this.selectedReviewDiscount.id, 1, this.discountReviewComment || 'Rejected').subscribe({
+        next: (res) => {
+          this.successMessage = `Discount request #${this.selectedReviewDiscount.id} rejected.`;
+          this.loadDiscountRequests();
+          this.closeReviewDiscountModal();
+        },
+        error: (err) => {
+          console.error('Error rejecting discount request', err);
+          this.errorMessage = err.error?.message || 'Failed to reject discount request.';
+        }
+      });
+    }
+  }
+
+  openDiscountAuditHistory(dr: any) {
+    this.selectedAuditDiscount = dr;
+    this.showDiscountAuditModal = true;
+    this.salesService.getDiscountHistory(dr.id).subscribe({
       next: (res) => {
-        this.successMessage = `Discount request approved! Quotation values have been updated.`;
-        this.loadDiscountRequests();
-        this.loadQuotations();
+        this.discountAuditData = res;
       },
       error: (err) => {
-        console.error('Error approving discount request', err);
-        this.errorMessage = err.error?.message || 'Failed to approve discount request.';
+        console.error('Error fetching discount history', err);
+        this.discountAuditData = { approvals: [], auditLogs: [] };
       }
     });
   }
 
-  onRejectDiscount(id: number) {
-    const comment = prompt('Enter rejection reasons (required):');
-    if (!comment) {
-      alert('Rejection reason is required.');
-      return;
-    }
-    this.salesService.rejectDiscountRequest(id, 1, comment).subscribe({
-      next: (res) => {
-        this.successMessage = `Discount request rejected.`;
-        this.loadDiscountRequests();
-      },
-      error: (err) => {
-        console.error('Error rejecting discount request', err);
-        this.errorMessage = err.error?.message || 'Failed to reject discount request.';
-      }
-    });
+  closeDiscountAuditModal() {
+    this.showDiscountAuditModal = false;
+    this.selectedAuditDiscount = null;
+    this.discountAuditData = null;
   }
 
   // --- TC-5.09: PDF Print Modal ---
@@ -1124,7 +1329,178 @@ export class QuotationsComponent implements OnInit {
   }
 
   printQuotationPdf() {
-    window.print();
+    const quote = this.selectedPdfQuote;
+    if (!quote) {
+      window.print();
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank', 'width=850,height=950');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    const resolveUrl = (url: string) => {
+      if (!url) return '';
+      if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+      return environment.serverUrl + (url.startsWith('/') ? '' : '/') + url;
+    };
+
+    const logoHtml = this.orgSettings.headerImagePath 
+      ? `<img src="${resolveUrl(this.orgSettings.headerImagePath)}" style="max-height: 65px; width: auto; object-fit: contain;" />`
+      : (this.orgSettings.logoPath 
+          ? `<div style="display: flex; align-items: center; gap: 12px;"><img src="${resolveUrl(this.orgSettings.logoPath)}" style="height: 52px; width: 52px; object-fit: contain; border-radius: 6px;" /><div><h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px; text-transform: uppercase;">${this.orgSettings.companyName || 'IHSAN BRAND PROPERTIES'}</h1><p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">TIN: ${this.orgSettings.tinNumber || 'TIN-77665544'} | VAT: ${this.orgSettings.vatNumber || 'VAT-332211'} • ${this.orgSettings.companyAddress || 'Bole, Addis Ababa, Ethiopia'}</p></div></div>`
+          : `<div style="display: flex; align-items: center; gap: 12px;"><div style="width: 48px; height: 48px; background: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 24px;">I</div><div><h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px;">${this.orgSettings.companyName || 'IHSAN REAL ESTATE'}</h1><p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">${this.orgSettings.companyAddress || 'Luxury Developments • Addis Ababa, Ethiopia'}</p></div></div>`);
+
+    let itemsHtml = '';
+    if (quote.items && quote.items.length > 0) {
+      quote.items.forEach((item: any) => {
+        itemsHtml += `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 12px; font-weight: 500;">${item.description}</td>
+            <td style="padding: 10px 12px; text-align: center;">${item.quantity}</td>
+            <td style="padding: 10px 12px; text-align: right; font-family: monospace;">ETB ${Number(item.unitPrice || 0).toLocaleString()}</td>
+            <td style="padding: 10px 12px; text-align: right; font-family: monospace; font-weight: bold;">ETB ${Number(item.amount || 0).toLocaleString()}</td>
+          </tr>
+        `;
+      });
+    } else {
+      itemsHtml = `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 12px; font-weight: 500;">Unit Base Valuation Price</td>
+          <td style="padding: 10px 12px; text-align: center;">1</td>
+          <td style="padding: 10px 12px; text-align: right; font-family: monospace;">ETB ${Number(quote.basePrice || 0).toLocaleString()}</td>
+          <td style="padding: 10px 12px; text-align: right; font-family: monospace; font-weight: bold;">ETB ${Number(quote.basePrice || 0).toLocaleString()}</td>
+        </tr>
+      `;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Quotation ${quote.quotationNo}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600;700&display=swap');
+            body {
+              background: #f1f5f9;
+              margin: 0;
+              padding: 40px;
+              display: flex;
+              justify-content: center;
+              font-family: 'Inter', sans-serif;
+              color: #0f172a;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .a4-sheet {
+              background: white;
+              width: 210mm;
+              min-height: 297mm;
+              box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+              padding: 20mm;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+            }
+            @page { size: A4; margin: 0; }
+            @media print {
+              body { background: white; padding: 0; margin: 0; }
+              .a4-sheet { box-shadow: none; width: 210mm; height: 297mm; padding: 15mm; margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="a4-sheet">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 16px; margin-bottom: 24px;">
+              ${logoHtml}
+              <div style="text-align: right;">
+                <div style="background: #1e3a8a; color: #fff; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 4px; display: inline-block;">OFFICIAL QUOTATION</div>
+                <div style="margin-top: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">#${quote.quotationNo}</div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 6px;">Client Information</div>
+                <div style="font-size: 15px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">${quote.customer?.fullName || ''}</div>
+                <div style="font-size: 12px; color: #334155;">📞 Phone: ${quote.customer?.primaryPhone || 'N/A'}</div>
+                <div style="font-size: 12px; color: #334155;">✉️ Email: ${quote.customer?.primaryEmail || 'N/A'}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 6px;">Schedule Details</div>
+                <div style="font-size: 12px; color: #334155; margin-bottom: 3px;">📅 <strong>Date:</strong> ${new Date(quote.quotationDate).toLocaleDateString()}</div>
+                <div style="font-size: 12px; color: #dc2626; font-weight: bold; margin-bottom: 3px;">⏳ <strong>Valid Until:</strong> ${new Date(quote.validityDate).toLocaleDateString()}</div>
+                <div style="font-size: 12px; color: #334155;">🏢 <strong>Unit:</strong> ${quote.property?.propertyName || ''} - Unit #${quote.unit?.unitNumber || ''}</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                  <tr style="background: #1e3a8a; color: #ffffff;">
+                    <th style="padding: 10px 12px; text-align: left;">Description</th>
+                    <th style="padding: 10px 12px; text-align: center; width: 70px;">Qty</th>
+                    <th style="padding: 10px 12px; text-align: right; width: 140px;">Unit Rate</th>
+                    <th style="padding: 10px 12px; text-align: right; width: 160px;">Total (ETB)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+              <div style="width: 320px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                  <span style="color: #64748b;">Base Price:</span>
+                  <strong>ETB ${Number(quote.basePrice || 0).toLocaleString()}</strong>
+                </div>
+                ${quote.discountAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #dc2626;">
+                  <span>Discount:</span>
+                  <strong>- ETB ${Number(quote.discountAmount).toLocaleString()}</strong>
+                </div>` : ''}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #cbd5e1; color: #64748b;">
+                  <span>VAT (15%):</span>
+                  <strong>+ ETB ${Number(quote.vatAmount || 0).toLocaleString()}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800; color: #1e3a8a;">
+                  <span>Total Amount:</span>
+                  <span>ETB ${Number(quote.totalAmount || 0).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 12px; font-size: 11px; color: #92400e; margin-bottom: auto;">
+              <strong>Terms:</strong> ${quote.remarks || 'This quotation is issued for budgeting purposes and represents a binding reservation offer until the validity date specified above.'}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 16px;">
+              <div>
+                <div style="border-bottom: 1px solid #94a3b8; height: 40px; margin-bottom: 6px;"></div>
+                <div style="font-weight: bold; font-size: 12px;">Prepared By: Sales Representative</div>
+                <div style="font-size: 10px; color: #64748b;">${this.orgSettings.companyName || 'IHSAN Real Estate'}</div>
+              </div>
+              <div>
+                <div style="border-bottom: 1px solid #94a3b8; height: 40px; margin-bottom: 6px;"></div>
+                <div style="font-weight: bold; font-size: 12px;">Client Acknowledgement Signature</div>
+                <div style="font-size: 10px; color: #64748b;">Date: ________________________</div>
+              </div>
+            </div>
+          </div>
+          <script>
+            document.fonts.ready.then(() => {
+              setTimeout(() => { window.print(); }, 250);
+            });
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   }
 
   // --- TC-5.10: Email Quotation Modal ---

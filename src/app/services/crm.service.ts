@@ -118,8 +118,8 @@ export class CrmService {
     return `${this.apiBase}/leads/export/excel${queryStr}`;
   }
 
-  assignAgent(id: number, agentId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiBase}/leads/${id}/assign`, { agentId });
+  assignAgent(id: number, agentId: number, performedBy?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBase}/leads/${id}/assign`, { agentId, performedBy });
   }
 
   updateStatus(id: number, statusId: number): Observable<any> {

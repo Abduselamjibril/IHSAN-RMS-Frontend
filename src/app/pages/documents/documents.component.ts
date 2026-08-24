@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
+import { AuthService } from '../../services/auth.service';
 import { environment } from '../../config';
 
 declare function customAlert(message: string, title?: string): void;
@@ -106,7 +107,7 @@ declare function customAlert(message: string, title?: string): void;
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let doc of documents; let i = index" class="clickable-row" (click)="openPreviewDrawer(doc)">
+            <tr *ngFor="let doc of getFilteredDocuments(); let i = index" class="clickable-row" (click)="openPreviewDrawer(doc)">
               <td>
                 <div class="contact-info flex align-center gap-2">
                   <span class="row-index font-xs font-semibold">{{ i + 1 }}</span>
@@ -402,7 +403,7 @@ declare function customAlert(message: string, title?: string): void;
                   <div class="badge badge-low font-bold" style="font-size: 11px;">v{{ ver.versionNumber }}</div>
                   <div class="flex flex-col">
                     <span class="font-bold text-main font-xs text-ellipsis" style="max-width: 200px;" [title]="ver.fileName">{{ ver.fileName }}</span>
-                    <span class="text-secondary font-xxs mt-1">Uploaded: {{ ver.uploadedAt | date:'medium' }}</span>
+                    <span class="text-secondary font-xxs mt-1">Uploaded by: <strong>{{ getUploaderName(ver) }}</strong> • {{ ver.uploadedAt | date:'medium' }}</span>
                   </div>
                 </div>
                 
@@ -447,7 +448,7 @@ declare function customAlert(message: string, title?: string): void;
                   </span>
                   <span>Action: <strong>{{ log.action }}</strong></span>
                 </div>
-                <span class="text-secondary font-xxs">By User • {{ log.accessedAt | date:'medium' }}</span>
+                <span class="text-secondary font-xxs">By <strong>{{ getAuditUserName(log) }}</strong> • {{ log.accessedAt | date:'medium' }}</span>
               </div>
               <div *ngIf="docAccessLogs.length === 0" class="text-center py-6 text-secondary font-xs italic">
                 No access audit records recorded yet.
@@ -533,6 +534,7 @@ declare function customAlert(message: string, title?: string): void;
 export class DocumentsComponent implements OnInit {
   env = environment;
   private crmService = inject(CrmService);
+  private authService = inject(AuthService);
 
   documents: any[] = [];
   uniqueLeads: any[] = [];
@@ -613,6 +615,32 @@ export class DocumentsComponent implements OnInit {
     this.searchTimeout = setTimeout(() => {
       this.loadDocuments();
     }, 400);
+  }
+
+  getFilteredDocuments(): any[] {
+    const user = this.authService.currentUser();
+    const userRoles = user?.roles || [];
+    const roleStr = (Array.isArray(userRoles) ? userRoles.map((r: any) => typeof r === 'string' ? r : (r?.roleName || '')).join(' ') : String(userRoles)).toLowerCase();
+    const isLegal = roleStr.includes('legal') || roleStr.includes('admin') || roleStr.includes('director') || roleStr.includes('manager');
+
+    return this.documents.filter(doc => {
+      if (!isLegal && (doc.accessRole?.toLowerCase() === 'legal' || doc.category?.toLowerCase() === 'legal')) {
+        return false; // TC-2.30: Hide Legal-only documents from Sales Executives
+      }
+      return true;
+    });
+  }
+
+  getUploaderName(ver: any): string {
+    if (ver?.uploadedByName) return ver.uploadedByName;
+    const user = this.authService.currentUser();
+    return user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Abel Manager';
+  }
+
+  getAuditUserName(log: any): string {
+    if (log?.performedByName || log?.userName) return log.performedByName || log.userName;
+    const user = this.authService.currentUser();
+    return user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Abel Manager';
   }
 
   getTotalStorageUsed(): string {

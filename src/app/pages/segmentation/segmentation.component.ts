@@ -172,6 +172,28 @@ import { customConfirm } from '../../utils/confirm';
             </div>
           </div>
 
+          <!-- Segment Performance & Contribution Metrics Report (TC-2.23) -->
+          <div class="metrics-grid margin-y-3 mb-4" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            <div class="metric-card card p-3" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px;">
+              <div class="metric-info">
+                <span class="metric-label" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Segment Size</span>
+                <span class="metric-value" style="font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 4px;">{{ selectedSegment.members?.length || 0 }} Members</span>
+              </div>
+            </div>
+            <div class="metric-card card p-3" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;">
+              <div class="metric-info">
+                <span class="metric-label" style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase;">Conversion Rate</span>
+                <span class="metric-value" style="font-size: 20px; font-weight: 800; color: #15803d; margin-top: 4px;">{{ getSegmentConversionRate(selectedSegment) }}%</span>
+              </div>
+            </div>
+            <div class="metric-card card p-3" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px;">
+              <div class="metric-info">
+                <span class="metric-label" style="font-size: 11px; font-weight: 700; color: #6b21a8; text-transform: uppercase;">Revenue Contribution</span>
+                <span class="metric-value" style="font-size: 18px; font-weight: 800; color: #7e22ce; margin-top: 4px;">ETB {{ getSegmentRevenueContribution(selectedSegment) | number }}</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Rules Summary Section -->
           <div class="rules-summary-panel border p-3 bg-main mb-4 rounded">
             <h4 class="font-xs font-bold uppercase text-secondary mb-2">Segment Query Constraints (AND join)</h4>
@@ -582,6 +604,20 @@ export class SegmentationComponent implements OnInit {
       },
       error: (err) => console.error('Failed to load segment details:', err)
     });
+  }
+
+  getSegmentConversionRate(segment: any): string {
+    if (!segment?.members || segment.members.length === 0) return '0.0';
+    const convertedCount = segment.members.filter((m: any) => m.isConverted || m.leadStatus?.isConverted || m.leadStatus?.statusName === 'Converted').length;
+    return ((convertedCount / segment.members.length) * 100).toFixed(1);
+  }
+
+  getSegmentRevenueContribution(segment: any): number {
+    if (!segment?.members || segment.members.length === 0) return 0;
+    return segment.members.reduce((sum: number, m: any) => {
+      const val = Number(m.opportunity?.estimatedValue || m.budgetMax || m.budgetMin || 0);
+      return sum + val;
+    }, 0);
   }
 
   onRecalculate(id: number) {

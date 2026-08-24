@@ -465,9 +465,12 @@ export class FollowupsComponent implements OnInit {
     this.selectedReminder = reminder;
     if (reminder.reminderDatetime) {
       const dt = new Date(reminder.reminderDatetime);
-      const tzOffset = dt.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16);
-      this.rescheduleDatetime = localISOTime;
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      const hours = String(dt.getHours()).padStart(2, '0');
+      const minutes = String(dt.getMinutes()).padStart(2, '0');
+      this.rescheduleDatetime = `${year}-${month}-${day}T${hours}:${minutes}`;
     } else {
       this.rescheduleDatetime = '';
     }

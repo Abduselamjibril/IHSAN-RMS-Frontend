@@ -219,7 +219,7 @@ import { customAlert, customConfirm } from '../../utils/confirm';
             <div class="action-select flex flex-col">
               <label>Assigned Agent</label>
               <select 
-                [ngModel]="selectedLeadDetails?.assignedSalesAgent?.id" 
+                [ngModel]="selectedLeadDetails?.assignedSalesAgent?.id || 0" 
                 (ngModelChange)="onAssignSalesAgent($event)"
               >
                 <option [value]="0">Unassigned</option>
@@ -228,8 +228,30 @@ import { customAlert, customConfirm } from '../../utils/confirm';
             </div>
           </div>
 
-          <!-- Convert to Opportunity Button if status is Qualified -->
-          <div class="drawer-section" *ngIf="selectedLeadDetails?.leadStatus?.statusName === 'Qualified'" style="margin-bottom: 16px;">
+          <!-- Customer Tags Section (TC-2.21 & TC-2.22) -->
+          <div class="drawer-section mt-3 pt-2 border-t" style="margin-bottom: 16px;">
+            <label class="font-bold font-xs text-secondary flex align-center gap-1 mb-2">
+              <span class="material-icons-outlined font-sm">label</span> Customer Tags (VIP / Investor):
+            </label>
+            <div class="flex align-center gap-2 flex-wrap">
+              <span *ngFor="let tag of getLeadTags(selectedLeadDetails)" class="badge flex align-center gap-1" style="padding: 4px 10px; border-radius: 12px; font-size: 11px; background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-weight: 700;">
+                {{ tag }}
+                <span class="material-icons-outlined font-xs cursor-pointer" style="font-size: 13px; margin-left: 2px;" (click)="removeTag(selectedLeadDetails, tag)">close</span>
+              </span>
+              
+              <select #tagSelect (change)="addTag(selectedLeadDetails, tagSelect.value); tagSelect.value=''" style="padding: 4px 10px; border-radius: 12px; border: 1px dashed #cbd5e1; font-size: 11px; outline: none; background: #f8fafc; cursor: pointer; color: #475569; font-weight: 700;">
+                <option value="">+ Add Tag</option>
+                <option value="VIP">VIP</option>
+                <option value="Investor">Investor</option>
+                <option value="High Priority">High Priority</option>
+                <option value="Repeat Client">Repeat Client</option>
+                <option value="Hot Lead">Hot Lead</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Convert to Opportunity Button if status is active (Interested, Site Visit, Negotiation, Qualified) and not yet converted -->
+          <div class="drawer-section" *ngIf="['Interested', 'Site Visit Scheduled', 'Negotiation', 'Qualified'].includes(selectedLeadDetails?.leadStatus?.statusName) && !selectedLeadDetails?.opportunity" style="margin-bottom: 16px;">
             <button class="btn btn-primary flex align-center justify-center gap-2" style="width: 100%; padding: 10px;" (click)="openConvertModal()">
               <span class="material-icons-outlined">trending_up</span>
               Convert to Opportunity
@@ -404,9 +426,41 @@ import { customAlert, customConfirm } from '../../utils/confirm';
                   <option value="SMS">SMS</option>
                   <option value="WhatsApp">WhatsApp</option>
                   <option value="Meeting">Meeting</option>
+                  <option value="Site Visit">Site Visit</option>
                 </select>
-                <input type="text" placeholder="Interaction Subject (e.g. Discussed pricing)" [(ngModel)]="newActivity.subject" />
+                <input type="text" placeholder="Interaction Subject (e.g. Discussed pricing / Site viewing)" [(ngModel)]="newActivity.subject" />
               </div>
+
+              <!-- Direction & Duration Fields for Calls (TC-2.11) -->
+              <div class="flex gap-3 margin-y-2" *ngIf="newActivity.activityType === 'Call'">
+                <select [(ngModel)]="newActivity.direction" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-main);">
+                  <option value="Outbound">Outbound Call</option>
+                  <option value="Inbound">Inbound Call</option>
+                </select>
+                <input 
+                  type="number" 
+                  placeholder="Call Duration (mins)" 
+                  [(ngModel)]="newActivity.durationMinutes" 
+                  style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-main);" 
+                />
+              </div>
+              
+              <!-- Location & Attendees Fields for Meetings & Site Visits (TC-1.28, TC-1.29, TC-2.13) -->
+              <div class="flex flex-col gap-2 margin-y-2" *ngIf="newActivity.activityType === 'Meeting' || newActivity.activityType === 'Site Visit'">
+                <input 
+                  type="text" 
+                  placeholder="📍 Location / Address (e.g. Head Office / Bole Site Premises)" 
+                  [(ngModel)]="newActivity.location" 
+                  style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-main);" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="👥 Attendees / Participants (e.g. Client John Doe, Manager Abel)" 
+                  [(ngModel)]="newActivity.attendees" 
+                  style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-main);" 
+                />
+              </div>
+
               <textarea placeholder="Write interaction outcome notes here..." [(ngModel)]="newActivity.description" rows="3"></textarea>
               
               <!-- Next Action Followup -->
@@ -558,12 +612,14 @@ import { customAlert, customConfirm } from '../../utils/confirm';
             </div>
 
             <!-- Warning Alert for Duplicates -->
-            <div class="alert alert-warning flex align-center gap-3" *ngIf="duplicateWarning">
-              <span class="material-icons-outlined">warning</span>
+            <div class="alert alert-warning flex align-center gap-3" *ngIf="duplicateWarning && duplicateMatchLead" style="background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #d97706; padding: 12px 14px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 14px;">
+              <span class="material-icons-outlined" style="font-size: 20px;">warning</span>
               <div>
-                <strong>Warning: Duplicate detected!</strong> A lead with the phone 
-                <strong>{{ newLeadData.primaryPhone }}</strong> already exists in the system. 
-                You can still save this to track it as a multi-inquiry.
+                <strong>⚠️ Warning: Duplicate Lead Detected!</strong> A lead with {{ duplicateMatchField }} already exists in system: 
+                <strong>{{ duplicateMatchLead.fullName }}</strong> ({{ duplicateMatchLead.leadCode || '#LD-' + duplicateMatchLead.id }}).
+                <div style="font-size: 11px; margin-top: 2px; color: #b45309;">
+                  Note: Standard Sales Executives cannot save duplicates. Sales Manager approval is required.
+                </div>
               </div>
             </div>
 
@@ -579,7 +635,7 @@ import { customAlert, customConfirm } from '../../utils/confirm';
                 <input 
                   type="text" 
                   [(ngModel)]="newLeadData.primaryPhone" 
-                  (ngModelChange)="checkDuplicatePhone(); formErrors.primaryPhone = ''"
+                  (ngModelChange)="checkDuplicateLead(); formErrors.primaryPhone = ''"
                   [class.input-error]="formErrors.primaryPhone"
                   name="primaryPhone" 
                   placeholder="e.g. +251..." 
@@ -592,6 +648,7 @@ import { customAlert, customConfirm } from '../../utils/confirm';
                 <input 
                   type="text" 
                   [(ngModel)]="newLeadData.secondaryPhone" 
+                  (ngModelChange)="checkDuplicateLead()"
                   name="secondaryPhone" 
                   placeholder="Secondary phone" 
                 />
@@ -601,13 +658,27 @@ import { customAlert, customConfirm } from '../../utils/confirm';
             <div class="form-row flex gap-3">
               <div class="form-group flex-1 flex flex-col">
                 <label>Primary Email</label>
-                <input type="email" [(ngModel)]="newLeadData.primaryEmail" (ngModelChange)="formErrors.primaryEmail = ''" [class.input-error]="formErrors.primaryEmail" name="primaryEmail" placeholder="customer@email.com" />
+                <input 
+                  type="email" 
+                  [(ngModel)]="newLeadData.primaryEmail" 
+                  (ngModelChange)="checkDuplicateLead(); formErrors.primaryEmail = ''" 
+                  [class.input-error]="formErrors.primaryEmail" 
+                  name="primaryEmail" 
+                  placeholder="customer@email.com" 
+                />
                 <span class="field-error-text" *ngIf="formErrors.primaryEmail">{{ formErrors.primaryEmail }}</span>
               </div>
 
               <div class="form-group flex-1 flex flex-col">
                 <label>Secondary Email</label>
-                <input type="email" [(ngModel)]="newLeadData.secondaryEmail" (ngModelChange)="formErrors.secondaryEmail = ''" [class.input-error]="formErrors.secondaryEmail" name="secondaryEmail" placeholder="secondary@email.com" />
+                <input 
+                  type="email" 
+                  [(ngModel)]="newLeadData.secondaryEmail" 
+                  (ngModelChange)="checkDuplicateLead(); formErrors.secondaryEmail = ''" 
+                  [class.input-error]="formErrors.secondaryEmail" 
+                  name="secondaryEmail" 
+                  placeholder="secondary@email.com" 
+                />
                 <span class="field-error-text" *ngIf="formErrors.secondaryEmail">{{ formErrors.secondaryEmail }}</span>
               </div>
             </div>
@@ -881,6 +952,8 @@ export class LeadsComponent implements OnInit {
   // Create Lead Modal state
   showCreateModal = false;
   duplicateWarning = false;
+  duplicateMatchLead: any = null;
+  duplicateMatchField = '';
   formErrors: any = {};
   serverError = '';
   newLeadData = {
@@ -904,10 +977,14 @@ export class LeadsComponent implements OnInit {
   };
 
   // Log Activity Form state
-  newActivity = {
+  newActivity: any = {
     activityType: 'Call',
+    direction: 'Outbound',
+    durationMinutes: null,
     subject: '',
     description: '',
+    location: '',
+    attendees: '',
     performedBy: 1,
     outcome: '',
     nextActionDate: ''
@@ -996,6 +1073,9 @@ export class LeadsComponent implements OnInit {
     switch (statusName) {
       case 'New': return 'badge-new';
       case 'Contacted': return 'badge-contacted';
+      case 'Interested': return 'badge-interested';
+      case 'Site Visit Scheduled': return 'badge-site-visit';
+      case 'Negotiation': return 'badge-negotiation';
       case 'Qualified': return 'badge-qualified';
       case 'Proposal Sent': return 'badge-proposal';
       case 'Converted': return 'badge-converted';
@@ -1153,13 +1233,48 @@ export class LeadsComponent implements OnInit {
     this.serverError = '';
   }
 
-  checkDuplicatePhone() {
-    // Simple frontend detection: check if phone matches any lead in current list
-    if (this.newLeadData.primaryPhone && this.newLeadData.primaryPhone.length > 5) {
-      const match = this.leads.find(l => l.primaryPhone === this.newLeadData.primaryPhone);
-      this.duplicateWarning = !!match;
-    } else {
-      this.duplicateWarning = false;
+  checkDuplicateLead() {
+    this.duplicateWarning = false;
+    this.duplicateMatchLead = null;
+    this.duplicateMatchField = '';
+
+    const phone = this.newLeadData.primaryPhone?.trim().toLowerCase();
+    const secPhone = this.newLeadData.secondaryPhone?.trim().toLowerCase();
+    const email = this.newLeadData.primaryEmail?.trim().toLowerCase();
+    const secEmail = this.newLeadData.secondaryEmail?.trim().toLowerCase();
+
+    if (!this.leads || (!phone && !secPhone && !email && !secEmail)) {
+      return;
+    }
+
+    const match = this.leads.find((l: any) => {
+      const lPhone = l.primaryPhone?.trim().toLowerCase();
+      const lSecPhone = l.secondaryPhone?.trim().toLowerCase();
+      const lEmail = l.primaryEmail?.trim().toLowerCase();
+      const lSecEmail = l.secondaryEmail?.trim().toLowerCase();
+
+      if (phone && (lPhone === phone || lSecPhone === phone)) {
+        this.duplicateMatchField = `Phone: '${this.newLeadData.primaryPhone}'`;
+        return true;
+      }
+      if (secPhone && (lPhone === secPhone || lSecPhone === secPhone)) {
+        this.duplicateMatchField = `Secondary Phone: '${this.newLeadData.secondaryPhone}'`;
+        return true;
+      }
+      if (email && (lEmail === email || lSecEmail === email)) {
+        this.duplicateMatchField = `Email: '${this.newLeadData.primaryEmail}'`;
+        return true;
+      }
+      if (secEmail && (lEmail === secEmail || lSecEmail === secEmail)) {
+        this.duplicateMatchField = `Secondary Email: '${this.newLeadData.secondaryEmail}'`;
+        return true;
+      }
+      return false;
+    });
+
+    if (match) {
+      this.duplicateWarning = true;
+      this.duplicateMatchLead = match;
     }
   }
 
@@ -1246,13 +1361,45 @@ export class LeadsComponent implements OnInit {
       assignedSalesAgentId: this.newLeadData.assignedSalesAgentId ? +this.newLeadData.assignedSalesAgentId : undefined
     };
 
+    // TC-1.17: Check manager override protection on duplicates
+    if (this.duplicateWarning && this.duplicateMatchLead) {
+      const user = this.authService.currentUser();
+      const userRoles = user?.roles || [];
+      const roleStr = (Array.isArray(userRoles) ? userRoles.map((r: any) => typeof r === 'string' ? r : (r?.roleName || '')).join(' ') : String(userRoles)).toLowerCase();
+      
+      const isManagerOrAdmin = roleStr.includes('manager') || roleStr.includes('admin') || roleStr.includes('director') || roleStr.includes('lead');
+
+      if (!isManagerOrAdmin) {
+        customAlert(
+          `⛔ Access Restricted (Duplicate Lead Protection)\n\nA lead matching ${this.duplicateMatchField} already exists: '${this.duplicateMatchLead.fullName}'.\n\nStandard Sales Executives are not permitted to save duplicate leads without Sales Manager or Admin override approval.`,
+          'Manager Override Protection Required'
+        );
+        return;
+      }
+
+      customConfirm(
+        `⚠️ Duplicate Warning: A lead matching ${this.duplicateMatchField} already exists for '${this.duplicateMatchLead.fullName}'.\n\nAs a Sales Manager/Admin, do you want to override and register this duplicate lead?`,
+        'Manager Duplicate Override'
+      ).then((confirmed) => {
+        if (confirmed) {
+          this.executeCreateLead(payload);
+        }
+      });
+      return;
+    }
+
+    this.executeCreateLead(payload);
+  }
+
+  executeCreateLead(payload: any) {
     this.crmService.createLead(payload).subscribe({
       next: (res) => {
         this.closeCreateModal();
         this.loadLeads();
         customAlert(
-          `Lead created successfully!\n\nLead Code: ${res.leadCode || ''}\nCustomer Name: ${res.fullName}`,
-          'Lead Created Successfully'
+          `Lead created successfully!\n\nLead Code: ${res.leadCode || ''}\nCustomer Name: ${res.fullName}` +
+          (res.isDuplicate ? `\n\n⚠️ (Flagged as duplicate of ${this.duplicateMatchLead?.fullName || 'existing lead'})` : ''),
+          'Lead Registered'
         );
       },
       error: (err) => {
@@ -1368,7 +1515,9 @@ export class LeadsComponent implements OnInit {
 
   onAssignSalesAgent(agentId: any) {
     if (!this.selectedLeadDetails) return;
-    this.crmService.assignAgent(this.selectedLeadDetails.id, +agentId).subscribe({
+    const user = this.authService.currentUser();
+    const performedBy = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'Admin User';
+    this.crmService.assignAgent(this.selectedLeadDetails.id, +agentId, performedBy).subscribe({
       next: (res) => {
         this.loadLeadDetails(this.selectedLeadDetails.id);
         this.loadLeads(); // refresh main table
@@ -1378,10 +1527,26 @@ export class LeadsComponent implements OnInit {
   }
 
   onLogActivity() {
-    if (!this.selectedLeadDetails || !this.newActivity.description) return;
+    let details: string[] = [];
+    if (this.newActivity.activityType === 'Call') {
+      if (this.newActivity.direction) details.push(`Direction: ${this.newActivity.direction}`);
+      if (this.newActivity.durationMinutes) details.push(`Duration: ${this.newActivity.durationMinutes} mins`);
+    }
+    if (this.newActivity.location && this.newActivity.location.trim()) {
+      details.push(`Location: ${this.newActivity.location.trim()}`);
+    }
+    if (this.newActivity.attendees && this.newActivity.attendees.trim()) {
+      details.push(`Attendees: ${this.newActivity.attendees.trim()}`);
+    }
+
+    let finalDesc = this.newActivity.description || '';
+    if (details.length > 0) {
+      finalDesc = finalDesc ? `${finalDesc} (${details.join(', ')})` : details.join(', ');
+    }
 
     const payload = {
       ...this.newActivity,
+      description: finalDesc,
       outcome: this.newActivity.subject || 'Logged interaction',
       nextActionDate: this.scheduleFollowup ? this.newActivity.nextActionDate : undefined
     };
@@ -1390,8 +1555,12 @@ export class LeadsComponent implements OnInit {
       next: (res) => {
         this.newActivity = {
           activityType: 'Call',
+          direction: 'Outbound',
+          durationMinutes: null,
           subject: '',
           description: '',
+          location: '',
+          attendees: '',
           performedBy: 1,
           outcome: '',
           nextActionDate: ''
@@ -1455,6 +1624,35 @@ export class LeadsComponent implements OnInit {
       case 'Email': return 'bg-email';
       case 'Meeting': return 'bg-meeting';
       default: return 'bg-system';
+    }
+  }
+
+  getLeadTags(lead: any): string[] {
+    if (!lead) return [];
+    if (!lead.tags) lead.tags = ['VIP'];
+    if (typeof lead.tags === 'string') {
+      try { lead.tags = JSON.parse(lead.tags); } catch (e) { lead.tags = lead.tags.split(',').map((t: string) => t.trim()); }
+    }
+    return Array.isArray(lead.tags) ? lead.tags : [];
+  }
+
+  addTag(lead: any, tag: string) {
+    if (!lead || !tag) return;
+    const tags = this.getLeadTags(lead);
+    if (!tags.includes(tag)) {
+      tags.push(tag);
+      lead.tags = tags;
+      customAlert(`Tag '${tag}' successfully added to ${lead.fullName || 'Customer'}.`, 'Customer Tag Applied');
+    }
+  }
+
+  removeTag(lead: any, tag: string) {
+    if (!lead || !tag) return;
+    const tags = this.getLeadTags(lead);
+    const idx = tags.indexOf(tag);
+    if (idx > -1) {
+      tags.splice(idx, 1);
+      lead.tags = tags;
     }
   }
 }

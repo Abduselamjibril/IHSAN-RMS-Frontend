@@ -23,11 +23,14 @@
   --border-color: #dbe6f0;
   
   /* Status Colors */
-  --color-new: #3b82f6;
-  --color-contacted: #eab308;
-  --color-qualified: #10b981;
+  --color-new: #64748b;
+  --color-contacted: #3b82f6;
+  --color-interested: #8b5cf6;
+  --color-site-visit: #f59e0b;
+  --color-negotiation: #ec4899;
+  --color-qualified: #06b6d4;
   --color-proposal: #a855f7;
-  --color-converted: #14b8a6;
+  --color-converted: #22c55e;
   --color-lost: #ef4444;
 
   --color-high: #ef4444;
@@ -279,12 +282,15 @@ a {
   text-transform: capitalize;
 }
 
-.badge-new { background-color: rgba(59, 130, 246, 0.1); color: var(--color-new); }
-.badge-contacted { background-color: rgba(234, 179, 8, 0.1); color: var(--color-contacted); }
-.badge-qualified { background-color: rgba(16, 185, 129, 0.1); color: var(--color-qualified); }
-.badge-proposal { background-color: rgba(168, 85, 247, 0.1); color: var(--color-proposal); }
-.badge-converted { background-color: rgba(20, 184, 166, 0.1); color: var(--color-converted); }
-.badge-lost { background-color: rgba(239, 68, 68, 0.1); color: var(--color-lost); }
+.badge-new { background-color: rgba(100, 116, 139, 0.12); color: var(--color-new); }
+.badge-contacted { background-color: rgba(59, 130, 246, 0.12); color: var(--color-contacted); }
+.badge-interested { background-color: rgba(139, 92, 246, 0.12); color: var(--color-interested); }
+.badge-site-visit { background-color: rgba(245, 158, 11, 0.12); color: var(--color-site-visit); }
+.badge-negotiation { background-color: rgba(236, 72, 153, 0.12); color: var(--color-negotiation); }
+.badge-qualified { background-color: rgba(6, 182, 212, 0.12); color: var(--color-qualified); }
+.badge-proposal { background-color: rgba(168, 85, 247, 0.12); color: var(--color-proposal); }
+.badge-converted { background-color: rgba(34, 197, 94, 0.12); color: var(--color-converted); }
+.badge-lost { background-color: rgba(239, 68, 68, 0.12); color: var(--color-lost); }
 
 .badge-high { background-color: rgba(239, 68, 68, 0.1); color: var(--color-high); }
 .badge-medium { background-color: rgba(245, 158, 11, 0.1); color: var(--color-medium); }

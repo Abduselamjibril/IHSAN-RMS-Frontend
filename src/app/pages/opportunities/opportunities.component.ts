@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-
-declare function customAlert(message: string, title?: string): void;
+import { customAlert, customConfirm } from '../../utils/confirm';
 
 @Component({
   selector: 'app-opportunities',
@@ -330,6 +329,17 @@ declare function customAlert(message: string, title?: string): void;
                 </select>
                 <input type="text" placeholder="Subject (e.g. Completed site tour)" [(ngModel)]="newActivity.subject" />
               </div>
+
+              <!-- Location Field for Meetings & Site Visits (TC-1.28 & TC-1.29) -->
+              <div class="margin-y-2" *ngIf="newActivity.activityType === 'Meeting' || newActivity.activityType === 'In-Person Meeting' || newActivity.activityType === 'Site Visit'">
+                <input 
+                  type="text" 
+                  placeholder="📍 Location / Address (e.g. Head Office / Site 2)" 
+                  [(ngModel)]="newActivity.location" 
+                  style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-main);" 
+                />
+              </div>
+
               <textarea placeholder="Write interaction outcome notes here..." [(ngModel)]="newActivity.description" rows="3"></textarea>
               
               <div class="followup-scheduling flex align-center justify-between gap-3 margin-y-2">
@@ -484,10 +494,11 @@ export class OpportunitiesComponent implements OnInit {
   selectedOppDetails: any = null;
   activeTab = 'timeline';
 
-  newActivity = {
+  newActivity: any = {
     activityType: 'Meeting',
     subject: '',
     description: '',
+    location: '',
     performedBy: 1,
     outcome: '',
     nextActionDate: ''
@@ -628,7 +639,41 @@ export class OpportunitiesComponent implements OnInit {
 
   onUpdateStage(stageId: any) {
     if (!this.selectedOppDetails) return;
-    this.crmService.updateOpportunityStage(this.selectedOppDetails.id, +stageId).subscribe({
+    const targetStage = this.metadata?.stages?.find((s: any) => s.id === +stageId);
+    if (!targetStage) return;
+
+    // TC-2.08: Reopening a Lost Opportunity via dropdown requires a reason
+    if (this.selectedOppDetails.isLost) {
+      this.openReopenModal();
+      return;
+    }
+
+    // TC-2.05: Changing stage to 'Closed Lost' via dropdown requires reason & notes
+    if (targetStage.stageName === 'Closed Lost' || targetStage.stageName === 'Lost' || (targetStage.isClosed && targetStage.probabilityPercent === 0)) {
+      this.openCloseLostModal();
+      return;
+    }
+
+    // TC-2.04: Check stage transition validation (confirm jump directly to Won)
+    if (targetStage.stageName === 'Closed Won' || targetStage.stageName === 'Won' || targetStage.probabilityPercent === 100) {
+      customConfirm(
+        `⚠️ Confirm Stage Transition: Are you sure you want to transition '${this.selectedOppDetails.title}' directly to '${targetStage.stageName}'?`,
+        'Confirm Stage Advance'
+      ).then((confirmed: boolean) => {
+        if (confirmed) {
+          this.executeStageUpdate(+stageId);
+        } else {
+          this.loadOpportunityDetails(this.selectedOppDetails.id);
+        }
+      });
+      return;
+    }
+
+    this.executeStageUpdate(+stageId);
+  }
+
+  executeStageUpdate(stageId: number) {
+    this.crmService.updateOpportunityStage(this.selectedOppDetails.id, stageId).subscribe({
       next: () => {
         this.loadOpportunityDetails(this.selectedOppDetails.id);
         this.loadOpportunities();
@@ -697,16 +742,21 @@ export class OpportunitiesComponent implements OnInit {
   onLogActivity() {
     if (!this.selectedOppDetails || !this.newActivity.subject) return;
 
-    const payload: any = { ...this.newActivity };
+    let finalDesc = this.newActivity.description || '';
+    if (this.newActivity.location && this.newActivity.location.trim()) {
+      finalDesc = finalDesc ? `${finalDesc} (Location: ${this.newActivity.location.trim()})` : `Location: ${this.newActivity.location.trim()}`;
+    }
+
+    const payload: any = { ...this.newActivity, description: finalDesc };
     if (!this.scheduleFollowup) delete payload.nextActionDate;
 
     this.crmService.addOpportunityActivity(this.selectedOppDetails.id, payload).subscribe({
       next: () => {
-        this.newActivity = { activityType: 'Meeting', subject: '', description: '', performedBy: 1, outcome: '', nextActionDate: '' };
+        this.newActivity = { activityType: 'Meeting', subject: '', description: '', location: '', performedBy: 1, outcome: '', nextActionDate: '' };
         this.scheduleFollowup = false;
         this.loadOpportunityDetails(this.selectedOppDetails.id);
       },
-      error: (err) => console.error('Error logging activity:', err)
+      error: (err: any) => console.error('Error logging activity:', err)
     });
   }
 

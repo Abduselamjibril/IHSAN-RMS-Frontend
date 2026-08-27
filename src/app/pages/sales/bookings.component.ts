@@ -119,6 +119,7 @@ import { AuthService } from '../../services/auth.service';
                   <!-- Stage 1: Sales Manager Review -->
                   <ng-container *ngIf="b.status === 'PENDING_SALES' || b.status === 'PENDING'">
                     <button 
+                      *ngIf="authService.hasPermission('sales.bookings.sales_approve', 'edit') || authService.hasPermission('sales.bookings.sales_approve', 'approve')"
                       class="btn btn-primary btn-xs flex align-center gap-1"
                       (click)="onSalesApprove(b.id)"
                       title="Sales Manager: Approve & Forward to Finance"
@@ -127,6 +128,7 @@ import { AuthService } from '../../services/auth.service';
                       <span>Approve to Finance</span>
                     </button>
                     <button 
+                      *ngIf="authService.hasPermission('sales.bookings.reject', 'edit') || authService.hasPermission('sales.bookings.reject', 'approve')"
                       class="btn btn-danger btn-xs flex align-center gap-1"
                       (click)="openRejectModal(b)"
                       title="Sales Manager: Reject Booking with Reason"
@@ -139,6 +141,7 @@ import { AuthService } from '../../services/auth.service';
                   <!-- Stage 2: Finance Review -->
                   <ng-container *ngIf="b.status === 'PENDING_FINANCE'">
                     <button 
+                      *ngIf="authService.hasPermission('sales.bookings.finance_review', 'edit') || authService.hasPermission('sales.bookings.finance_review', 'approve')"
                       class="btn btn-success btn-xs flex align-center gap-1"
                       (click)="openFinanceReviewModal(b, 'APPROVE')"
                       title="Finance Officer: Confirm Payment & Final Approve"
@@ -147,6 +150,7 @@ import { AuthService } from '../../services/auth.service';
                       <span>Finance Approve</span>
                     </button>
                     <button 
+                      *ngIf="authService.hasPermission('sales.bookings.finance_review', 'edit') || authService.hasPermission('sales.bookings.finance_review', 'approve')"
                       class="btn btn-danger btn-xs flex align-center gap-1"
                       (click)="openFinanceReviewModal(b, 'REJECT')"
                       title="Finance Officer: Reject Payment Proof"
@@ -158,7 +162,7 @@ import { AuthService } from '../../services/auth.service';
 
                   <!-- Cancel Button (Available on Active/Approved Bookings with Reason) -->
                   <button 
-                    *ngIf="b.status === 'APPROVED' || b.status === 'PENDING_SALES' || b.status === 'PENDING_FINANCE' || b.status === 'PENDING'"
+                    *ngIf="(b.status === 'APPROVED' || b.status === 'PENDING_SALES' || b.status === 'PENDING_FINANCE' || b.status === 'PENDING') && (authService.hasPermission('sales.bookings.cancel', 'edit') || authService.hasPermission('sales.bookings.cancel', 'approve'))"
                     class="btn btn-secondary btn-xs flex align-center gap-1"
                     (click)="openCancelModal(b)"
                     title="Cancel Booking & Revert Unit"

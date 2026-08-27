@@ -4,12 +4,23 @@ import { FormsModule } from '@angular/forms';
 import { PropertiesService } from '../../../services/properties.service';
 import { AuthService } from '../../../services/auth.service';
 import { customConfirm } from '../../../utils/confirm';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-floor-plans',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
+    <!-- Floating Toast Notifications -->
+    <div *ngIf="toastSuccess" class="floating-toast success" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 14px; background: #10b981; animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined">check_circle</span>
+      <span>{{ toastSuccess }}</span>
+    </div>
+    <div *ngIf="toastError" class="floating-toast error" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 14px; background: #ef4444; animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined">error_outline</span>
+      <span>{{ toastError }}</span>
+    </div>
+
     <header class="app-header flex justify-between align-center" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
       <div class="app-title-section">
         <h1>Floor Plans & Layouts</h1>
@@ -107,60 +118,98 @@ import { customConfirm } from '../../../utils/confirm';
       </div>
 
       <!-- Upload Floor Plan File -->
-      <div class="card flex flex-col justify-between">
-        <h3 class="border-bottom pb-2" style="font-size: 15px;">Architectural Drawing</h3>
-        <div class="upload-container border p-4 mt-3 flex flex-col gap-3 bg-main" style="border-style: dashed; border-radius: var(--radius-md); flex: 1; border-color: var(--text-muted);">
-          <span class="material-icons-outlined text-muted" style="font-size: 44px; color: var(--brand-primary); text-align: center;">photo</span>
-          
-          <div *ngIf="activeFloor.floorPlan" class="mb-3 p-2 bg-white border" style="border-radius: var(--radius-sm); font-size: 12px; margin-bottom: 12px; border-style: solid;">
-            <div class="flex justify-between align-center">
+      <!-- Upload Floor Plan File -->
+      <div class="card flex flex-col justify-between" style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px;">
+        <h3 class="border-bottom pb-2 font-bold text-main" style="font-size: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">Architectural Drawing</h3>
+        
+        <div class="flex flex-col gap-4">
+          <!-- Active Blueprint Presentation -->
+          <div *ngIf="activeFloor.floorPlan" class="active-blueprint-card border p-3 bg-white" style="border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+            <div class="flex justify-between align-center border-bottom pb-2 mb-2" style="border-bottom: 1px solid var(--border-color); margin-bottom: 10px; padding-bottom: 8px;">
               <div>
-                <span class="font-bold text-indigo">Active Blueprint:</span> {{ activeFloor.floorPlan.planName }} (v{{ activeFloor.floorPlan.versionNumber || 1 }})
-                <p class="text-secondary font-xs italic mt-1" *ngIf="activeFloor.floorPlan.remarks">{{ activeFloor.floorPlan.remarks }}</p>
+                <span class="font-bold text-main" style="font-size: 13px; display: block;">{{ activeFloor.floorPlan.planName }}</span>
+                <span class="text-secondary font-xxs">Version {{ activeFloor.floorPlan.versionNumber || 1 }}</span>
               </div>
-              <button type="button" class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openPreviewModal(activeFloor.floorPlan)">
-                <span class="material-icons-outlined font-xs">visibility</span> Preview
+              <button type="button" class="btn btn-secondary btn-xs flex align-center gap-1" (click)="openPreviewModal(activeFloor.floorPlan)" style="padding: 4px 8px; font-size: 11px;">
+                <span class="material-icons-outlined font-xs">zoom_in</span> View Large
               </button>
             </div>
             <!-- Embedded Visual Preview Thumbnail -->
-            <div class="mt-2 text-center" style="max-height: 180px; overflow: hidden; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc; cursor: pointer;" (click)="openPreviewModal(activeFloor.floorPlan)">
-              <img *ngIf="isImagePlan(activeFloor.floorPlan)" [src]="authService.getDownloadUrl(activeFloor.floorPlan.filePath)" style="max-width: 100%; max-height: 175px; object-fit: contain;" />
-              <div *ngIf="isPdfPlan(activeFloor.floorPlan)" class="py-4 flex flex-col align-center justify-center text-indigo">
-                <span class="material-icons-outlined" style="font-size: 40px;">picture_as_pdf</span>
-                <span class="font-xs font-bold mt-1">PDF Floor Plan Blueprint — Click to View</span>
+            <div class="blueprint-thumb-container text-center p-1 bg-main border cursor-pointer" style="border-radius: var(--radius-sm); border: 1px solid var(--border-color); max-height: 180px; overflow: hidden; display: flex; justify-content: center; align-items: center;" (click)="openPreviewModal(activeFloor.floorPlan)">
+              <img *ngIf="isImagePlan(activeFloor.floorPlan)" [src]="authService.getDownloadUrl(activeFloor.floorPlan.filePath)" style="max-width: 100%; max-height: 170px; object-fit: contain; border-radius: var(--radius-xs);" />
+              <div *ngIf="isPdfPlan(activeFloor.floorPlan)" class="py-5 flex flex-col align-center justify-center text-indigo">
+                <span class="material-icons-outlined" style="font-size: 38px;">picture_as_pdf</span>
+                <span class="font-xs font-bold mt-1 text-indigo">PDF Blueprint — Click to View</span>
+              </div>
+            </div>
+            <p class="text-secondary font-xxs italic mt-2" *ngIf="activeFloor.floorPlan.remarks" style="margin-top: 8px; line-height: 1.3;"><strong>Note:</strong> {{ activeFloor.floorPlan.remarks }}</p>
+
+            <!-- Blueprint Version History -->
+            <div *ngIf="activeFloor.allFloorPlans && activeFloor.allFloorPlans.length > 1" class="version-history-section border-top pt-2" style="border-top: 1px solid var(--border-color); margin-top: 12px; padding-top: 8px;">
+              <div class="font-bold text-secondary mb-1.5" style="font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+                <span class="material-icons-outlined" style="font-size: 13px;">history</span>
+                <span>Blueprint Revisions ({{ activeFloor.allFloorPlans.length }} versions)</span>
+              </div>
+              <div class="flex flex-col gap-1" style="max-height: 110px; overflow-y: auto; padding-right: 2px;">
+                <div *ngFor="let plan of activeFloor.allFloorPlans; let idx = index" class="version-row flex justify-between align-center p-1.5 bg-white border" style="border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 10.5px;" [style.border-left]="idx === 0 ? '3px solid var(--brand-primary)' : '1px solid var(--border-color)'">
+                  <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                    <span class="font-bold" style="color: var(--text-main);">v{{ plan.versionNumber || (activeFloor.allFloorPlans.length - idx) }}</span>
+                    <span style="color: var(--text-secondary);" class="truncate">{{ plan.planName }}</span>
+                    <span *ngIf="idx === 0" class="badge badge-success btn-xs" style="font-size: 8px; padding: 0.5px 3px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);">Active</span>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-xs flex align-center gap-0.5" (click)="openPreviewModal(plan)" style="padding: 1px 4px; font-size: 9.5px; height: 18px;">
+                    <span class="material-icons-outlined" style="font-size: 11px;">visibility</span> View
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          
-          <p class="font-xs text-secondary text-center" style="line-height: 1.4;">Upload AutoCAD floorplan / map image for visual blueprint lookup reference</p>
-          <input type="file" (change)="onFileSelected($event)" style="padding: 6px; background: white; border-radius: var(--radius-sm); font-size: 12px; max-width: 100%; border: 1px solid var(--border-color);" />
-          <div class="flex flex-col gap-2">
-            <div class="flex flex-col">
-              <label class="font-xs text-secondary">Plan Name <span class="text-danger" style="color: red;">*</span></label>
-              <input type="text" [(ngModel)]="planName" placeholder="e.g. Ground Floor Blueprint" style="background: white;" />
+
+          <!-- File Upload Dropzone -->
+          <div class="upload-dropzone border p-4 flex flex-col align-center justify-center gap-2 bg-main text-center cursor-pointer" style="border-style: dashed; border-radius: var(--radius-md); border-color: var(--border-color); min-height: 110px; transition: all 0.2s ease; position: relative;" (click)="fileInput.click()">
+            <span class="material-icons-outlined text-muted" style="font-size: 36px; color: var(--brand-primary);">cloud_upload</span>
+            <div class="font-xs font-bold text-main" style="font-size: 12px; margin-top: 4px;">Click to select architectural blueprint drawing</div>
+            <div class="text-secondary font-xxs" style="font-size: 10px; color: var(--text-muted);">Supports PNG, JPG, JPEG, or PDF formats</div>
+            <input type="file" (change)="onFileSelected($event)" style="display: none;" #fileInput />
+            
+            <!-- Custom file chosen label -->
+            <div *ngIf="selectedFile" class="mt-2 p-1.5 px-3 bg-white border flex align-center gap-2" style="border-radius: var(--radius-sm); font-size: 11px; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center;" (click)="$event.stopPropagation()">
+              <span class="material-icons-outlined text-success" style="font-size: 15px; color: #10b981;">check_circle</span>
+              <span class="font-bold truncate" style="max-width: 180px; color: var(--text-main);">{{ selectedFile.name }}</span>
             </div>
-            <div class="flex gap-2">
+          </div>
+
+          <!-- Form Details -->
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col">
+              <label class="font-xs font-bold text-secondary mb-1" style="font-size: 11px;">Blueprint Title <span class="text-danger" style="color: red;">*</span></label>
+              <input type="text" [(ngModel)]="planName" placeholder="e.g. Ground Floor Blueprint" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: white; outline: none; width: 100%;" />
+            </div>
+            
+            <div class="flex gap-3">
               <div class="flex-1 flex flex-col">
-                <label class="font-xs text-secondary">Version</label>
-                <input type="number" [(ngModel)]="planVersionNumber" min="1" style="background: white;" />
+                <label class="font-xs font-bold text-secondary mb-1" style="font-size: 11px;">Version</label>
+                <input type="number" [(ngModel)]="planVersionNumber" min="1" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: white; outline: none; width: 100%;" />
               </div>
               <div class="flex-1 flex flex-col">
-                <label class="font-xs text-secondary">Scope</label>
-                <select [(ngModel)]="planScope" style="background: white;">
+                <label class="font-xs font-bold text-secondary mb-1" style="font-size: 11px;">Scope</label>
+                <select [(ngModel)]="planScope" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: white; outline: none; width: 100%; height: 35px;">
                   <option value="floor">Floor Level</option>
                   <option value="building">Entire Building</option>
                   <option value="property">Full Property</option>
                 </select>
               </div>
             </div>
+            
             <div class="flex flex-col">
-              <label class="font-xs text-secondary">Remarks</label>
-              <input type="text" [(ngModel)]="planRemarks" placeholder="Notes about this plan..." style="background: white;" />
+              <label class="font-xs font-bold text-secondary mb-1" style="font-size: 11px;">Remarks / Revisions</label>
+              <input type="text" [(ngModel)]="planRemarks" placeholder="Notes about this layout..." style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: white; outline: none; width: 100%;" />
             </div>
           </div>
-          <button class="btn btn-primary btn-sm mt-2 flex align-center gap-1" style="align-self: flex-end;" (click)="onUploadBlueprint()" [disabled]="!selectedFile || !planName.trim()">
+
+          <button class="btn btn-primary btn-sm flex align-center justify-center gap-2" style="align-self: stretch; padding: 10px 14px; font-weight: 600;" (click)="onUploadBlueprint()" [disabled]="!selectedFile || !planName.trim()">
             <span class="material-icons-outlined font-sm">file_upload</span>
-            <span>Upload Blueprint</span>
+            <span>Upload & Apply Blueprint</span>
           </button>
         </div>
       </div>
@@ -492,7 +541,7 @@ import { customConfirm } from '../../../utils/confirm';
             <img [src]="authService.getDownloadUrl(previewingPlan?.filePath)" style="max-width: 100%; max-height: 68vh; object-fit: contain; border-radius: var(--radius-md); box-shadow: 0 12px 30px rgba(0,0,0,0.6);" />
           </div>
           <div *ngIf="isPdfPlan(previewingPlan)" style="width: 100%; height: 68vh;">
-            <iframe [src]="authService.getDownloadUrl(previewingPlan?.filePath)" style="width: 100%; height: 100%; border: none; border-radius: var(--radius-md);"></iframe>
+            <iframe [src]="getSafeUrl(previewingPlan?.filePath)" style="width: 100%; height: 100%; border: none; border-radius: var(--radius-md);"></iframe>
           </div>
         </div>
         <div class="modal-footer flex justify-between align-center" style="background: var(--bg-card); padding: 12px 20px; border-top: 1px solid var(--border-color);">
@@ -562,15 +611,44 @@ import { customConfirm } from '../../../utils/confirm';
     .mt-3 { margin-top: 12px; }
     .mt-1 { margin-top: 4px; }
     .flex-wrap { flex-wrap: wrap; }
+    @keyframes toastSlideIn {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   `]
 })
 export class FloorPlansComponent implements OnInit {
   private propertiesService = inject(PropertiesService);
   public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
+  private sanitizer = inject(DomSanitizer);
+
+  getSafeUrl(filePath: string) {
+    if (!filePath) return '';
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.authService.getDownloadUrl(filePath));
+  }
 
   propertiesList: any[] = [];
   sitesList: any[] = [];
+  toastSuccess = '';
+  toastError = '';
+
+  showToast(message: string, isError = false) {
+    if (isError) {
+      this.toastError = message;
+      setTimeout(() => {
+        this.toastError = '';
+        this.cdr.detectChanges();
+      }, 5000);
+    } else {
+      this.toastSuccess = message;
+      setTimeout(() => {
+        this.toastSuccess = '';
+        this.cdr.detectChanges();
+      }, 5000);
+    }
+    this.cdr.detectChanges();
+  }
   buildingsList: any[] = [];
   floorsList: any[] = [];
   activeFloor: any = null;
@@ -798,14 +876,22 @@ export class FloorPlansComponent implements OnInit {
     if (!plan) return false;
     const type = (plan.fileType || plan.mimeType || '').toLowerCase();
     const path = (plan.filePath || '').toLowerCase();
-    return type.startsWith('image/') || path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif') || path.endsWith('.webp');
+    const cleanPath = path.split('?')[0];
+    return type.startsWith('image/') || 
+           cleanPath.endsWith('.png') || 
+           cleanPath.endsWith('.jpg') || 
+           cleanPath.endsWith('.jpeg') || 
+           cleanPath.endsWith('.gif') || 
+           cleanPath.endsWith('.webp') ||
+           cleanPath.endsWith('.svg');
   }
 
   isPdfPlan(plan: any): boolean {
     if (!plan) return false;
     const type = (plan.fileType || plan.mimeType || '').toLowerCase();
     const path = (plan.filePath || '').toLowerCase();
-    return type.includes('pdf') || path.endsWith('.pdf');
+    const cleanPath = path.split('?')[0];
+    return type.includes('pdf') || cleanPath.endsWith('.pdf');
   }
 
   onSubmitStatus(event: Event) {
@@ -848,7 +934,7 @@ export class FloorPlansComponent implements OnInit {
 
     this.propertiesService.uploadFloorPlan(this.selectedFile, this.planName.trim(), options).subscribe({
       next: () => {
-        alert('Blueprint uploaded successfully!');
+        this.showToast('Blueprint uploaded successfully!');
         this.selectedFile = null;
         this.planName = 'Blueprint Layout';
         this.planVersionNumber = 1;
@@ -961,16 +1047,19 @@ export class FloorPlansComponent implements OnInit {
             versionNumber: this.floorPlanVersion
           }).subscribe({
             next: () => {
+              this.showToast('Floor level created and floor plan blueprint uploaded successfully!');
               this.closeFloorModal();
               this.refreshAll();
             },
             error: (err) => {
               console.error('Error uploading floor plan blueprint:', err);
+              this.showToast('Floor level created, but floor plan upload failed.', true);
               this.closeFloorModal();
               this.refreshAll();
             }
           });
         } else {
+          this.showToast('Floor level created successfully!');
           this.closeFloorModal();
           this.refreshAll();
         }
@@ -1026,16 +1115,19 @@ export class FloorPlansComponent implements OnInit {
             remarks: this.editFloorPlanRemarks
           }).subscribe({
             next: () => {
+              this.showToast('Floor level updated and floor plan blueprint uploaded successfully!');
               this.closeEditFloorModal();
               this.refreshAll();
             },
             error: (err) => {
               console.error('Error uploading floor plan blueprint:', err);
+              this.showToast('Floor level updated, but floor plan upload failed.', true);
               this.closeEditFloorModal();
               this.refreshAll();
             }
           });
         } else {
+          this.showToast('Floor level updated successfully!');
           this.closeEditFloorModal();
           this.refreshAll();
         }
@@ -1082,10 +1174,14 @@ export class FloorPlansComponent implements OnInit {
       remarks: this.quickPlanRemarks
     }).subscribe({
       next: () => {
+        this.showToast('Floor plan blueprint uploaded successfully!');
         this.closeCreateFloorPlanModal();
         this.refreshAll();
       },
-      error: (err) => console.error('Error uploading floor plan:', err)
+      error: (err) => {
+        console.error('Error uploading floor plan:', err);
+        this.showToast('Floor plan upload failed. Please verify the file is not corrupted.', true);
+      }
     });
   }
 }

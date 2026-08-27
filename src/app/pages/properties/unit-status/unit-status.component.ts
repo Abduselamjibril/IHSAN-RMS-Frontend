@@ -51,7 +51,7 @@ import { PropertiesService } from '../../../services/properties.service';
             <div class="flex align-center gap-2 mt-2">
               <span class="badge badge-low">From: {{ log.oldStatus?.statusName || 'Available' }}</span>
               <span class="material-icons-outlined font-sm text-secondary">arrow_forward</span>
-              <span class="badge" [style.background-color]="getStatusColor(log.newStatus?.colorCode)">To: {{ log.newStatus?.statusName }}</span>
+              <span class="badge" [style.background-color]="getStatusColor(log.newStatus?.colorCode)" style="color: #fff; font-weight: 600;">To: {{ log.newStatus?.statusName }}</span>
             </div>
 
             <p class="mt-2 text-secondary font-sm italic" style="margin-top: 8px;">

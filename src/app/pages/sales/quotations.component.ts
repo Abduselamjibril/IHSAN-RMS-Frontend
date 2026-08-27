@@ -36,16 +36,14 @@ interface QuotationItemRow {
     </header>
 
     <!-- Success Alert -->
-    <div class="alert alert-success" *ngIf="successMessage" style="margin-bottom: 24px; padding: 14px 18px; border-radius: var(--radius-md); background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--color-qualified); color: var(--color-qualified); font-size: 14px; display: flex; align-items: center; gap: 10px;">
-      <span class="material-icons-outlined" style="font-size: 20px;">check_circle</span>
-      <strong>Success:</strong>
+    <div class="alert alert-success" *ngIf="successMessage" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: 6px; background-color: #10b981; border: 1px solid #10b981; color: white; font-size: 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.15); animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined" style="font-size: 20px; color: white;">check_circle</span>
       <span>{{ successMessage }}</span>
     </div>
 
     <!-- Error Alert -->
-    <div class="alert alert-danger" *ngIf="errorMessage" style="margin-bottom: 24px; padding: 14px 18px; border-radius: var(--radius-md); background-color: rgba(239, 68, 68, 0.1); border: 1px solid var(--color-lost); color: var(--color-lost); font-size: 14px; display: flex; align-items: center; gap: 10px;">
-      <span class="material-icons-outlined" style="font-size: 20px;">error_outline</span>
-      <strong>Error:</strong>
+    <div class="alert alert-danger" *ngIf="errorMessage" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: 6px; background-color: #ef4444; border: 1px solid #ef4444; color: white; font-size: 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.15); animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined" style="font-size: 20px; color: white;">error_outline</span>
       <span>{{ errorMessage }}</span>
     </div>
 
@@ -865,6 +863,10 @@ interface QuotationItemRow {
         display: none !important;
       }
     }
+    @keyframes toastSlideIn {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   `]
 })
 export class QuotationsComponent implements OnInit {
@@ -1531,13 +1533,15 @@ export class QuotationsComponent implements OnInit {
       next: (res) => {
         this.isSendingEmail = false;
         this.closeEmailModal();
-        this.successMessage = res.message || `Quotation successfully emailed to ${this.emailData.recipientEmail}!`;
+        const msg = res.message || `Quotation successfully emailed to ${this.emailData.recipientEmail}!`;
+        this.successMessage = msg;
         setTimeout(() => this.successMessage = '', 6000);
       },
       error: (err) => {
         this.isSendingEmail = false;
         console.error('Error sending quotation email:', err);
-        this.errorMessage = err.error?.message || 'Failed to email quotation.';
+        const errMsg = err.error?.message || 'Failed to email quotation.';
+        this.errorMessage = errMsg;
         setTimeout(() => this.errorMessage = '', 6000);
       }
     });

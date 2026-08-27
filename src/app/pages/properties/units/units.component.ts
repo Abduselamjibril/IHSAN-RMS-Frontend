@@ -536,7 +536,7 @@ import { AuthService } from '../../../services/auth.service';
               <div class="timeline-item" *ngFor="let h of statusHistory">
                 <div class="timeline-body" style="padding-left: 12px; border-left: 2px solid var(--brand-primary); margin-left: 6px; padding-bottom: 12px;">
                   <div class="timeline-header flex justify-between">
-                    <span class="badge" [style.background-color]="getStatusColor(h.newStatus?.colorCode)">
+                    <span class="badge" [style.background-color]="getStatusColor(h.newStatus?.colorCode)" style="color: #fff; font-weight: 600;">
                       {{ h.newStatus?.statusName }}
                     </span>
                     <span class="timeline-date font-xs text-secondary">{{ h.changedAt | date:'short' }}</span>

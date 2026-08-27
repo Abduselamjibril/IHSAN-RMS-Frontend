@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SalesService } from '../../services/sales.service';
 import { PropertiesService } from '../../services/properties.service';
 import { customConfirm } from '../../utils/confirm';
@@ -9,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-bookings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <header class="app-header">
       <div class="app-title-section">
@@ -74,7 +75,8 @@ import { AuthService } from '../../services/auth.service';
               <td>
                 <div class="flex flex-col">
                   <span class="font-bold text-main">{{ b.property?.propertyName }}</span>
-                  <span class="text-secondary font-xs">Unit: {{ b.unit?.unitCode || b.unit?.unitNumber }}</span>
+                  <a [routerLink]="['/properties/units/details', b.unit?.id]" class="text-indigo font-xs font-bold hover-underline" *ngIf="b.unit?.id" style="color: var(--brand-primary); text-decoration: none; cursor: pointer; display: inline-block; margin-top: 2px;">Unit: {{ b.unit?.unitCode || b.unit?.unitNumber }}</a>
+                  <span class="text-secondary font-xs" *ngIf="!b.unit?.id">Unit: {{ b.unit?.unitCode || b.unit?.unitNumber }}</span>
                 </div>
               </td>
               <td>{{ b.bookingDate | date:'mediumDate' }}</td>
@@ -431,6 +433,7 @@ import { AuthService } from '../../services/auth.service';
     .badge-rejected { background-color: rgba(239, 68, 68, 0.15); color: var(--color-lost); }
     .badge-cancelled { background-color: rgba(100, 116, 139, 0.15); color: var(--text-secondary); }
     .badge-contract { background-color: rgba(76, 58, 147, 0.15); color: var(--brand-primary); }
+    .hover-underline:hover { text-decoration: underline !important; }
   `]
 })
 export class BookingsComponent implements OnInit {

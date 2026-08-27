@@ -41,7 +41,8 @@ export class AuthService {
     const base = this.apiBase.replace('/api', '');
     const token = this.getToken();
     const separator = filePath.includes('?') ? '&' : '?';
-    return token ? `${base}${filePath}${separator}token=${token}` : `${base}${filePath}`;
+    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+    return token ? `${base}${cleanPath}${separator}token=${token}` : `${base}${cleanPath}`;
   }
 
   currentUser = signal<AuthenticatedUser | null>(null);

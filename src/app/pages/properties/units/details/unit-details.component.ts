@@ -11,6 +11,16 @@ import { environment } from '../../../../config';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
+    <!-- Floating Toast Notifications -->
+    <div *ngIf="toastSuccess" class="floating-toast success" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 14px; background: #10b981; animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined">check_circle</span>
+      <span>{{ toastSuccess }}</span>
+    </div>
+    <div *ngIf="toastError" class="floating-toast error" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; color: white; padding: 12px 20px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 14px; background: #ef4444; animation: toastSlideIn 0.3s ease-out;">
+      <span class="material-icons-outlined">error_outline</span>
+      <span>{{ toastError }}</span>
+    </div>
+
     <header class="app-header flex justify-between align-center">
       <div class="app-title-section">
         <div class="flex align-center gap-2">
@@ -170,7 +180,7 @@ import { environment } from '../../../../config';
           <div class="timeline-item" *ngFor="let h of unit.statusHistory">
             <div class="timeline-body" style="padding-left: 12px; border-left: 2px solid var(--brand-primary); margin-left: 6px; padding-bottom: 12px;">
               <div class="timeline-header flex justify-between">
-                <span class="badge" [style.background-color]="h.newStatus?.colorCode || '#28a745'">{{ h.newStatus?.statusName }}</span>
+                <span class="badge" [style.background-color]="h.newStatus?.colorCode || '#28a745'" style="color: #fff; font-weight: 600;">{{ h.newStatus?.statusName }}</span>
                 <span class="timeline-date font-xs text-secondary">{{ h.changedAt | date:'short' }}</span>
               </div>
               <p class="mt-1 text-main font-sm">{{ h.reason || 'No details provided.' }}</p>
@@ -386,6 +396,10 @@ import { environment } from '../../../../config';
     .mt-3 { margin-top: 12px; }
     .mt-2 { margin-top: 8px; }
     .mt-4 { margin-top: 16px; }
+    @keyframes toastSlideIn {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   `]
 })
 export class UnitDetailsComponent implements OnInit {
@@ -397,6 +411,25 @@ export class UnitDetailsComponent implements OnInit {
   unit: any = null;
   auditLog: any[] = [];
   priceHistoryList: any[] = [];
+  toastSuccess = '';
+  toastError = '';
+
+  showToast(message: string, isError = false) {
+    if (isError) {
+      this.toastError = message;
+      setTimeout(() => {
+        this.toastError = '';
+        this.cdr.detectChanges();
+      }, 5000);
+    } else {
+      this.toastSuccess = message;
+      setTimeout(() => {
+        this.toastSuccess = '';
+        this.cdr.detectChanges();
+      }, 5000);
+    }
+    this.cdr.detectChanges();
+  }
 
   showEditModal = false;
   editForm: any = {
@@ -497,8 +530,13 @@ export class UnitDetailsComponent implements OnInit {
         this.loadUnit(this.unit.id);
         this.loadAuditLog(this.unit.id);
         this.loadPriceHistory(this.unit.id);
+        this.showToast('Unit updated successfully!');
       },
-      error: (err) => console.error('Error updating unit:', err)
+      error: (err) => {
+        console.error('Error updating unit:', err);
+        const errMsg = err.error?.message || err.message || 'An error occurred while updating the unit.';
+        this.showToast(errMsg, true);
+      }
     });
   }
 
@@ -532,9 +570,13 @@ export class UnitDetailsComponent implements OnInit {
     this.propertiesService.createPriceChangeRequest(payload).subscribe({
       next: () => {
         this.closePriceRequestModal();
-        alert('Price change request submitted successfully for Manager approval!');
+        this.showToast('Price change request submitted successfully for Manager approval!');
       },
-      error: (err) => console.error('Error submitting price request:', err)
+      error: (err) => {
+        console.error('Error submitting price request:', err);
+        const errMsg = err.error?.message || 'Failed to submit price request.';
+        this.showToast(errMsg, true);
+      }
     });
   }
 

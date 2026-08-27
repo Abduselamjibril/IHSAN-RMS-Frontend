@@ -253,9 +253,14 @@ import { AuthService } from '../../services/auth.service';
         </header>
         <form (ngSubmit)="saveExpense()" #expForm="ngForm" class="modal-form">
           <div class="modal-body">
-            <div *ngIf="expenseModel.expenseAmount && targetAdForAction?.campaign?.id" class="p-3 mb-4 rounded border font-semibold text-xs flex items-center gap-2" style="background-color: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); color: #d97706;">
+            <div *ngIf="targetAdForAction?.campaign?.id" class="p-3 mb-4 rounded border font-semibold text-xs flex items-center gap-2" [style.background-color]="expenseModel.expenseAmount > targetAdRemainingBudget ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)'" [style.border-color]="expenseModel.expenseAmount > targetAdRemainingBudget ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'" [style.color]="expenseModel.expenseAmount > targetAdRemainingBudget ? '#dc2626' : '#d97706'">
               <span class="material-icons-outlined text-sm">warning</span>
-              <span>⚠️ Expense validation: Remaining Campaign Budget is <strong>ETB {{ targetAdRemainingBudget | number:'1.2-2' }}</strong>.</span>
+              <div>
+                <span>Remaining Campaign Budget: <strong>ETB {{ targetAdRemainingBudget | number:'1.2-2' }}</strong>.</span>
+                <div *ngIf="expenseModel.expenseAmount > targetAdRemainingBudget" class="font-bold" style="margin-top: 4px; color: #b91c1c;">
+                  ⚠️ Alert: This expense exceeds campaign budget! Remaining balance warning visible.
+                </div>
+              </div>
             </div>
             <div class="form-grid">
               <div class="form-group">
@@ -539,10 +544,17 @@ export class AdvertisementsComponent implements OnInit {
   closeExpenseModal() { this.showExpenseModal = false; }
 
   saveExpense() {
+    if (this.expenseModel.expenseAmount > this.targetAdRemainingBudget) {
+      customAlert(
+        `This expense of ETB ${Number(this.expenseModel.expenseAmount).toLocaleString()} exceeds campaign budget! Available balance: ETB ${Number(this.targetAdRemainingBudget).toLocaleString()}.`,
+        'Campaign Budget Overspend Alert'
+      );
+    }
+
     this.marketingService.recordAdExpense(this.targetAdForAction.id, this.expenseModel).subscribe({
       next: (res: any) => {
         this.closeExpenseModal();
-        if (res?.warning) {
+        if (res?.warning && !(this.expenseModel.expenseAmount > this.targetAdRemainingBudget)) {
           customAlert(res.warning, 'Campaign Budget Overspend Warning');
         }
         if (this.selectedAd?.id === this.targetAdForAction.id) {

@@ -958,6 +958,29 @@ import { MarketingService } from '../../services/marketing.service';
             </table>
           </div>
         </div>
+
+        <!-- Lead Source Trend Visualization Chart (TC-7.19) -->
+        <div class="card p-6 border-indigo">
+          <div class="flex justify-between items-center mb-4 border-bottom pb-3">
+            <div>
+              <h3>Lead Source Volume Trend Chart</h3>
+              <p class="text-secondary font-xs mt-1">Lead volume distribution and revenue contribution across lead sources</p>
+            </div>
+            <span class="badge badge-new">Time-Series Breakdown</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
+            <div *ngFor="let src of leadSourceReportData" class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs font-semibold">
+                <span class="text-main font-bold">#{{ src.rank }} {{ src.sourceName }} ({{ src.channelType }})</span>
+                <span class="text-indigo">{{ src.totalLeads }} Leads • ETB {{ formatValue(src.revenueContribution) }}</span>
+              </div>
+              <div style="height: 10px; background: rgba(0,0,0,0.06); border-radius: 5px; overflow: hidden;">
+                <div [style.width.%]="getLeadSourcePercent(src.totalLeads)" style="height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 5px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== CAMPAIGN PERFORMANCE TAB (TC-7.16) ==================== -->
@@ -1025,6 +1048,29 @@ import { MarketingService } from '../../services/marketing.service';
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Campaign Performance Comparative Visual Chart (TC-7.20) -->
+        <div class="card p-6 border-indigo">
+          <div class="flex justify-between items-center mb-4 border-bottom pb-3">
+            <div>
+              <h3>Comparative Campaign Visual Chart</h3>
+              <p class="text-secondary font-xs mt-1">Cross-campaign comparative visualization of revenue, leads, and conversion efficiency</p>
+            </div>
+            <span class="badge badge-qualified">Visual Telemetry</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 8px;">
+            <div *ngFor="let c of campaignReportData" class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs font-semibold">
+                <span class="text-main font-bold">{{ c.campaignName }} ({{ c.campaignCode }})</span>
+                <span class="text-green">{{ c.leadsGenerated }} Leads • ETB {{ formatValue(c.revenueGenerated) }} (ROI: {{ c.roi }}%)</span>
+              </div>
+              <div style="height: 10px; background: rgba(0,0,0,0.06); border-radius: 5px; overflow: hidden;">
+                <div [style.width.%]="getCampaignRevenuePercent(c.revenueGenerated)" style="height: 100%; background: linear-gradient(90deg, #10b981, #14b8a6); border-radius: 5px;"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1723,60 +1769,33 @@ export class ReportsComponent implements OnInit {
       alert('Please select a specific report tab to export.');
       return;
     }
+    this.exportExcelReport();
+  }
 
-    let reportCode = '';
-    let columns: string[] = [];
+  getLeadSourcePercent(leads: number): number {
+    if (!this.leadSourceReportData || this.leadSourceReportData.length === 0) return 0;
+    const max = Math.max(...this.leadSourceReportData.map((s: any) => Number(s.totalLeads) || 1), 1);
+    return Math.round(((Number(leads) || 0) / max) * 100);
+  }
 
-    switch (this.activeTab) {
-      case 'sales':
-        reportCode = 'SALES_PERFORMANCE';
-        columns = ['contractNo', 'siteName', 'propertyCode', 'propertyName', 'propertyType', 'contractAmount', 'salesAgent', 'brokerName', 'contractDate', 'status'];
-        break;
-      case 'inventory':
-        reportCode = 'INVENTORY_AVAILABILITY';
-        columns = ['propertyCode', 'propertyName', 'siteName', 'propertyType', 'unitSize', 'listingPrice', 'currentStatus', 'reservedBy', 'reservationDate', 'soldTo', 'saleDate', 'salesAgent', 'brokerName', 'lastStatusUpdateDate', 'daysAvailable'];
-        break;
-      case 'revenue':
-        reportCode = 'REVENUE_ANALYSIS';
-        columns = ['contractNo', 'propertyName', 'propertyType', 'contractAmount', 'collected', 'outstanding'];
-        break;
-      case 'collections':
-        reportCode = 'COLLECTION_MONITORING';
-        columns = ['paymentReference', 'propertyName', 'paymentDate', 'paymentAmount', 'paymentMethod'];
-        break;
-      case 'receivables':
-        reportCode = 'RECEIVABLE_MONITORING';
-        columns = ['customerName', 'contractNo', 'propertyName', 'contractAmount', 'totalPaid', 'outstandingBalance'];
-        break;
-      case 'brokers':
-        reportCode = 'BROKER_COMMISSIONS';
-        columns = ['brokerName', 'propertyName', 'saleAmount', 'commissionAmount', 'calculatedDate', 'status'];
-        break;
-    }
+  getCampaignRevenuePercent(rev: number): number {
+    if (!this.campaignReportData || this.campaignReportData.length === 0) return 0;
+    const max = Math.max(...this.campaignReportData.map((c: any) => Number(c.revenueGenerated) || 1), 1);
+    return Math.round(((Number(rev) || 0) / max) * 100);
+  }
 
-    if (!reportCode) {
-      alert('Export not supported for this tab.');
-      return;
-    }
+  private downloadCsvBlob(content: string, filename: string) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    this.downloadBlob(blob, filename);
+  }
 
-    const cleanFilters: any = {};
-    Object.keys(this.filters).forEach(k => {
-      if (this.filters[k] !== null && this.filters[k] !== 'null') {
-        cleanFilters[k] = this.filters[k];
-      }
-    });
-
-    this.reportsService.exportReport(reportCode, cleanFilters, columns).subscribe({
-      next: (blob) => {
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `${this.activeTab}_report_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      },
-      error: (err) => console.error('Export failed:', err)
-    });
+  private downloadBlob(blob: Blob, filename: string) {
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   showPropertyFilter(): boolean {

@@ -365,7 +365,8 @@ export class CampaignsComponent implements OnInit {
   }
 
   saveCampaign() {
-    if (this.formModel.campaignStatus === 'ACTIVE' && this.formModel.startDate) {
+    const statusUpper = (this.formModel.campaignStatus || '').toUpperCase();
+    if (statusUpper === 'ACTIVE' && this.formModel.startDate) {
       const startDate = new Date(this.formModel.startDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);

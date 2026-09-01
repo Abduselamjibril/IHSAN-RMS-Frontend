@@ -245,6 +245,12 @@ import { NotificationsService } from '../../services/notifications.service';
                   <span class="menu-text">Receipts & Templates</span>
                 </a>
               </li>
+              <li>
+                <a routerLink="/sales/bookings" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">verified</span>
+                  <span class="menu-text">Booking Approvals</span>
+                </a>
+              </li>
             </ul>
           </li>
 

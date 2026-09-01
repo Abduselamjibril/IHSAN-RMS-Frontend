@@ -244,8 +244,10 @@ import { customAlert, customConfirm } from '../../utils/confirm';
           <div class="drawer-section bg-main p-4 border-radius-md mb-4">
             <label class="font-bold font-sm text-secondary">Pipeline Stage Control</label>
             <div class="flex align-center gap-3 mt-2 flex-wrap">
-              <select [ngModel]="selectedOppDetails?.opportunityStage?.id" (change)="onUpdateStage($any($event.target).value)" class="flex-1 p-2 border-radius-md">
-                <option *ngFor="let s of metadata?.stages" [value]="s.id">{{ s.stageName }} ({{ s.probabilityPercent }}%)</option>
+              <select [value]="selectedOppDetails?.opportunityStage?.id" (change)="onSelectStage($event)" class="flex-1 p-2 border-radius-md">
+                <option *ngFor="let s of metadata?.stages" [value]="s.id" [selected]="+s.id === +(selectedOppDetails?.opportunityStage?.id ?? 0)">
+                  {{ s.stageName }} ({{ s.probabilityPercent }}%)
+                </option>
               </select>
 
               <button class="btn btn-success btn-sm" (click)="onMarkWon()" *ngIf="!selectedOppDetails?.isWon">
@@ -637,10 +639,25 @@ export class OpportunitiesComponent implements OnInit {
     this.selectedOppDetails = null;
   }
 
+  onSelectStage(event: any) {
+    const val = event.target?.value;
+    if (val !== undefined && val !== null && val !== '') {
+      this.onUpdateStage(+val);
+    }
+  }
+
   onUpdateStage(stageId: any) {
     if (!this.selectedOppDetails) return;
-    const targetStage = this.metadata?.stages?.find((s: any) => s.id === +stageId);
-    if (!targetStage) return;
+    const numId = Number(stageId);
+    const targetStage = this.metadata?.stages?.find((s: any) => Number(s.id) === numId);
+    if (!targetStage) {
+      console.warn('Target stage not found for ID:', stageId, this.metadata?.stages);
+      return;
+    }
+
+    if (Number(this.selectedOppDetails.opportunityStage?.id) === numId) {
+      return;
+    }
 
     // TC-2.08: Reopening a Lost Opportunity via dropdown requires a reason
     if (this.selectedOppDetails.isLost) {
@@ -649,19 +666,19 @@ export class OpportunitiesComponent implements OnInit {
     }
 
     // TC-2.05: Changing stage to 'Closed Lost' via dropdown requires reason & notes
-    if (targetStage.stageName === 'Closed Lost' || targetStage.stageName === 'Lost' || (targetStage.isClosed && targetStage.probabilityPercent === 0)) {
+    if (targetStage.stageName === 'Closed Lost' || targetStage.stageName === 'Lost' || targetStage.stageName.toLowerCase().includes('lost') || (targetStage.isClosed && targetStage.probabilityPercent === 0)) {
       this.openCloseLostModal();
       return;
     }
 
     // TC-2.04: Check stage transition validation (confirm jump directly to Won)
-    if (targetStage.stageName === 'Closed Won' || targetStage.stageName === 'Won' || targetStage.probabilityPercent === 100) {
+    if (targetStage.stageName === 'Closed Won' || targetStage.stageName === 'Won' || targetStage.stageName.toLowerCase().includes('won') || targetStage.probabilityPercent === 100) {
       customConfirm(
         `⚠️ Confirm Stage Transition: Are you sure you want to transition '${this.selectedOppDetails.title}' directly to '${targetStage.stageName}'?`,
         'Confirm Stage Advance'
       ).then((confirmed: boolean) => {
         if (confirmed) {
-          this.executeStageUpdate(+stageId);
+          this.executeStageUpdate(numId);
         } else {
           this.loadOpportunityDetails(this.selectedOppDetails.id);
         }
@@ -669,24 +686,34 @@ export class OpportunitiesComponent implements OnInit {
       return;
     }
 
-    this.executeStageUpdate(+stageId);
+    this.executeStageUpdate(numId);
   }
 
   executeStageUpdate(stageId: number) {
     this.crmService.updateOpportunityStage(this.selectedOppDetails.id, stageId).subscribe({
-      next: () => {
-        this.loadOpportunityDetails(this.selectedOppDetails.id);
+      next: (res) => {
+        this.selectedOppDetails = res;
+        const idx = this.opportunities.findIndex(o => Number(o.id) === Number(res.id));
+        if (idx !== -1) {
+          this.opportunities[idx] = res;
+        }
+        this.calculateStats();
         this.loadOpportunities();
       },
-      error: (err) => console.error('Error updating stage:', err)
+      error: (err) => {
+        console.error('Error updating stage:', err);
+        customAlert('Failed to update stage: ' + (err.error?.message || err.message), 'Update Error');
+      }
     });
   }
 
   onMarkWon() {
     if (!this.selectedOppDetails) return;
-    const wonStage = this.metadata?.stages?.find((s: any) => s.stageName === 'Won' || s.stageName === 'Closed Won');
+    const wonStage = this.metadata?.stages?.find((s: any) => s.isWon || s.probabilityPercent === 100 || (s.stageName && s.stageName.toLowerCase().includes('won')));
     if (wonStage) {
       this.onUpdateStage(wonStage.id);
+    } else {
+      alert('Closed Won stage not found in metadata.');
     }
   }
 

@@ -131,7 +131,12 @@ import { customAlert, customConfirm } from '../../utils/confirm';
                     <span class="row-index">{{ i + 1 }}</span>
                     <div class="table-avatar">{{ getInitials(l.fullName) }}</div>
                     <div class="flex flex-col">
-                      <span class="lead-name">{{ l.fullName }}</span>
+                      <div class="flex align-center gap-2 flex-wrap">
+                        <span class="lead-name">{{ l.fullName }}</span>
+                        <span *ngFor="let tag of getLeadTags(l)" class="badge" style="font-size: 10px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 8px; font-weight: 700;">
+                          {{ tag }}
+                        </span>
+                      </div>
                       <span class="lead-phone">{{ l.primaryPhone }} <span class="text-muted font-xs" style="margin-left: 6px;">• {{ l.leadCode }}</span></span>
                     </div>
                     <span *ngIf="l.isDuplicate" class="duplicate-tag">Duplicate</span>
@@ -490,7 +495,7 @@ import { customAlert, customConfirm } from '../../utils/confirm';
                 <div class="timeline-body">
                   <div class="timeline-header flex justify-between">
                     <span class="timeline-subject">{{ act.subject }}</span>
-                    <span class="timeline-date">{{ act.activityDate | date:'short' }}</span>
+                    <span class="timeline-date">{{ formatDatePreservingLocal(act.activityDate) }}</span>
                   </div>
                   <p class="timeline-text">{{ act.description }}</p>
                   <span class="timeline-outcome" *ngIf="act.outcome">Outcome: {{ act.outcome }}</span>
@@ -530,18 +535,18 @@ import { customAlert, customConfirm } from '../../utils/confirm';
           <div class="tab-content" *ngIf="activeTab === 'attachments'">
             <!-- File Uploader -->
             <div class="attachment-upload-form flex flex-col gap-2">
-              <label class="font-bold font-sm">Upload New Document</label>
+              <label class="font-bold font-sm">Upload New Document(s)</label>
               <div class="flex gap-2 align-center">
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.docx" (change)="onFileSelected($event)" #fileInput style="display: none;" />
+                <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" (change)="onFileSelected($event)" #fileInput style="display: none;" />
                 <button type="button" class="btn btn-secondary flex align-center gap-1 btn-sm" (click)="fileInput.click()">
-                  <span class="material-icons-outlined font-sm">file_upload</span> Select File
+                  <span class="material-icons-outlined font-sm">file_upload</span> Select Files (Multiple)
                 </button>
-                <span class="selected-filename text-secondary font-xs" *ngIf="selectedFile">{{ selectedFile.name }}</span>
-                <span class="selected-filename text-secondary font-xs italic" *ngIf="!selectedFile">No file chosen</span>
+                <span class="selected-filename text-secondary font-xs" *ngIf="selectedFiles?.length">{{ selectedFiles.length }} file(s) selected</span>
+                <span class="selected-filename text-secondary font-xs italic" *ngIf="!selectedFiles?.length && !selectedFile">No files chosen</span>
               </div>
-              <div class="flex justify-end gap-2 mt-2" *ngIf="selectedFile">
-                <button type="button" class="btn btn-secondary btn-sm" (click)="selectedFile = null">Cancel</button>
-                <button type="button" class="btn btn-primary btn-sm" (click)="onUploadFile()">Upload</button>
+              <div class="flex justify-end gap-2 mt-2" *ngIf="selectedFiles?.length || selectedFile">
+                <button type="button" class="btn btn-secondary btn-sm" (click)="selectedFile = null; selectedFiles = []">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" (click)="onUploadFile()">Upload Documents</button>
               </div>
             </div>
 
@@ -1152,35 +1157,39 @@ export class LeadsComponent implements OnInit {
     this.previewImageName = '';
   }
 
+  selectedFiles: File[] = [];
+
   onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.docx'];
-    const ext = '.' + file.name.split('.').pop().toLowerCase();
-    if (!allowedExts.includes(ext)) {
-      customAlert('Unsupported file type. Only PDF, JPG, PNG, and DOCX files are accepted.', 'Unsupported File Type');
-      event.target.value = '';
-      this.selectedFile = null;
-      return;
+    const files: FileList = event.target.files;
+    if (files && files.length > 0) {
+      this.selectedFiles = Array.from(files);
+      this.selectedFile = files[0];
     }
-
-    this.selectedFile = file;
   }
 
   onUploadFile() {
-    if (!this.selectedLeadDetails || !this.selectedFile) return;
+    if (!this.selectedLeadDetails || (!this.selectedFile && this.selectedFiles.length === 0)) return;
 
-    this.crmService.uploadAttachment(this.selectedLeadDetails.id, this.selectedFile).subscribe({
-      next: () => {
-        this.selectedFile = null;
-        this.loadLeadDetails(this.selectedLeadDetails.id);
-      },
-      error: (err) => {
-        console.error('Error uploading attachment:', err);
-        const msg = err.error?.message;
-        customAlert(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to upload attachment.'), 'Upload Error');
-      }
+    const filesToUpload: File[] = (this.selectedFiles.length > 0 ? this.selectedFiles : (this.selectedFile ? [this.selectedFile] : [])).filter((f): f is File => !!f);
+    if (filesToUpload.length === 0) return;
+    let completed = 0;
+
+    filesToUpload.forEach(file => {
+      this.crmService.uploadAttachment(this.selectedLeadDetails.id, file).subscribe({
+        next: () => {
+          completed++;
+          if (completed === filesToUpload.length) {
+            this.selectedFile = null;
+            this.selectedFiles = [];
+            this.loadLeadDetails(this.selectedLeadDetails.id);
+          }
+        },
+        error: (err) => {
+          console.error('Error uploading attachment:', err);
+          const msg = err.error?.message;
+          customAlert(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to upload attachment.'), 'Upload Error');
+        }
+      });
     });
   }
 
@@ -1628,31 +1637,89 @@ export class LeadsComponent implements OnInit {
   }
 
   getLeadTags(lead: any): string[] {
-    if (!lead) return [];
-    if (!lead.tags) lead.tags = ['VIP'];
+    if (!lead || !lead.tags) return [];
     if (typeof lead.tags === 'string') {
       try { lead.tags = JSON.parse(lead.tags); } catch (e) { lead.tags = lead.tags.split(',').map((t: string) => t.trim()); }
     }
-    return Array.isArray(lead.tags) ? lead.tags : [];
+    if (Array.isArray(lead.tags)) {
+      return lead.tags.map((t: any) => typeof t === 'string' ? t.trim() : (t?.tagName || String(t))).filter(Boolean);
+    }
+    return [];
   }
 
   addTag(lead: any, tag: string) {
     if (!lead || !tag) return;
-    const tags = this.getLeadTags(lead);
-    if (!tags.includes(tag)) {
-      tags.push(tag);
-      lead.tags = tags;
-      customAlert(`Tag '${tag}' successfully added to ${lead.fullName || 'Customer'}.`, 'Customer Tag Applied');
+    const currentTags = this.getLeadTags(lead);
+    if (currentTags.includes(tag)) return;
+
+    const newTags = [...currentTags, tag];
+    lead.tags = newTags;
+
+    // Immediately sync local table array item
+    const tableItem = this.leads.find(l => Number(l.id) === Number(lead.id));
+    if (tableItem) {
+      tableItem.tags = newTags;
     }
+
+    // Persist to backend database via updateLead
+    this.crmService.updateLead(lead.id, { tags: newTags }).subscribe({
+      next: (res) => {
+        if (tableItem && res.tags) {
+          tableItem.tags = res.tags;
+        }
+        if (this.selectedLeadDetails && this.selectedLeadDetails.id === lead.id && res.tags) {
+          this.selectedLeadDetails.tags = res.tags;
+        }
+      },
+      error: (err) => console.error('Failed to persist customer tag:', err)
+    });
   }
 
   removeTag(lead: any, tag: string) {
     if (!lead || !tag) return;
-    const tags = this.getLeadTags(lead);
-    const idx = tags.indexOf(tag);
-    if (idx > -1) {
-      tags.splice(idx, 1);
-      lead.tags = tags;
+    const currentTags = this.getLeadTags(lead);
+    const newTags = currentTags.filter(t => t !== tag);
+    lead.tags = newTags;
+
+    const tableItem = this.leads.find(l => Number(l.id) === Number(lead.id));
+    if (tableItem) {
+      tableItem.tags = newTags;
     }
+
+    this.crmService.updateLead(lead.id, { tags: newTags }).subscribe({
+      next: (res) => {
+        if (tableItem && res.tags) {
+          tableItem.tags = res.tags;
+        }
+        if (this.selectedLeadDetails && this.selectedLeadDetails.id === lead.id && res.tags) {
+          this.selectedLeadDetails.tags = res.tags;
+        }
+      },
+      error: (err) => console.error('Failed to remove customer tag:', err)
+    });
+  }
+
+  formatDatePreservingLocal(dateVal: any): string {
+    if (!dateVal) return '';
+    const str = String(dateVal).trim();
+    if (str.includes('T')) {
+      const [datePart, timePart] = str.split('T');
+      const parts = datePart.split('-').map(Number);
+      if (parts.length === 3) {
+        const timeClean = timePart.split('Z')[0].split('+')[0];
+        const tParts = timeClean.split(':').map(Number);
+        const [year, month, day] = parts;
+        const yrShort = String(year).slice(-2);
+        let hours = tParts[0] || 0;
+        const minutes = String(tParts[1] || 0).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${month}/${day}/${yrShort}, ${hours}:${minutes} ${ampm}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleString();
   }
 }

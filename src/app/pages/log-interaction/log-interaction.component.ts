@@ -93,6 +93,7 @@ import { CrmService } from '../../services/crm.service';
                 <option value="SMS">SMS text</option>
                 <option value="WhatsApp">WhatsApp log</option>
                 <option value="Meeting">In-Person Meeting</option>
+                <option value="Site Visit">Site Visit</option>
               </select>
             </div>
 
@@ -105,6 +106,48 @@ import { CrmService } from '../../services/crm.service';
                 [(ngModel)]="newActivity.subject" 
                 name="subject" 
                 required 
+              />
+            </div>
+          </div>
+
+          <!-- Direction & Duration Fields for Calls (TC-2.11) -->
+          <div class="form-row flex gap-3 margin-y-2" *ngIf="newActivity.activityType === 'Call'">
+            <div class="form-group flex-1 flex flex-col">
+              <label>Call Direction</label>
+              <select [(ngModel)]="newActivity.direction" name="direction">
+                <option value="Outbound">Outbound Call</option>
+                <option value="Inbound">Inbound Call</option>
+              </select>
+            </div>
+            <div class="form-group flex-1 flex flex-col">
+              <label>Call Duration (mins)</label>
+              <input 
+                type="number" 
+                placeholder="e.g. 15" 
+                [(ngModel)]="newActivity.durationMinutes" 
+                name="durationMinutes" 
+              />
+            </div>
+          </div>
+
+          <!-- Location & Attendees Fields for Meetings & Site Visits (TC-1.28, TC-1.29, TC-2.13) -->
+          <div class="form-row flex gap-3 margin-y-2" *ngIf="newActivity.activityType === 'Meeting' || newActivity.activityType === 'Site Visit'">
+            <div class="form-group flex-1 flex flex-col">
+              <label>📍 Location / Address *</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Head Office / Bole Site Premises" 
+                [(ngModel)]="newActivity.location" 
+                name="location" 
+              />
+            </div>
+            <div class="form-group flex-1 flex flex-col">
+              <label>👥 Attendees / Participants</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Client John Doe, Manager Abel" 
+                [(ngModel)]="newActivity.attendees" 
+                name="attendees" 
               />
             </div>
           </div>
@@ -190,8 +233,8 @@ import { CrmService } from '../../services/crm.service';
                 👤 Lead: <strong>{{ log.lead?.fullName }}</strong>
               </span>
               <p class="timeline-desc">{{ log.description }}</p>
-              <span class="badge badge-low mt-1" *ngIf="log.nextActionDate" style="font-size: 9px;">
-                📅 Follow-up: {{ log.nextActionDate | date:'short' }}
+              <span class="badge badge-low mt-1" *ngIf="log.nextActionDate" style="font-size: 11px;">
+                📅 Follow-up: {{ formatDatePreservingLocal(log.nextActionDate) }}
               </span>
             </div>
           </div>
@@ -258,23 +301,44 @@ import { CrmService } from '../../services/crm.service';
       top: calc(100% + 4px);
       left: 0;
       width: 100%;
-      max-height: 220px;
+      max-height: 240px;
       overflow-y: auto;
-      z-index: 200;
+      z-index: 9999;
       border-radius: var(--radius-md);
-      box-shadow: var(--shadow-lg);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
       list-style: none;
-      padding: 4px 0;
+      padding: 6px 0;
+      background: #ffffff !important;
+      border: 1px solid var(--border-color);
     }
     
     .suggestion-item {
-      padding: 8px 14px;
+      padding: 10px 14px;
       cursor: pointer;
+      background: #ffffff;
       transition: var(--transition-fast);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
     }
     
     .suggestion-item:hover {
-      background-color: var(--brand-primary-light);
+      background-color: var(--brand-primary-light, #eff6ff);
+    }
+
+    .no-suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      z-index: 9999;
+      background: #ffffff !important;
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border-color);
+      padding: 12px;
     }
     
     .selected-lead-card {
@@ -384,6 +448,10 @@ export class LogInteractionComponent implements OnInit {
     activityType: 'Call',
     subject: '',
     description: '',
+    location: '',
+    attendees: '',
+    direction: 'Outbound',
+    durationMinutes: null as number | null,
     nextActionDate: ''
   };
 
@@ -450,6 +518,10 @@ export class LogInteractionComponent implements OnInit {
       activityType: this.newActivity.activityType,
       subject: this.newActivity.subject,
       description: this.newActivity.description,
+      location: this.newActivity.location,
+      attendees: this.newActivity.attendees,
+      direction: this.newActivity.direction,
+      durationMinutes: this.newActivity.durationMinutes,
       performedBy: 1,
       outcome: this.newActivity.subject,
       nextActionDate: this.scheduleFollowup ? this.newActivity.nextActionDate : undefined
@@ -475,6 +547,10 @@ export class LogInteractionComponent implements OnInit {
       activityType: 'Call',
       subject: '',
       description: '',
+      location: '',
+      attendees: '',
+      direction: 'Outbound',
+      durationMinutes: null as number | null,
       nextActionDate: ''
     };
     this.scheduleFollowup = false;
@@ -507,7 +583,32 @@ export class LogInteractionComponent implements OnInit {
       case 'Call': return 'bg-call';
       case 'Email': return 'bg-email';
       case 'Meeting': return 'bg-meeting';
+      case 'Site Visit': return 'bg-meeting';
       default: return 'bg-system';
     }
+  }
+
+  formatDatePreservingLocal(dateVal: any): string {
+    if (!dateVal) return '';
+    const str = String(dateVal).trim();
+    if (str.includes('T')) {
+      const [datePart, timePart] = str.split('T');
+      const parts = datePart.split('-').map(Number);
+      if (parts.length === 3) {
+        const timeClean = timePart.split('Z')[0].split('+')[0];
+        const tParts = timeClean.split(':').map(Number);
+        const [year, month, day] = parts;
+        const yrShort = String(year).slice(-2);
+        let hours = tParts[0] || 0;
+        const minutes = String(tParts[1] || 0).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${month}/${day}/${yrShort}, ${hours}:${minutes} ${ampm}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleString();
   }
 }

@@ -195,7 +195,7 @@ declare function customAlert(message: string, title?: string): void;
               <textarea [(ngModel)]="editForm.messageBody" name="messageBody" rows="4" class="p-2 border-radius-md"></textarea>
             </div>
 
-            <div class="form-group flex flex-col gap-1">
+            <div class="form-group flex flex-col gap-1" *ngIf="editForm.subject !== 'File Attachment' && !editForm.subject?.includes('Attachment')">
               <label class="font-bold font-sm">Location / Attendees / Ref</label>
               <input type="text" [(ngModel)]="editForm.externalReference" name="externalReference" class="p-2 border-radius-md" />
             </div>

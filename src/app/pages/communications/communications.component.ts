@@ -226,11 +226,28 @@ declare function customAlert(message: string, title?: string): void;
               <span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px;">{{ audit.auditAction }}</span>
               <span style="font-size: 12px; color: #64748b;">{{ audit.changedAt | date:'medium' }}</span>
             </div>
-            <div style="font-size: 12px;">
-              <p style="font-weight: 700; color: #475569; margin-bottom: 4px;">Before Change:</p>
-              <pre style="background: #ffffff; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; margin-bottom: 8px; max-height: 120px; overflow: auto; color: #334155;">{{ audit.oldValue | json }}</pre>
-              <p style="font-weight: 700; color: #475569; margin-bottom: 4px;">After Change:</p>
-              <pre style="background: #ffffff; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; max-height: 120px; overflow: auto; color: #334155;">{{ audit.newValue | json }}</pre>
+            <div class="audit-diff-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+              <!-- Before Change -->
+              <div style="background: #ffffff; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <span style="font-weight: 700; color: #dc2626; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Before Change</span>
+                <div *ngIf="formatAuditValue(audit.oldValue).length > 0" style="display: flex; flex-direction: column; gap: 4px;">
+                  <div *ngFor="let item of formatAuditValue(audit.oldValue)" style="font-size: 12px; line-height: 1.4;">
+                    <strong style="color: #475569;">{{ item.label }}:</strong> <span style="color: #64748b;">{{ item.value }}</span>
+                  </div>
+                </div>
+                <span *ngIf="formatAuditValue(audit.oldValue).length === 0" style="color: #94a3b8; font-size: 11px; font-style: italic;">No previous data</span>
+              </div>
+
+              <!-- After Change -->
+              <div style="background: #f0fdf4; padding: 10px 12px; border: 1px solid #bbf7d0; border-radius: 8px;">
+                <span style="font-weight: 700; color: #16a34a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">After Change</span>
+                <div *ngIf="formatAuditValue(audit.newValue).length > 0" style="display: flex; flex-direction: column; gap: 4px;">
+                  <div *ngFor="let item of formatAuditValue(audit.newValue)" style="font-size: 12px; line-height: 1.4;">
+                    <strong style="color: #166534;">{{ item.label }}:</strong> <span style="color: #15803d; font-weight: 600;">{{ item.value }}</span>
+                  </div>
+                </div>
+                <span *ngIf="formatAuditValue(audit.newValue).length === 0" style="color: #94a3b8; font-size: 11px; font-style: italic;">No updated data</span>
+              </div>
             </div>
           </div>
           <div *ngIf="auditLogs.length === 0" style="text-align: center; padding: 32px 0; color: #94a3b8; font-size: 13px; font-style: italic;">
@@ -435,6 +452,42 @@ export class CommunicationsComponent implements OnInit {
   closeAuditsDrawer() {
     this.showAuditsDrawer = false;
     this.auditLogs = [];
+  }
+
+  formatAuditValue(val: any): { key: string; label: string; value: string }[] {
+    if (!val) return [];
+    let parsed = val;
+    if (typeof val === 'string') {
+      try {
+        parsed = JSON.parse(val);
+      } catch (e) {
+        return [{ key: 'raw', label: 'Details', value: val }];
+      }
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+      return [{ key: 'value', label: 'Value', value: String(parsed) }];
+    }
+    const labelMap: Record<string, string> = {
+      subject: 'Subject',
+      messageBody: 'Summary / Body',
+      durationSeconds: 'Duration (sec)',
+      externalReference: 'Location / Reference',
+      communicationStatus: 'Status',
+      communicationDirection: 'Direction',
+      channelId: 'Channel ID',
+      occurredAt: 'Date / Time'
+    };
+    const result: { key: string; label: string; value: string }[] = [];
+    for (const [k, v] of Object.entries(parsed)) {
+      if (v !== undefined && v !== null && v !== '') {
+        result.push({
+          key: k,
+          label: labelMap[k] || k,
+          value: typeof v === 'object' ? JSON.stringify(v) : String(v)
+        });
+      }
+    }
+    return result;
   }
 }
 

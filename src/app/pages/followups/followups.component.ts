@@ -129,7 +129,7 @@ import { CrmService } from '../../services/crm.service';
                 </span>
               </td>
               <td class="text-secondary font-xs font-bold" [style.color]="isOverdue(reminder) ? 'var(--color-high)' : ''">
-                {{ reminder.reminderDatetime | date:'medium' }}
+                {{ formatReminderDate(reminder.reminderDatetime) }}
                 <div class="text-red font-xxs font-semibold mt-1" *ngIf="isOverdue(reminder) && !reminder.isCompleted">
                   ⚠️ OVERDUE
                 </div>
@@ -464,17 +464,60 @@ export class FollowupsComponent implements OnInit {
   openRescheduleModal(reminder: any) {
     this.selectedReminder = reminder;
     if (reminder.reminderDatetime) {
-      const dt = new Date(reminder.reminderDatetime);
-      const year = dt.getFullYear();
-      const month = String(dt.getMonth() + 1).padStart(2, '0');
-      const day = String(dt.getDate()).padStart(2, '0');
-      const hours = String(dt.getHours()).padStart(2, '0');
-      const minutes = String(dt.getMinutes()).padStart(2, '0');
-      this.rescheduleDatetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      const str = String(reminder.reminderDatetime).trim();
+      if (str.includes('T')) {
+        const [dPart, tPart] = str.split('T');
+        const timeClean = tPart.split('Z')[0].split('+')[0];
+        const parts = timeClean.split(':');
+        const h = parts[0] || '00';
+        const m = parts[1] || '00';
+        this.rescheduleDatetime = `${dPart}T${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+      } else {
+        const dt = new Date(reminder.reminderDatetime);
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        this.rescheduleDatetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
     } else {
       this.rescheduleDatetime = '';
     }
     this.showRescheduleModal = true;
+  }
+
+  formatReminderDate(dateVal: any): string {
+    if (!dateVal) return '-';
+    const str = String(dateVal).trim();
+    if (str.includes('T')) {
+      const [datePart, timePart] = str.split('T');
+      const parts = datePart.split('-').map(Number);
+      if (parts.length === 3) {
+        const timeClean = timePart.split('Z')[0].split('+')[0];
+        const tParts = timeClean.split(':').map(Number);
+        const [year, month, day] = parts;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const mName = monthNames[month - 1] || month;
+        let hours = tParts[0] || 0;
+        const minutes = String(tParts[1] || 0).padStart(2, '0');
+        const seconds = String(tParts[2] || 0).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        return `${mName} ${day}, ${year}, ${displayHours}:${minutes}:${seconds} ${ampm}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
   }
 
   closeRescheduleModal() {

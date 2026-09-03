@@ -304,11 +304,11 @@ import { customConfirm } from '../../utils/confirm';
                 <div *ngFor="let rule of newSegment.rules; let i = index" class="rule-edit-row flex gap-2 align-center">
                   <!-- Select Field -->
                   <select [(ngModel)]="rule.fieldName" [name]="'rule_field_' + i" class="flex-2" (change)="onRuleFieldChange(rule)">
-                    <option value="interestedPropertyType">Interested In (Property)</option>
+                    <option value="interestedPropertyType">Interested In (Property Type)</option>
                     <option value="statusId">Status</option>
                     <option value="budgetMin">Min Budget (ETB)</option>
                     <option value="budgetMax">Max Budget (ETB)</option>
-                    <option value="city">City</option>
+                    <option value="city">City / Location</option>
                     <option value="nationality">Nationality</option>
                     <option value="gender">Gender</option>
                     <option value="sourceId">Lead Source</option>
@@ -332,7 +332,7 @@ import { customConfirm } from '../../utils/confirm';
                       [(ngModel)]="rule.value" 
                       [name]="'rule_val_' + i"
                     >
-                      <option *ngFor="let st of metadata?.statuses" [value]="st.id">{{ st.statusName }}</option>
+                      <option *ngFor="let st of (metadata?.statuses?.length ? metadata.statuses : defaultStatuses)" [value]="st.id">{{ st.statusName }}</option>
                     </select>
 
                     <!-- If field is sourceId -->
@@ -344,11 +344,27 @@ import { customConfirm } from '../../utils/confirm';
                       <option *ngFor="let src of metadata?.sources" [value]="src.id">{{ src.sourceName }}</option>
                     </select>
 
+                    <!-- If field is interestedPropertyType with datalist -->
+                    <div *ngIf="rule.fieldName === 'interestedPropertyType'" style="width: 100%;">
+                      <input 
+                        type="text" 
+                        list="propertyTypesList" 
+                        placeholder="e.g. Apartment, Villa..." 
+                        [(ngModel)]="rule.value" 
+                        [name]="'rule_val_' + i"
+                        required
+                        style="width: 100%;"
+                      />
+                      <datalist id="propertyTypesList">
+                        <option *ngFor="let pt of propertyTypeOptions" [value]="pt">{{ pt }}</option>
+                      </datalist>
+                    </div>
+
                     <!-- Text input for generic fields -->
                     <input 
-                      *ngIf="rule.fieldName !== 'statusId' && rule.fieldName !== 'sourceId'"
+                      *ngIf="rule.fieldName !== 'statusId' && rule.fieldName !== 'sourceId' && rule.fieldName !== 'interestedPropertyType'"
                       type="text" 
-                      [placeholder]="rule.fieldName === 'interestedPropertyType' ? 'e.g. Luxury Apartment' : (rule.operator === 'IN' ? 'Val1, Val2, Val3' : 'Constraint value')" 
+                      [placeholder]="rule.operator === 'IN' ? 'Val1, Val2, Val3' : 'Constraint value'" 
                       [(ngModel)]="rule.value" 
                       [name]="'rule_val_' + i"
                       required
@@ -535,6 +551,31 @@ export class SegmentationComponent implements OnInit {
 
   selectedSegment: any = null;
   isRecalculating = false;
+
+  propertyTypeOptions = [
+    'Apartment',
+    'Luxury Apartment',
+    'Villa',
+    'Penthouse',
+    'Commercial',
+    'Office',
+    'Townhouse',
+    'Studio',
+    'Duplex',
+    'Residential Plot'
+  ];
+
+  defaultStatuses = [
+    { id: '1', statusName: 'New' },
+    { id: '2', statusName: 'Contacted' },
+    { id: '3', statusName: 'Qualified' },
+    { id: '4', statusName: 'Interested' },
+    { id: '5', statusName: 'Site Visit Scheduled' },
+    { id: '6', statusName: 'Proposal Sent' },
+    { id: '7', statusName: 'Negotiation' },
+    { id: '8', statusName: 'Closed Won' },
+    { id: '9', statusName: 'Lost' }
+  ];
 
   showCreateModal = false;
   newSegment = {
@@ -754,13 +795,17 @@ export class SegmentationComponent implements OnInit {
 
   getFieldLabel(field: string): string {
     switch (field) {
+      case 'interestedPropertyType':
+      case 'interestedIn': return 'Interested In';
       case 'budgetMin': return 'Min Budget';
       case 'budgetMax': return 'Max Budget';
       case 'city': return 'City';
       case 'nationality': return 'Nationality';
       case 'gender': return 'Gender';
-      case 'statusId': return 'Status';
-      case 'sourceId': return 'Lead Source';
+      case 'statusId':
+      case 'status': return 'Status';
+      case 'sourceId':
+      case 'source': return 'Lead Source';
       default: return field;
     }
   }

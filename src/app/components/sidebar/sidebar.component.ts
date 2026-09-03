@@ -251,6 +251,12 @@ import { NotificationsService } from '../../services/notifications.service';
                   <span class="menu-text">Booking Approvals</span>
                 </a>
               </li>
+              <li>
+                <a routerLink="/sales/commissions" routerLinkActive="active" class="submenu-item">
+                  <span class="material-icons-outlined font-sm">payments</span>
+                  <span class="menu-text">Commission Payouts</span>
+                </a>
+              </li>
             </ul>
           </li>
 

@@ -760,6 +760,14 @@ import { customAlert, customConfirm } from '../../utils/confirm';
               </div>
 
               <div class="form-group flex-1 flex flex-col">
+                <label>Marketing Campaign (Attribution)</label>
+                <select [(ngModel)]="newLeadData.campaignId" name="campaignId">
+                  <option [value]="0">-- Select Marketing Campaign --</option>
+                  <option *ngFor="let camp of campaigns" [value]="camp.id">{{ camp.campaignName }} ({{ camp.campaignCode }})</option>
+                </select>
+              </div>
+
+              <div class="form-group flex-1 flex flex-col">
                 <label>Assign to Sales Agent</label>
                 <select [(ngModel)]="newLeadData.assignedSalesAgentId" name="assignedSalesAgentId">
                   <option [value]="0">Select Agent</option>
@@ -976,6 +984,7 @@ export class LeadsComponent implements OnInit {
     budgetMax: null,
     interestedPropertyType: '',
     leadSourceId: 0,
+    campaignId: 0,
     assignedSalesAgentId: 0,
     remarks: '',
     contacts: [] as any[]
@@ -1012,7 +1021,9 @@ export class LeadsComponent implements OnInit {
 
   loadCampaigns() {
     this.marketingService.getCampaigns().subscribe({
-      next: (res) => this.campaigns = res,
+      next: (res) => {
+        this.campaigns = Array.isArray(res) ? res : ((res as any)?.items || []);
+      },
       error: (err) => console.error('Error fetching campaigns:', err)
     });
   }
@@ -1200,6 +1211,7 @@ export class LeadsComponent implements OnInit {
     this.duplicateWarning = false;
     this.formErrors = {};
     this.serverError = '';
+    this.loadCampaigns();
     this.newLeadData = {
       fullName: '',
       gender: '',
@@ -1215,6 +1227,7 @@ export class LeadsComponent implements OnInit {
       budgetMax: null,
       interestedPropertyType: '',
       leadSourceId: 0,
+      campaignId: 0,
       assignedSalesAgentId: 0,
       remarks: '',
       contacts: [] as any[]
@@ -1401,8 +1414,22 @@ export class LeadsComponent implements OnInit {
   }
 
   executeCreateLead(payload: any) {
+    const selectedCampId = this.newLeadData.campaignId ? +this.newLeadData.campaignId : 0;
     this.crmService.createLead(payload).subscribe({
       next: (res) => {
+        if (selectedCampId > 0 && res?.id) {
+          this.marketingService.trackMarketingLead({
+            leadId: res.id,
+            campaignId: selectedCampId,
+            leadSourceId: payload.leadSourceId ? +payload.leadSourceId : undefined,
+            leadScore: 70,
+            conversionProbability: 50,
+            acquisitionCost: 0
+          }).subscribe({
+            next: () => console.log('Marketing campaign attribution tracked for lead:', res.id),
+            error: (err) => console.error('Error linking marketing attribution:', err)
+          });
+        }
         this.closeCreateModal();
         this.loadLeads();
         customAlert(
@@ -1471,6 +1498,7 @@ export class LeadsComponent implements OnInit {
   }
 
   loadLeadDetails(id: number) {
+    this.loadCampaigns();
     this.crmService.getLeadDetails(id).subscribe({
       next: (res) => {
         this.selectedLeadDetails = res;

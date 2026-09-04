@@ -8,6 +8,7 @@ import { BrokerService } from '../../services/broker.service';
 import { FinanceService } from '../../services/finance.service';
 import { SalesService } from '../../services/sales.service';
 import { MarketingService } from '../../services/marketing.service';
+import * as XLSX from 'xlsx';
 
 
 @Component({
@@ -961,22 +962,122 @@ import { MarketingService } from '../../services/marketing.service';
 
         <!-- Lead Source Trend Visualization Chart (TC-7.19) -->
         <div class="card p-6 border-indigo">
-          <div class="flex justify-between items-center mb-4 border-bottom pb-3">
+          <div class="flex justify-between items-center mb-4 border-bottom pb-3 flex-wrap gap-3">
             <div>
               <h3>Lead Source Volume Trend Chart</h3>
-              <p class="text-secondary font-xs mt-1">Lead volume distribution and revenue contribution across lead sources</p>
+              <p class="text-secondary font-xs mt-1">Time-series breakdown showing lead volume trends across specific time periods</p>
             </div>
-            <span class="badge badge-new">Time-Series Breakdown</span>
+            <div class="flex items-center gap-3">
+              <!-- View Mode Toggles -->
+              <div class="tab-pill-group flex gap-1" style="background: rgba(0,0,0,0.04); padding: 3px; border-radius: 8px;">
+                <button type="button" class="btn btn-xs" [class.btn-primary]="leadSourceViewMode === 'trendLine'" [class.btn-ghost]="leadSourceViewMode !== 'trendLine'" (click)="leadSourceViewMode = 'trendLine'">
+                  <span class="material-icons-outlined font-xs">show_chart</span> Trend Line
+                </button>
+                <button type="button" class="btn btn-xs" [class.btn-primary]="leadSourceViewMode === 'monthlyMatrix'" [class.btn-ghost]="leadSourceViewMode !== 'monthlyMatrix'" (click)="leadSourceViewMode = 'monthlyMatrix'">
+                  <span class="material-icons-outlined font-xs">calendar_view_month</span> Monthly Breakdown
+                </button>
+                <button type="button" class="btn btn-xs" [class.btn-primary]="leadSourceViewMode === 'share'" [class.btn-ghost]="leadSourceViewMode !== 'share'" (click)="leadSourceViewMode = 'share'">
+                  <span class="material-icons-outlined font-xs">bar_chart</span> Source Share
+                </button>
+              </div>
+
+              <!-- Source Filter Selector -->
+              <select [(ngModel)]="selectedLeadSourceFilter" class="font-xs" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);">
+                <option value="ALL">All Sources</option>
+                <option *ngFor="let s of leadSourceReportData" [value]="s.sourceName">{{ s.sourceName }}</option>
+              </select>
+            </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
-            <div *ngFor="let src of leadSourceReportData" class="flex flex-col gap-1">
+          <!-- Mode 1: Time-Series SVG Trend Line Chart -->
+          <div *ngIf="leadSourceViewMode === 'trendLine'" class="pt-2">
+            <div style="position: relative; width: 100%; height: 220px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px;">
+              <svg viewBox="0 0 500 180" style="width: 100%; height: 100%; overflow: visible;">
+                <!-- Grid Lines -->
+                <line x1="40" y1="20" x2="480" y2="20" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3 3" />
+                <line x1="40" y1="60" x2="480" y2="60" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3 3" />
+                <line x1="40" y1="100" x2="480" y2="100" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3 3" />
+                <line x1="40" y1="140" x2="480" y2="140" stroke="rgba(0,0,0,0.12)" />
+
+                <!-- Y-axis labels -->
+                <text x="32" y="24" text-anchor="end" font-size="9" fill="var(--text-secondary)">{{ getLeadSourceMaxMonthlyCount() }}</text>
+                <text x="32" y="84" text-anchor="end" font-size="9" fill="var(--text-secondary)">{{ (getLeadSourceMaxMonthlyCount() / 2) | number:'1.0-0' }}</text>
+                <text x="32" y="144" text-anchor="end" font-size="9" fill="var(--text-secondary)">0</text>
+
+                <!-- Source Trend Lines -->
+                <g *ngFor="let src of getFilteredLeadSources(); let i = index">
+                  <!-- Area fill for single/primary selection -->
+                  <path *ngIf="selectedLeadSourceFilter !== 'ALL' || i === 0" [attr.d]="getLeadSourceAreaPath(src)" [attr.fill]="getSourceColorByIndex(i)" opacity="0.12" />
+
+                  <!-- Trend Line Path -->
+                  <path [attr.d]="getLeadSourceLinePath(src)" fill="none" [attr.stroke]="getSourceColorByIndex(i)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+                  <!-- Data Point Nodes -->
+                  <g *ngFor="let pt of getLeadSourceLinePoints(src)">
+                    <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" [attr.fill]="getSourceColorByIndex(i)" stroke="#ffffff" stroke-width="1.5" />
+                    <text *ngIf="pt.count > 0" [attr.x]="pt.x" [attr.y]="pt.y - 7" text-anchor="middle" font-size="8.5" font-weight="bold" [attr.fill]="getSourceColorByIndex(i)">{{ pt.count }}</text>
+                  </g>
+                </g>
+
+                <!-- X-axis Month Labels -->
+                <g *ngFor="let m of getLeadSourceMonths(); let idx = index">
+                  <text [attr.x]="getLeadSourceXCoord(idx, getLeadSourceMonths().length)" y="162" text-anchor="middle" font-size="9" font-weight="bold" fill="var(--text-secondary)">
+                    {{ formatMonthLabel(m) }}
+                  </text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Legend Bar with Totals -->
+            <div class="flex flex-wrap gap-4 mt-4 pt-3 border-top justify-center">
+              <div *ngFor="let src of getFilteredLeadSources(); let i = index" class="flex items-center gap-2 font-xs">
+                <span [style.background]="getSourceColorByIndex(i)" style="width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
+                <span class="font-bold text-main">{{ src.sourceName }}</span>
+                <span class="text-secondary font-mono">({{ src.totalLeads }} total)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode 2: Monthly Time-Series Matrix Table -->
+          <div *ngIf="leadSourceViewMode === 'monthlyMatrix'" class="table-container pt-2">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Month / Time Period</th>
+                  <th *ngFor="let src of getFilteredLeadSources()">{{ src.sourceName }}</th>
+                  <th>Monthly Total Leads</th>
+                  <th>Trend Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let m of getLeadSourceMonths()">
+                  <td><strong class="text-main">{{ formatMonthLabel(m) }}</strong> <span class="text-secondary font-xs font-mono ml-1">({{ m }})</span></td>
+                  <td *ngFor="let src of getFilteredLeadSources()">
+                    <span class="font-mono font-bold" [class.text-indigo]="getLeadSourceMonthlyCount(src, m) > 0" [class.text-secondary]="getLeadSourceMonthlyCount(src, m) === 0">
+                      {{ getLeadSourceMonthlyCount(src, m) }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong class="text-main font-mono">{{ getLeadSourceMonthTotal(m) }} Leads</strong>
+                  </td>
+                  <td>
+                    <span class="badge badge-qualified" *ngIf="getLeadSourceMonthTotal(m) > 0">Active Flow</span>
+                    <span class="badge badge-proposal" *ngIf="getLeadSourceMonthTotal(m) === 0">No Acquisition</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mode 3: Source Share Progress Bars -->
+          <div *ngIf="leadSourceViewMode === 'share'" style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
+            <div *ngFor="let src of getFilteredLeadSources(); let i = index" class="flex flex-col gap-1">
               <div class="flex justify-between text-xs font-semibold">
-                <span class="text-main font-bold">#{{ src.rank }} {{ src.sourceName }} ({{ src.channelType }})</span>
+                <span class="text-main font-bold">#{{ src.rank || (i + 1) }} {{ src.sourceName }} ({{ src.channelType }})</span>
                 <span class="text-indigo">{{ src.totalLeads }} Leads • ETB {{ formatValue(src.revenueContribution) }}</span>
               </div>
               <div style="height: 10px; background: rgba(0,0,0,0.06); border-radius: 5px; overflow: hidden;">
-                <div [style.width.%]="getLeadSourcePercent(src.totalLeads)" style="height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 5px;"></div>
+                <div [style.width.%]="getLeadSourcePercent(src.totalLeads)" [style.background]="getSourceColorByIndex(i)" style="height: 100%; border-radius: 5px;"></div>
               </div>
             </div>
           </div>
@@ -1580,112 +1681,386 @@ export class ReportsComponent implements OnInit {
     return Math.round((totalRoi / this.campaignReportData.length) * 100) / 100;
   }
 
-  exportExcelReport() {
-    let csvData = '';
-    const dateStr = new Date().toISOString().slice(0, 10);
-    let filename = `Report_${this.activeTab}_${dateStr}.csv`;
+  leadSourceViewMode: 'trendLine' | 'monthlyMatrix' | 'share' = 'trendLine';
+  selectedLeadSourceFilter: string = 'ALL';
 
-    if (this.activeTab === 'lead-sources') {
-      filename = `Lead_Source_Analysis_Report_${dateStr}.csv`;
-      csvData = 'Rank,Lead Source,Channel Type,Total Leads,Converted Leads,Conversion Rate %,Total Expense (ETB),Cost per Lead (CPL ETB),Revenue Contribution (ETB)\n';
-      (this.leadSourceReportData || []).forEach(row => {
-        csvData += `"${row.rank}","${row.sourceName}","${row.channelType}","${row.totalLeads}","${row.convertedLeads}","${row.conversionRate}%","${row.totalExpense}","${row.costPerLead}","${row.revenueContribution}"\n`;
+  // Lead Source Time-Series Helpers (TC-7.19)
+  getLeadSourceMonths(): string[] {
+    const monthsSet = new Set<string>();
+    (this.leadSourceReportData || []).forEach(src => {
+      (src.monthlyTrend || []).forEach((m: any) => {
+        if (m.period) monthsSet.add(m.period);
       });
-    } else if (this.activeTab === 'campaigns') {
-      filename = `Campaign_Performance_Report_${dateStr}.csv`;
-      csvData = 'Campaign Code,Campaign Name,Type,Status,Allocated Budget (ETB),Spent (ETB),Leads Generated,Sales Generated,Revenue Generated (ETB),Conversion Rate %,ROI %\n';
-      (this.campaignReportData || []).forEach(row => {
-        csvData += `"${row.campaignCode}","${row.campaignName}","${row.campaignType}","${row.campaignStatus}","${row.budgetAmount}","${row.utilizedBudget}","${row.leadsGenerated}","${row.salesGenerated}","${row.revenueGenerated}","${row.conversionRate}%","${row.roi}%"\n`;
-      });
-    } else {
-      const rows = this.reportData?.items || [];
-      if (!rows.length) return;
-      const headers = Object.keys(rows[0]).join(',');
-      const body = rows.map((r: any) => Object.values(r).map(v => `"${v}"`).join(',')).join('\n');
-      csvData = `${headers}\n${body}`;
+    });
+
+    const now = new Date();
+    let baseYear = now.getFullYear();
+    let baseMonth = now.getMonth();
+    if (monthsSet.size > 0) {
+      const sorted = Array.from(monthsSet).sort();
+      const latestMonthStr = sorted[sorted.length - 1];
+      const parts = latestMonthStr.split('-');
+      if (parts.length === 2) {
+        baseYear = parseInt(parts[0], 10);
+        baseMonth = parseInt(parts[1], 10) - 1;
+      }
     }
 
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Always generate at least past 6 consecutive months for continuous trend curve
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(baseYear, baseMonth - i, 1);
+      monthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    return Array.from(monthsSet).sort();
+  }
+
+  getFilteredLeadSources(): any[] {
+    if (!this.leadSourceReportData || this.leadSourceReportData.length === 0) return [];
+    if (this.selectedLeadSourceFilter === 'ALL') return this.leadSourceReportData;
+    return this.leadSourceReportData.filter(s => s.sourceName === this.selectedLeadSourceFilter || String(s.id) === String(this.selectedLeadSourceFilter));
+  }
+
+  getLeadSourceMaxMonthlyCount(): number {
+    let max = 1;
+    (this.leadSourceReportData || []).forEach(src => {
+      (src.monthlyTrend || []).forEach((m: any) => {
+        if (Number(m.count) > max) max = Number(m.count);
+      });
+      if (Number(src.totalLeads) > max && (!src.monthlyTrend || src.monthlyTrend.length === 0)) {
+        max = Number(src.totalLeads);
+      }
+    });
+    return max;
+  }
+
+  getLeadSourceMonthlyCount(src: any, month: string): number {
+    if (!src) return 0;
+    if (src.monthlyTrend && src.monthlyTrend.length > 0) {
+      const item = src.monthlyTrend.find((m: any) => m.period === month);
+      if (item) return Number(item.count) || 0;
+    }
+    return 0;
+  }
+
+  getLeadSourceMonthTotal(month: string): number {
+    return (this.leadSourceReportData || []).reduce((acc, src) => acc + this.getLeadSourceMonthlyCount(src, month), 0);
+  }
+
+  getLeadSourceXCoord(index: number, total: number): number {
+    const paddingX = 40;
+    const chartWidth = 500;
+    if (total <= 1) return chartWidth / 2;
+    return paddingX + (index / (total - 1)) * (chartWidth - 2 * paddingX);
+  }
+
+  getLeadSourceLinePoints(src: any): { x: number; y: number; count: number; month: string }[] {
+    const months = this.getLeadSourceMonths();
+    const maxVal = this.getLeadSourceMaxMonthlyCount();
+    const chartHeight = 140;
+    const paddingY = 20;
+
+    return months.map((m, idx) => {
+      const count = this.getLeadSourceMonthlyCount(src, m);
+      const x = this.getLeadSourceXCoord(idx, months.length);
+      const y = (chartHeight - paddingY) - (count / maxVal) * (chartHeight - 2 * paddingY) + 20;
+      return { x, y, count, month: m };
+    });
+  }
+
+  getLeadSourceLinePath(src: any): string {
+    const points = this.getLeadSourceLinePoints(src);
+    if (!points.length) return '';
+    return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  }
+
+  getLeadSourceAreaPath(src: any): string {
+    const points = this.getLeadSourceLinePoints(src);
+    if (!points.length) return '';
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const lastX = points[points.length - 1].x;
+    const firstX = points[0].x;
+    return `${linePath} L ${lastX.toFixed(1)} 140 L ${firstX.toFixed(1)} 140 Z`;
+  }
+
+  getSourceColorByIndex(index: number): string {
+    const palette = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#ef4444'];
+    return palette[index % palette.length];
+  }
+
+  exportExcelReport() {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const wb = XLSX.utils.book_new();
+    let ws: XLSX.WorkSheet;
+    let filename = `Report_${this.activeTab}_${dateStr}.xlsx`;
+
+    if (this.activeTab === 'lead-sources') {
+      filename = `Lead_Source_Analysis_Report_${dateStr}.xlsx`;
+      const data = (this.leadSourceReportData || []).map(row => ({
+        'Rank': row.rank,
+        'Lead Source': row.sourceName,
+        'Channel Type': row.channelType,
+        'Total Leads': row.totalLeads,
+        'Converted Leads': row.convertedLeads,
+        'Conversion Rate (%)': `${row.conversionRate}%`,
+        'Total Expense (ETB)': Number(row.totalExpense || 0),
+        'Cost per Lead (CPL ETB)': Number(row.costPerLead || 0),
+        'Revenue Contribution (ETB)': Number(row.revenueContribution || 0)
+      }));
+      ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Lead Source Analysis');
+    } else if (this.activeTab === 'campaigns') {
+      filename = `Campaign_Performance_Report_${dateStr}.xlsx`;
+      const data = (this.campaignReportData || []).map(row => ({
+        'Campaign Code': row.campaignCode,
+        'Campaign Name': row.campaignName,
+        'Type': row.campaignType,
+        'Status': row.campaignStatus,
+        'Allocated Budget (ETB)': Number(row.budgetAmount || 0),
+        'Spent (ETB)': Number(row.utilizedBudget || 0),
+        'Leads Generated': Number(row.leadsGenerated || 0),
+        'Sales Generated': Number(row.salesGenerated || 0),
+        'Revenue Generated (ETB)': Number(row.revenueGenerated || 0),
+        'Conversion Rate (%)': `${row.conversionRate}%`,
+        'ROI (%)': `${row.roi}%`
+      }));
+      ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Campaign Performance');
+    } else if (this.activeTab === 'sales') {
+      filename = `Sales_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      const data = rows.map((r: any) => ({
+        'Unit Number': r.unitNumber || '',
+        'Customer': r.customerName || '',
+        'Sales Agent': r.agentName || '',
+        'Sale Date': r.saleDate || '',
+        'Contract Value (ETB)': Number(r.contractAmount || 0),
+        'Status': r.status || ''
+      }));
+      ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+    } else if (this.activeTab === 'inventory') {
+      filename = `Inventory_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      const data = rows.map((r: any) => ({
+        'Unit Number': r.unitNumber || '',
+        'Property / Project': r.propertyName || '',
+        'Unit Type': r.unitType || '',
+        'Area (sqm)': r.area || '',
+        'Price (ETB)': Number(r.price || 0),
+        'Status': r.status || ''
+      }));
+      ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory Report');
+    } else if (this.activeTab === 'revenue') {
+      filename = `Revenue_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Revenue Report');
+    } else if (this.activeTab === 'collections') {
+      filename = `Collections_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Collections Report');
+    } else if (this.activeTab === 'receivables') {
+      filename = `Receivables_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Receivables Report');
+    } else if (this.activeTab === 'leads') {
+      filename = `Lead_Conversions_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Lead Funnel Report');
+    } else if (this.activeTab === 'brokers') {
+      filename = `Broker_Commissions_Report_${dateStr}.xlsx`;
+      const rows = this.reportData?.items || [];
+      const data = rows.map((r: any) => ({
+        'Broker Name': r.brokerName || '',
+        'Property': r.propertyName || '',
+        'Sale Value (ETB)': Number(r.saleAmount || 0),
+        'Commission (ETB)': Number(r.commissionAmount || 0),
+        'Calculated Date': r.calculatedDate || '',
+        'Status': r.status || ''
+      }));
+      ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Broker Commissions');
+    } else {
+      const rows = this.reportData?.items || [];
+      ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Message': 'No data available' }]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    }
+
+    // Auto-fit column widths
+    if (ws['!ref']) {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const colWidths = [];
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        colWidths.push({ wch: 24 });
+      }
+      ws['!cols'] = colWidths;
+    }
+
+    const excelBuffer: any = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+    this.downloadBlob(blob, filename);
   }
 
   exportPdfReport() {
     const printWin = window.open('', '_blank');
     if (!printWin) return;
 
-    const dateStr = new Date().toLocaleDateString();
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     let title = `${this.activeTab.toUpperCase()} REPORT`;
+    let visualChartHtml = '';
     let tableHtml = '';
 
-    if (this.activeTab === 'lead-sources') {
-      title = 'LEAD SOURCE PERFORMANCE ANALYSIS REPORT';
-      tableHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-          <thead>
-            <tr style="background: #1e293b; color: white; text-align: left;">
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Rank</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Lead Source</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Channel Type</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Total Leads</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Converted</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Conv. Rate</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">CPL (ETB)</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Revenue Contribution (ETB)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(this.leadSourceReportData || []).map(r => `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">#${r.rank}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r.sourceName}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.channelType}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.totalLeads}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; color: #16a34a;">${r.convertedLeads}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.conversionRate}%</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(r.costPerLead).toLocaleString()}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; color: #16a34a;">ETB ${Number(r.revenueContribution).toLocaleString()}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    } else if (this.activeTab === 'campaigns') {
+    if (this.activeTab === 'campaigns') {
       title = 'MARKETING CAMPAIGN PERFORMANCE REPORT';
+      const maxRev = Math.max(...(this.campaignReportData || []).map(c => Number(c.revenueGenerated) || 1), 1);
+      const totalLeads = this.getTotalCampaignLeads();
+      const totalRev = this.getTotalCampaignRevenue();
+      const avgRoi = this.getAvgCampaignRoi();
+
+      visualChartHtml = `
+        <div style="margin: 24px 0; padding: 18px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 16px;">
+            <div>
+              <h3 style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 800;">Comparative Campaign Visual Chart</h3>
+              <p style="margin: 4px 0 0; font-size: 11px; color: #64748b;">Cross-campaign comparative visualization of revenue, leads, and conversion efficiency</p>
+            </div>
+            <span style="font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px;">Visual Telemetry</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">Active Campaigns</div>
+              <div style="font-size: 20px; font-weight: 800; color: #4338ca; margin-top: 4px;">${this.campaignReportData?.length || 0}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">Leads Generated</div>
+              <div style="font-size: 20px; font-weight: 800; color: #0284c7; margin-top: 4px;">${totalLeads}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">Revenue Generated</div>
+              <div style="font-size: 20px; font-weight: 800; color: #16a34a; margin-top: 4px;">ETB ${totalRev.toLocaleString()}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">Average ROI</div>
+              <div style="font-size: 20px; font-weight: 800; color: #d97706; margin-top: 4px;">${avgRoi}%</div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${(this.campaignReportData || []).map(c => {
+              const pct = Math.max(Math.round(((Number(c.revenueGenerated) || 0) / maxRev) * 100), 5);
+              return `
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
+                    <span style="color: #0f172a;">${c.campaignName} (${c.campaignCode}) • <span style="color: #64748b; font-weight: normal;">${c.campaignType}</span></span>
+                    <span style="color: #16a34a;">${c.leadsGenerated} Leads • ETB ${Number(c.revenueGenerated).toLocaleString()} (ROI: ${c.roi}%)</span>
+                  </div>
+                  <div style="height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden;">
+                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #10b981, #0d9488); border-radius: 6px;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
       tableHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
           <thead>
             <tr style="background: #1e293b; color: white; text-align: left;">
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Code</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Campaign Name</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Type</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Status</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Budget</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Spent</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Leads</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Sales</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">Revenue</th>
-              <th style="padding: 10px; border: 1px solid #cbd5e1;">ROI %</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Code</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Campaign Name</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Type</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Status</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Budget</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Spent</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Leads</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Sales</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Revenue</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">ROI %</th>
             </tr>
           </thead>
           <tbody>
             ${(this.campaignReportData || []).map(c => `
               <tr>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignCode}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${c.campaignName}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignType}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.campaignStatus}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(c.budgetAmount).toLocaleString()}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">ETB ${Number(c.utilizedBudget).toLocaleString()}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;">${c.leadsGenerated}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; color: #16a34a;">${c.salesGenerated}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; color: #16a34a;">ETB ${Number(c.revenueGenerated).toLocaleString()}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${c.roi}%</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${c.campaignCode}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold;">${c.campaignName}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${c.campaignType}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${c.campaignStatus}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">ETB ${Number(c.budgetAmount).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">ETB ${Number(c.utilizedBudget).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${c.leadsGenerated}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; color: #16a34a;">${c.salesGenerated}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; color: #16a34a;">ETB ${Number(c.revenueGenerated).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold;">${c.roi}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (this.activeTab === 'lead-sources') {
+      title = 'LEAD SOURCE PERFORMANCE ANALYSIS REPORT';
+      const maxLeads = Math.max(...(this.leadSourceReportData || []).map(s => Number(s.totalLeads) || 1), 1);
+      visualChartHtml = `
+        <div style="margin: 24px 0; padding: 18px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 16px;">
+            <div>
+              <h3 style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 800;">Lead Source Volume Trend Chart</h3>
+              <p style="margin: 4px 0 0; font-size: 11px; color: #64748b;">Lead volume acquisition distribution and revenue telemetry</p>
+            </div>
+            <span style="font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px;">Time-Series Breakdown</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${(this.leadSourceReportData || []).map(s => {
+              const pct = Math.max(Math.round(((Number(s.totalLeads) || 0) / maxLeads) * 100), 5);
+              return `
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
+                    <span style="color: #0f172a;">#${s.rank} ${s.sourceName} (${s.channelType})</span>
+                    <span style="color: #4338ca;">${s.totalLeads} Leads • ETB ${Number(s.revenueContribution).toLocaleString()}</span>
+                  </div>
+                  <div style="height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden;">
+                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 6px;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
+      tableHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background: #1e293b; color: white; text-align: left;">
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Rank</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Lead Source</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Channel Type</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Total Leads</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Converted</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Conv. Rate</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">CPL (ETB)</th>
+              <th style="padding: 9px; border: 1px solid #cbd5e1; font-size: 11px;">Revenue Contribution (ETB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(this.leadSourceReportData || []).map(r => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">#${r.rank}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold;">${r.sourceName}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${r.channelType}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${r.totalLeads}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; color: #16a34a;">${r.convertedLeads}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${r.conversionRate}%</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">ETB ${Number(r.costPerLead).toLocaleString()}</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; color: #16a34a;">ETB ${Number(r.revenueContribution).toLocaleString()}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1700,7 +2075,7 @@ export class ReportsComponent implements OnInit {
         <head>
           <title>${title}</title>
           <style>
-            body { font-family: sans-serif; margin: 30px; color: #0f172a; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 30px; color: #0f172a; }
             .header { border-bottom: 3px solid #4c3a93; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
             .company { font-size: 20px; font-weight: 800; color: #4c3a93; }
             .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
@@ -1715,6 +2090,7 @@ export class ReportsComponent implements OnInit {
             </div>
             <div class="date">${title}</div>
           </div>
+          ${visualChartHtml}
           ${tableHtml}
           <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between;">
             <span>Confidential Executive Report • IHSAN RMS System</span>

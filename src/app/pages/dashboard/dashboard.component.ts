@@ -247,22 +247,75 @@ interface ChartPoint {
         <div class="flex justify-between items-center border-bottom pb-4 mb-4">
           <div>
             <h3>Lead Source Volume Trend</h3>
-            <span class="text-secondary font-xs">Historical volume distribution across lead sources over time</span>
+            <span class="text-secondary font-xs">Time-series breakdown showing lead volume trends across specific time periods</span>
           </div>
-          <span class="badge badge-new">Source Breakdown</span>
+          <div class="flex items-center gap-2">
+            <div class="tab-pill-group flex gap-1" style="background: rgba(0,0,0,0.04); padding: 2px; border-radius: 6px;">
+              <button type="button" class="btn btn-xs" [class.btn-primary]="leadSourceViewMode === 'trendLine'" [class.btn-ghost]="leadSourceViewMode !== 'trendLine'" (click)="leadSourceViewMode = 'trendLine'">
+                <span class="material-icons-outlined font-xs">show_chart</span> Trend Line
+              </button>
+              <button type="button" class="btn btn-xs" [class.btn-primary]="leadSourceViewMode === 'share'" [class.btn-ghost]="leadSourceViewMode !== 'share'" (click)="leadSourceViewMode = 'share'">
+                <span class="material-icons-outlined font-xs">bar_chart</span> Shares
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div style="height: 220px;" class="flex flex-col justify-end gap-3 pt-4">
-          <div *ngFor="let src of leadSourceTrends" class="flex flex-col gap-1">
-            <div class="flex justify-between text-xs font-semibold">
-              <span class="text-main">{{ src.source }}</span>
-              <span class="text-indigo">{{ src.count }} Leads</span>
-            </div>
-            <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
-              <div [style.width.%]="getSourcePercent(src.count)" style="height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 4px;"></div>
+        <!-- Mode 1: Time-Series SVG Trend Line Chart -->
+        <div *ngIf="leadSourceViewMode === 'trendLine'" style="height: 220px;" class="flex flex-col justify-between pt-1">
+          <div style="position: relative; width: 100%; height: 160px;">
+            <svg viewBox="0 0 450 140" style="width: 100%; height: 100%; overflow: visible;">
+              <!-- Grid lines -->
+              <line x1="30" y1="15" x2="430" y2="15" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3 3" />
+              <line x1="30" y1="60" x2="430" y2="60" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3 3" />
+              <line x1="30" y1="105" x2="430" y2="105" stroke="rgba(0,0,0,0.1)" />
+
+              <!-- Y-axis labels -->
+              <text x="24" y="18" text-anchor="end" font-size="8.5" fill="var(--text-secondary)">{{ getDashboardLeadSourceMax() }}</text>
+              <text x="24" y="63" text-anchor="end" font-size="8.5" fill="var(--text-secondary)">{{ (getDashboardLeadSourceMax() / 2) | number:'1.0-0' }}</text>
+              <text x="24" y="108" text-anchor="end" font-size="8.5" fill="var(--text-secondary)">0</text>
+
+              <!-- Lines for each source series -->
+              <g *ngFor="let s of leadSourceSeries; let idx = index">
+                <path *ngIf="idx === 0" [attr.d]="getDashboardLeadSourceAreaPath(s)" [attr.fill]="getDashboardSourceColor(idx)" opacity="0.1" />
+                <path [attr.d]="getDashboardLeadSourceLinePath(s)" fill="none" [attr.stroke]="getDashboardSourceColor(idx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                <g *ngFor="let pt of getDashboardLeadSourcePoints(s)">
+                  <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3.5" [attr.fill]="getDashboardSourceColor(idx)" stroke="#fff" stroke-width="1.5" />
+                  <text *ngIf="pt.count > 0" [attr.x]="pt.x" [attr.y]="pt.y - 6" text-anchor="middle" font-size="8" font-weight="bold" [attr.fill]="getDashboardSourceColor(idx)">{{ pt.count }}</text>
+                </g>
+              </g>
+
+              <!-- X-axis Month Labels -->
+              <g *ngFor="let m of leadSourceMonths; let idx = index">
+                <text [attr.x]="getDashboardLeadSourceXCoord(idx, leadSourceMonths.length)" y="125" text-anchor="middle" font-size="8.5" font-weight="bold" fill="var(--text-secondary)">
+                  {{ formatDashboardMonthLabel(m) }}
+                </text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Trend Legend -->
+          <div class="flex flex-wrap gap-3 pt-2 border-top justify-center">
+            <div *ngFor="let s of leadSourceSeries; let idx = index" class="flex items-center gap-1 font-xs">
+              <span [style.background]="getDashboardSourceColor(idx)" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span>
+              <span class="font-bold text-main">{{ s.source }}</span>
+              <span class="text-secondary font-mono">({{ s.total }})</span>
             </div>
           </div>
-          <div *ngIf="!leadSourceTrends.length" class="text-center text-secondary italic py-8">
+        </div>
+
+        <!-- Mode 2: Static / Share Progress Bars -->
+        <div *ngIf="leadSourceViewMode === 'share'" style="height: 220px;" class="flex flex-col justify-end gap-3 pt-4">
+          <div *ngFor="let src of (leadSourceSeries.length ? leadSourceSeries : leadSourceTrends)" class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-main">{{ src.source }}</span>
+              <span class="text-indigo">{{ src.total || src.count }} Leads</span>
+            </div>
+            <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
+              <div [style.width.%]="getSourcePercent(src.total || src.count)" style="height: 100%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div *ngIf="!leadSourceTrends.length && !leadSourceSeries.length" class="text-center text-secondary italic py-8">
             No source trend telemetry available for selected period.
           </div>
         </div>
@@ -853,6 +906,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Marketing Executive Dashboard bindings (TC-7.18, TC-7.19, TC-7.20)
   marketingKpis: any = null;
   leadSourceTrends: any[] = [];
+  leadSourceSeries: any[] = [];
+  leadSourceMonths: string[] = [];
+  leadSourceViewMode: 'trendLine' | 'share' = 'trendLine';
   campaignComparisons: any[] = [];
   marketingDateFrom: string = '';
   marketingDateTo: string = '';
@@ -887,15 +943,104 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.marketingService.getDashboardCharts(filters).subscribe({
       next: (res) => {
         this.leadSourceTrends = res?.sourceTrend || [];
+        this.leadSourceSeries = res?.sourceSeries || [];
+        const rawMonths: string[] = res?.months || [];
+        const monthsSet = new Set<string>(rawMonths);
+
+        const now = new Date();
+        let baseYear = now.getFullYear();
+        let baseMonth = now.getMonth();
+        if (monthsSet.size > 0) {
+          const sorted = Array.from(monthsSet).sort();
+          const latestMonthStr = sorted[sorted.length - 1];
+          const parts = latestMonthStr.split('-');
+          if (parts.length === 2) {
+            baseYear = parseInt(parts[0], 10);
+            baseMonth = parseInt(parts[1], 10) - 1;
+          }
+        }
+
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(baseYear, baseMonth - i, 1);
+          monthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        }
+
+        this.leadSourceMonths = Array.from(monthsSet).sort();
         this.campaignComparisons = res?.campaigns || [];
       },
       error: (err) => console.error('Error loading marketing charts:', err)
     });
   }
 
+  getDashboardLeadSourceMax(): number {
+    let max = 1;
+    (this.leadSourceSeries || []).forEach(s => {
+      (s.monthlyData || []).forEach((m: any) => {
+        if (m.count > max) max = m.count;
+      });
+      if (s.total > max && (!s.monthlyData || s.monthlyData.length === 0)) {
+        max = s.total;
+      }
+    });
+    return max;
+  }
+
+  getDashboardLeadSourceXCoord(index: number, total: number): number {
+    const paddingX = 30;
+    const chartWidth = 450;
+    if (total <= 1) return chartWidth / 2;
+    return paddingX + (index / (total - 1)) * (chartWidth - 2 * paddingX);
+  }
+
+  getDashboardLeadSourcePoints(series: any): { x: number; y: number; count: number; month: string }[] {
+    const months = this.leadSourceMonths;
+    const maxVal = this.getDashboardLeadSourceMax();
+    const chartHeight = 90;
+    const paddingY = 15;
+
+    return months.map((m, idx) => {
+      const found = (series.monthlyData || []).find((item: any) => item.month === m);
+      const count = found ? found.count : 0;
+      const x = this.getDashboardLeadSourceXCoord(idx, months.length);
+      const y = (chartHeight - paddingY) - (count / maxVal) * (chartHeight - 2 * paddingY) + 15;
+      return { x, y, count, month: m };
+    });
+  }
+
+  getDashboardLeadSourceLinePath(series: any): string {
+    const points = this.getDashboardLeadSourcePoints(series);
+    if (!points.length) return '';
+    return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  }
+
+  getDashboardLeadSourceAreaPath(series: any): string {
+    const points = this.getDashboardLeadSourcePoints(series);
+    if (!points.length) return '';
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const lastX = points[points.length - 1].x;
+    const firstX = points[0].x;
+    return `${linePath} L ${lastX.toFixed(1)} 105 L ${firstX.toFixed(1)} 105 Z`;
+  }
+
+  getDashboardSourceColor(index: number): string {
+    const palette = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6'];
+    return palette[index % palette.length];
+  }
+
+  formatDashboardMonthLabel(periodStr: string): string {
+    if (!periodStr) return '';
+    const parts = periodStr.split('-');
+    if (parts.length === 2) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      return monthNames[monthIdx] || periodStr;
+    }
+    return periodStr;
+  }
+
   getSourcePercent(count: number): number {
     if (!this.leadSourceTrends || this.leadSourceTrends.length === 0) return 0;
-    const max = Math.max(...this.leadSourceTrends.map(s => Number(s.count) || 1), 1);
+    const max = Math.max(...this.leadSourceTrends.map(s => Number(s.count || s.total) || 1), 1);
     return Math.round(((Number(count) || 0) / max) * 100);
   }
 
